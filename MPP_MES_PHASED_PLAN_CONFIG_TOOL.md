@@ -13,6 +13,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-10 | Blue Ridge Automation | Initial phased plan covering 8 configuration tool phases. Each phase scopes data model, API layer (Named Queries → stored procedures), and Perspective frontend requirements. Conceptual — no SQL scripts produced. |
+| 0.2 | 2026-04-10 | Blue Ridge Automation | Reformatted API Layer sections from bulleted lists to tables (Procedure / Parameters / Notes) for Word readability. Added explicit Seed Data tables to Phases 1, 7, and 8 with row counts and source CSVs. No content changes — purely a presentation pass. |
 
 ---
 
@@ -116,51 +117,74 @@ Tables involved (all from the `Location` schema, per `MPP_MES_DATA_MODEL.md` §1
 | `Location` | Instances. Self-referential via `ParentLocationId`. Every row references one `LocationTypeDefinition`. |
 | `LocationAttribute` | Attribute values per location. FK enforces that the attribute definition belongs to the location's own definition. |
 
-**Seed data to load (Phase 1):**
-- 5 `LocationType` rows (hard-coded at deployment)
-- ~15 initial `LocationTypeDefinition` rows (per `MPP_MES_DATA_MODEL.md` Phase 1 seed table)
-- ~20 initial `LocationAttributeDefinition` rows (Tonnage, NumberOfCavities, IpAddress, DefaultPrinter, etc.)
-- The MPP plant root: 1 Enterprise row, 1 Site row, 5 Area rows (Die Cast, Trim Shop, Machine Shop, Production Control, Quality Control)
-- All ~209 machines from `reference/seed_data/machines.csv` as `Location` records under appropriate Areas, with `LocationTypeDefinition` resolved from the machine's process (e.g., DieCast# → `DieCastMachine`, MS Machine → `CNCMachine`)
-- Tonnage and cycle time values from `machines.csv` columns loaded as `LocationAttribute` rows
+**Seed data to load:**
+
+| Table | Source | Rows | Notes |
+|---|---|---|---|
+| `LocationType` | hard-coded | 5 | Enterprise, Site, Area, WorkCenter, Cell |
+| `LocationTypeDefinition` | hard-coded | ~15 | Organization, Facility, ProductionArea, SupportArea, ProductionLine, InspectionLine, Terminal, DieCastMachine, CNCMachine, TrimPress, AssemblyStation, SerializedAssemblyLine, InspectionStation, InventoryLocation, Scale |
+| `LocationAttributeDefinition` | hard-coded | ~20 | Per definition: Tonnage, NumberOfCavities, RefCycleTimeSec on `DieCastMachine`; IpAddress, DefaultPrinter, HasBarcodeScanner on `Terminal`; etc. |
+| `Location` (Enterprise) | hard-coded | 1 | Madison Precision Products, Inc. |
+| `Location` (Site) | hard-coded | 1 | Madison facility |
+| `Location` (Area) | hard-coded | 5 | Die Cast, Trim Shop, Machine Shop, Production Control, Quality Control |
+| `Location` (Cell) | `reference/seed_data/machines.csv` | 209 | Machines mapped to Cell-tier definitions by process (DieCast# → `DieCastMachine`, MS Machine → `CNCMachine`, etc.) |
+| `LocationAttribute` | from `machines.csv` columns | ~600 | Tonnage, RefCycleTimeSec, NumberOfCavities per Cell where present |
 
 ### API Layer (Named Queries → Stored Procedures)
 
-`LocationType` (read-only):
-- `LocationType_List` — returns all 5 tiers
-- `LocationType_Get @Id`
+**`LocationType`** (read-only — seeded at deployment):
 
-`LocationTypeDefinition` (full CRUD):
-- `LocationTypeDefinition_List @LocationTypeId NULL` — optional filter by tier
-- `LocationTypeDefinition_Get @Id`
-- `LocationTypeDefinition_Create @LocationTypeId, @Code, @Name, @Description, @AppUserId`
-- `LocationTypeDefinition_Update @Id, @Name, @Description, @AppUserId`
-- `LocationTypeDefinition_Deprecate @Id, @AppUserId` (rejects if any active `Location` references it)
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `LocationType_List` | — | Returns all 5 tiers |
+| `LocationType_Get` | `@Id` | Single tier |
 
-`LocationAttributeDefinition` (full CRUD, scoped to a definition):
-- `LocationAttributeDefinition_ListByDefinition @LocationTypeDefinitionId`
-- `LocationAttributeDefinition_Get @Id`
-- `LocationAttributeDefinition_Create @LocationTypeDefinitionId, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId`
-- `LocationAttributeDefinition_Update @Id, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId`
-- `LocationAttributeDefinition_Deprecate @Id, @AppUserId` (rejects if any `LocationAttribute` references it)
+**`LocationTypeDefinition`** (full CRUD):
 
-`Location` (full CRUD + tree queries):
-- `Location_List @ParentLocationId NULL, @LocationTypeDefinitionId NULL` — children of a parent and/or filtered by kind
-- `Location_GetTree @RootLocationId` — recursive CTE returning the hierarchy from a root down
-- `Location_GetAncestors @LocationId` — recursive CTE returning ancestors from this location up to the Enterprise root
-- `Location_GetDescendantsOfType @LocationId, @LocationTypeId` — e.g., "all Cells under the Die Cast Area"
-- `Location_Get @Id` — returns location plus all its current `LocationAttribute` values
-- `Location_Create @LocationTypeDefinitionId, @ParentLocationId, @Name, @Code, @Description, @AppUserId`
-- `Location_Update @Id, @Name, @Code, @Description, @AppUserId`
-- `Location_Deprecate @Id, @AppUserId` (rejects if any active `Lot.CurrentLocationId`, `LotMovement`, etc. reference it)
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `LocationTypeDefinition_List` | `@LocationTypeId NULL` | Optional filter by tier |
+| `LocationTypeDefinition_Get` | `@Id` | |
+| `LocationTypeDefinition_Create` | `@LocationTypeId, @Code, @Name, @Description, @AppUserId` | Returns new `Id` |
+| `LocationTypeDefinition_Update` | `@Id, @Name, @Description, @AppUserId` | `LocationTypeId` is immutable after create |
+| `LocationTypeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any active `Location` references it |
 
-`LocationAttribute` (per-instance attribute values):
-- `LocationAttribute_GetByLocation @LocationId` — returns all current values for a location
-- `LocationAttribute_Set @LocationId, @LocationAttributeDefinitionId, @AttributeValue, @AppUserId` — upsert (insert or update one row); validates that the definition belongs to the location's definition
-- `LocationAttribute_Clear @LocationId, @LocationAttributeDefinitionId, @AppUserId` — remove a value (set to NULL or delete the row, depending on whether definition is `IsRequired`)
+**`LocationAttributeDefinition`** (full CRUD, scoped to a parent definition):
 
-Seed loading (one-time):
-- `Location_BulkLoadMachinesFromSeed @CsvData NVARCHAR(MAX), @AppUserId` — accepts the `machines.csv` content as a delimited blob, parses, and creates `Location` rows under the appropriate Areas. Or loaded via a separate Ignition Gateway script that calls `Location_Create` per row. (Implementation choice deferred — both work.)
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `LocationAttributeDefinition_ListByDefinition` | `@LocationTypeDefinitionId` | Attribute schema for one kind |
+| `LocationAttributeDefinition_Get` | `@Id` | |
+| `LocationAttributeDefinition_Create` | `@LocationTypeDefinitionId, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | |
+| `LocationAttributeDefinition_Update` | `@Id, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | |
+| `LocationAttributeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any `LocationAttribute` references it |
+
+**`Location`** (full CRUD + tree queries):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `Location_List` | `@ParentLocationId NULL, @LocationTypeDefinitionId NULL` | Children and/or filtered by kind |
+| `Location_GetTree` | `@RootLocationId` | Recursive CTE: full hierarchy from a root down |
+| `Location_GetAncestors` | `@LocationId` | Recursive CTE: from this location up to root |
+| `Location_GetDescendantsOfType` | `@LocationId, @LocationTypeId` | E.g., "all Cells under the Die Cast Area" |
+| `Location_Get` | `@Id` | Returns location + all current `LocationAttribute` values |
+| `Location_Create` | `@LocationTypeDefinitionId, @ParentLocationId, @Name, @Code, @Description, @AppUserId` | |
+| `Location_Update` | `@Id, @Name, @Code, @Description, @AppUserId` | |
+| `Location_Deprecate` | `@Id, @AppUserId` | Rejects if active `Lot.CurrentLocationId` or `LotMovement` references exist |
+
+**`LocationAttribute`** (per-instance values):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `LocationAttribute_GetByLocation` | `@LocationId` | All current values for one location |
+| `LocationAttribute_Set` | `@LocationId, @LocationAttributeDefinitionId, @AttributeValue, @AppUserId` | Upsert; validates definition belongs to location's kind |
+| `LocationAttribute_Clear` | `@LocationId, @LocationAttributeDefinitionId, @AppUserId` | Remove value; rejects if `IsRequired` |
+
+**Seed loading** (one-time):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `Location_BulkLoadMachinesFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Loads `machines.csv`. Alternative: Ignition Gateway script that calls `Location_Create` per row. Implementation choice deferred — both work. |
 
 ### Frontend (Perspective Views)
 
@@ -202,26 +226,35 @@ Seed loading (one-time):
 | `Audit.LogEntityType` | Code table: Location, Item, Lot, BOM, etc. Seeded from the entity table list. |
 | `Audit.ConfigLog` | The destination for all Configuration Tool audit entries. Every mutation in every phase writes here. |
 
-### API Layer
+### API Layer (Named Queries → Stored Procedures)
 
-`AppUser`:
-- `AppUser_List @IncludeDeprecated BIT = 0` — returns active users by default
-- `AppUser_Get @Id`
-- `AppUser_GetByAdAccount @AdAccount` — for session resolution at login
-- `AppUser_GetByClockNumber @ClockNumber` — for shop-floor login
-- `AppUser_Create @AdAccount, @DisplayName, @ClockNumber, @PinHash, @IgnitionRole, @AppUserId` (admin creates user; the `@AppUserId` is the admin's Id for audit)
-- `AppUser_Update @Id, @DisplayName, @ClockNumber, @PinHash, @IgnitionRole, @AppUserId`
-- `AppUser_Deprecate @Id, @AppUserId` — rejects if there are active Lot rows referencing this user as creator (or whatever soft-delete dependency rule applies)
-- `AppUser_SetPin @Id, @PinHash, @AppUserId` — separate proc for password resets to avoid surfacing it in the general Update flow
+**`AppUser`** (full CRUD + lookup variants):
 
-Audit lookup tables (read-only after seeding):
-- `LogSeverity_List`
-- `LogEventType_List`
-- `LogEntityType_List`
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `AppUser_List` | `@IncludeDeprecated BIT = 0` | Active users by default |
+| `AppUser_Get` | `@Id` | |
+| `AppUser_GetByAdAccount` | `@AdAccount` | Session resolution at AD login |
+| `AppUser_GetByClockNumber` | `@ClockNumber` | Shop-floor login lookup |
+| `AppUser_Create` | `@AdAccount, @DisplayName, @ClockNumber, @PinHash, @IgnitionRole, @AppUserId` | `@AppUserId` is the admin creating the row |
+| `AppUser_Update` | `@Id, @DisplayName, @ClockNumber, @IgnitionRole, @AppUserId` | PIN changes go through `_SetPin` |
+| `AppUser_SetPin` | `@Id, @PinHash, @AppUserId` | Separate proc keeps PIN out of the general Update flow |
+| `AppUser_Deprecate` | `@Id, @AppUserId` | Rejects if active records reference this user as creator |
 
-`Audit.ConfigLog` (read-only from Configuration Tool — written only by other procs):
-- `ConfigLog_List @StartDate, @EndDate, @LogEntityTypeId NULL, @AppUserId NULL` — paged, filterable
-- `ConfigLog_GetByEntity @LogEntityTypeId, @EntityId` — "show me everything that's ever been changed about this Item / Location / BOM"
+**Audit lookup tables** (read-only after seeding):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `LogSeverity_List` | — | Info, Warning, Error, Critical |
+| `LogEventType_List` | — | LotCreated, LotMoved, ProductionRecorded, ConfigChanged, etc. |
+| `LogEntityType_List` | — | Location, Item, Lot, BOM, etc. |
+
+**`Audit.ConfigLog`** (read-only from the Configuration Tool — written only by other procs):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `ConfigLog_List` | `@StartDate, @EndDate, @LogEntityTypeId NULL, @AppUserId NULL` | Paged, filterable |
+| `ConfigLog_GetByEntity` | `@LogEntityTypeId, @EntityId` | "Show me everything ever changed about this Item / Location / BOM" |
 
 ### Frontend (Perspective Views)
 
@@ -262,20 +295,26 @@ Audit lookup tables (read-only after seeding):
 | `OperationStatus` | Pending, InProgress, Completed, Skipped | Fixed; seeded only |
 | `WorkOrderStatus` | (per the workorder schema) | Fixed; seeded only |
 
-### API Layer
+### API Layer (Named Queries → Stored Procedures)
 
-For each of the above tables:
+Each table follows one of two standard patterns based on whether engineering can extend it.
 
-**Read-only tables (everything except `Uom` and `ItemType`):**
-- `<Entity>_List`
-- `<Entity>_Get @Id`
+**Read-only pattern** (`LotOriginType`, `LotStatusCode`, `ContainerStatusCode`, `GenealogyRelationshipType`, `OperationStatus`, `WorkOrderStatus`):
 
-**Mutable tables (`Uom`, `ItemType`):**
-- `<Entity>_List @IncludeDeprecated BIT = 0`
-- `<Entity>_Get @Id`
-- `<Entity>_Create @Code, @Name, @Description, @AppUserId`
-- `<Entity>_Update @Id, @Name, @Description, @AppUserId`
-- `<Entity>_Deprecate @Id, @AppUserId`
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `<Entity>_List` | — | Returns all rows |
+| `<Entity>_Get` | `@Id` | Single row |
+
+**Mutable pattern** (`Uom`, `ItemType` — engineering can add new entries):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `<Entity>_List` | `@IncludeDeprecated BIT = 0` | |
+| `<Entity>_Get` | `@Id` | |
+| `<Entity>_Create` | `@Code, @Name, @Description, @AppUserId` | Returns new `Id` |
+| `<Entity>_Update` | `@Id, @Name, @Description, @AppUserId` | `Code` is immutable |
+| `<Entity>_Deprecate` | `@Id, @AppUserId` | Rejects on active dependents |
 
 ### Frontend (Perspective Views)
 
@@ -308,21 +347,27 @@ This phase is intentionally minimal. The frontend is a generic CRUD grid that lo
 | `Item` | The master part list. Each row is one MPP part number. Carries description, item type, default sub-lot quantity, max lot size, unit weight, UOM, optional Macola cross-reference. |
 | `ContainerConfig` | Per-finished-good packing rules: trays per container, parts per tray, serialized flag, dunnage code, customer code. Note OI-02 may add `ClosureMethod` and `TargetWeight` columns. |
 
-### API Layer
+### API Layer (Named Queries → Stored Procedures)
 
-`Item`:
-- `Item_List @ItemTypeId NULL, @SearchText NULL, @IncludeDeprecated BIT = 0`
-- `Item_Get @Id`
-- `Item_GetByPartNumber @PartNumber` — for lookups during BOM/route construction
-- `Item_Create @PartNumber, @ItemTypeId, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId`
-- `Item_Update @Id, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` (note: `PartNumber` and `ItemTypeId` are immutable after create — would create downstream chaos to change them; if the engineer needs to change a part number, they deprecate the old one and create a new one)
-- `Item_Deprecate @Id, @AppUserId` — rejects if there are active `Bom`, `RouteTemplate`, `ItemLocation`, or `ContainerConfig` references
+**`Item`**:
 
-`ContainerConfig`:
-- `ContainerConfig_GetByItem @ItemId` — usually one config per item
-- `ContainerConfig_Create @ItemId, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId`
-- `ContainerConfig_Update @Id, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId`
-- `ContainerConfig_Deprecate @Id, @AppUserId`
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `Item_List` | `@ItemTypeId NULL, @SearchText NULL, @IncludeDeprecated BIT = 0` | Filterable list |
+| `Item_Get` | `@Id` | |
+| `Item_GetByPartNumber` | `@PartNumber` | For BOM/route construction lookups |
+| `Item_Create` | `@PartNumber, @ItemTypeId, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | Returns new `Id` |
+| `Item_Update` | `@Id, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | `PartNumber` and `ItemTypeId` are immutable after create — to change them, deprecate the old item and create new |
+| `Item_Deprecate` | `@Id, @AppUserId` | Rejects if active `Bom`, `RouteTemplate`, `ItemLocation`, or `ContainerConfig` references exist |
+
+**`ContainerConfig`**:
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `ContainerConfig_GetByItem` | `@ItemId` | Usually one config per item |
+| `ContainerConfig_Create` | `@ItemId, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | OI-02 may add `@ClosureMethod` and `@TargetWeight` |
+| `ContainerConfig_Update` | `@Id, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | |
+| `ContainerConfig_Deprecate` | `@Id, @AppUserId` | |
 
 ### Frontend (Perspective Views)
 
@@ -361,35 +406,47 @@ This phase is intentionally minimal. The frontend is a generic CRUD grid that lo
 
 Note: per FDS-03-009, route steps do **not** prescribe a specific machine — they reference an `OperationTemplate` which has an `AreaLocationId`, and the operator picks the Cell at runtime from the `ItemLocation` eligibility set.
 
-### API Layer
+### API Layer (Named Queries → Stored Procedures)
 
-`OperationTemplate` (versioned):
-- `OperationTemplate_List @AreaLocationId NULL, @ActiveOnly BIT = 1`
-- `OperationTemplate_Get @Id`
-- `OperationTemplate_Create @Name, @AreaLocationId, @CollectsDieInfo, @CollectsCavityInfo, @CollectsWeight, @CollectsGoodCount, @CollectsBadCount, @RequiresMaterialVerification, @RequiresSerialNumber, @AppUserId` — creates version 1
-- `OperationTemplate_CreateNewVersion @ParentOperationTemplateId, ..., @EffectiveFrom, @AppUserId` — creates a new version, does NOT modify the previous one
-- `OperationTemplate_Deprecate @Id, @AppUserId` — soft-delete a specific version
+**`OperationTemplate`** (versioned):
 
-`RouteTemplate` (versioned):
-- `RouteTemplate_ListByItem @ItemId, @ActiveOnly BIT = 1` — usually one active route per item
-- `RouteTemplate_Get @Id` — returns route header plus all its steps in order
-- `RouteTemplate_GetActiveForItem @ItemId, @AsOfDate DATETIME2 = NULL` — used by production code to pick the version active at a given time
-- `RouteTemplate_Create @ItemId, @Name, @EffectiveFrom, @AppUserId` — creates an empty route version 1
-- `RouteTemplate_CreateNewVersion @ParentRouteTemplateId, @EffectiveFrom, @AppUserId`
-- `RouteTemplate_Deprecate @Id, @AppUserId`
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `OperationTemplate_List` | `@AreaLocationId NULL, @ActiveOnly BIT = 1` | Filter by area |
+| `OperationTemplate_Get` | `@Id` | |
+| `OperationTemplate_Create` | `@Name, @AreaLocationId, @CollectsDieInfo, @CollectsCavityInfo, @CollectsWeight, @CollectsGoodCount, @CollectsBadCount, @RequiresMaterialVerification, @RequiresSerialNumber, @AppUserId` | Creates version 1 |
+| `OperationTemplate_CreateNewVersion` | `@ParentOperationTemplateId, ..., @EffectiveFrom, @AppUserId` | New version preserves the previous |
+| `OperationTemplate_Deprecate` | `@Id, @AppUserId` | Soft-deletes a specific version |
 
-`RouteStep`:
-- `RouteStep_ListByRoute @RouteTemplateId`
-- `RouteStep_Add @RouteTemplateId, @SequenceNumber, @OperationTemplateId, @AppUserId`
-- `RouteStep_Update @Id, @SequenceNumber, @OperationTemplateId, @AppUserId`
-- `RouteStep_Remove @Id, @AppUserId`
-- `RouteStep_Reorder @RouteTemplateId, @StepIds NVARCHAR(MAX) /*comma-delimited new order*/, @AppUserId` — drag-and-drop reorder support
+**`RouteTemplate`** (versioned):
 
-`ItemLocation` (eligibility map):
-- `ItemLocation_ListByItem @ItemId` — "where can this part run?"
-- `ItemLocation_ListByLocation @LocationId` — "what parts can run on this machine?"
-- `ItemLocation_Add @ItemId, @LocationId, @AppUserId`
-- `ItemLocation_Remove @ItemId, @LocationId, @AppUserId`
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `RouteTemplate_ListByItem` | `@ItemId, @ActiveOnly BIT = 1` | Usually one active route per item |
+| `RouteTemplate_Get` | `@Id` | Returns route header + steps in order |
+| `RouteTemplate_GetActiveForItem` | `@ItemId, @AsOfDate DATETIME2 = NULL` | Used by production code to pick the version active at a given moment |
+| `RouteTemplate_Create` | `@ItemId, @Name, @EffectiveFrom, @AppUserId` | Empty route, version 1 |
+| `RouteTemplate_CreateNewVersion` | `@ParentRouteTemplateId, @EffectiveFrom, @AppUserId` | Copies steps from prior version |
+| `RouteTemplate_Deprecate` | `@Id, @AppUserId` | |
+
+**`RouteStep`**:
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `RouteStep_ListByRoute` | `@RouteTemplateId` | |
+| `RouteStep_Add` | `@RouteTemplateId, @SequenceNumber, @OperationTemplateId, @AppUserId` | |
+| `RouteStep_Update` | `@Id, @SequenceNumber, @OperationTemplateId, @AppUserId` | |
+| `RouteStep_Remove` | `@Id, @AppUserId` | |
+| `RouteStep_Reorder` | `@RouteTemplateId, @StepIds NVARCHAR(MAX), @AppUserId` | Comma-delimited new order — drag-and-drop reorder support |
+
+**`ItemLocation`** (eligibility map):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `ItemLocation_ListByItem` | `@ItemId` | "Where can this part run?" |
+| `ItemLocation_ListByLocation` | `@LocationId` | "What parts can run on this machine?" |
+| `ItemLocation_Add` | `@ItemId, @LocationId, @AppUserId` | |
+| `ItemLocation_Remove` | `@ItemId, @LocationId, @AppUserId` | |
 
 ### Frontend (Perspective Views)
 
@@ -424,21 +481,27 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 | `Bom` | Header table. One row per `(ParentItemId, VersionNumber)`. Versioned. |
 | `BomLine` | Component lines. Each row = one component item with quantity per parent. |
 
-### API Layer
+### API Layer (Named Queries → Stored Procedures)
 
-`Bom`:
-- `Bom_ListByParentItem @ParentItemId, @ActiveOnly BIT = 1`
-- `Bom_Get @Id` — returns header plus all lines in sort order
-- `Bom_GetActiveForItem @ParentItemId, @AsOfDate DATETIME2 = NULL`
-- `Bom_Create @ParentItemId, @VersionNumber, @EffectiveFrom, @AppUserId`
-- `Bom_CreateNewVersion @ParentBomId, @EffectiveFrom, @AppUserId` — copies all lines from the prior version
-- `Bom_Deprecate @Id, @AppUserId`
+**`Bom`** (versioned):
 
-`BomLine`:
-- `BomLine_ListByBom @BomId`
-- `BomLine_Add @BomId, @ChildItemId, @QtyPer, @UomId, @SortOrder, @AppUserId`
-- `BomLine_Update @Id, @QtyPer, @UomId, @SortOrder, @AppUserId`
-- `BomLine_Remove @Id, @AppUserId`
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `Bom_ListByParentItem` | `@ParentItemId, @ActiveOnly BIT = 1` | All BOM versions for a parent item |
+| `Bom_Get` | `@Id` | Header + all lines in sort order |
+| `Bom_GetActiveForItem` | `@ParentItemId, @AsOfDate DATETIME2 = NULL` | Picks the version active at a given moment |
+| `Bom_Create` | `@ParentItemId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty BOM, no lines |
+| `Bom_CreateNewVersion` | `@ParentBomId, @EffectiveFrom, @AppUserId` | Copies all lines from the prior version |
+| `Bom_Deprecate` | `@Id, @AppUserId` | |
+
+**`BomLine`**:
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `BomLine_ListByBom` | `@BomId` | |
+| `BomLine_Add` | `@BomId, @ChildItemId, @QtyPer, @UomId, @SortOrder, @AppUserId` | |
+| `BomLine_Update` | `@Id, @QtyPer, @UomId, @SortOrder, @AppUserId` | |
+| `BomLine_Remove` | `@Id, @AppUserId` | |
 
 ### Frontend (Perspective Views)
 
@@ -473,34 +536,52 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 | `QualitySpecAttribute` | The measurable attributes per spec version: name, data type, target value, lower limit, upper limit, UOM, sample trigger. |
 | `DefectCode` | Reference list: code, description, area, excused flag. Loaded from `defect_codes.csv` (153 rows). |
 
-### API Layer
+**Seed data to load:**
 
-`QualitySpec` (versioned):
-- `QualitySpec_List @ItemId NULL, @OperationTemplateId NULL`
-- `QualitySpec_Get @Id` — header plus active version plus attributes
-- `QualitySpec_Create @Name, @ItemId NULL, @OperationTemplateId NULL, @AppUserId`
-- `QualitySpec_Deprecate @Id, @AppUserId`
+| Table | Source | Rows | Notes |
+|---|---|---|---|
+| `DefectCode` | `reference/seed_data/defect_codes.csv` | 153 | Codes 100–145 by department: Die Cast, Trim Shop, Machine Shop, Production Control, Quality Control, HSP. Includes `IsExcused` flag. |
 
-`QualitySpecVersion`:
-- `QualitySpecVersion_ListBySpec @QualitySpecId`
-- `QualitySpecVersion_GetActive @QualitySpecId, @AsOfDate DATETIME2 = NULL`
-- `QualitySpecVersion_Create @QualitySpecId, @VersionNumber, @EffectiveFrom, @AppUserId` — creates an empty version
-- `QualitySpecVersion_CreateNewVersion @ParentVersionId, @EffectiveFrom, @AppUserId` — copies attributes
-- `QualitySpecVersion_Deprecate @Id, @AppUserId`
+### API Layer (Named Queries → Stored Procedures)
 
-`QualitySpecAttribute`:
-- `QualitySpecAttribute_ListByVersion @QualitySpecVersionId`
-- `QualitySpecAttribute_Add @QualitySpecVersionId, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId`
-- `QualitySpecAttribute_Update @Id, ..., @AppUserId`
-- `QualitySpecAttribute_Remove @Id, @AppUserId`
+**`QualitySpec`** (header):
 
-`DefectCode` (loaded from seed data):
-- `DefectCode_List @AreaLocationId NULL, @IncludeDeprecated BIT = 0`
-- `DefectCode_Get @Id`
-- `DefectCode_Create @Code, @Description, @AreaLocationId, @IsExcused, @AppUserId`
-- `DefectCode_Update @Id, @Description, @AreaLocationId, @IsExcused, @AppUserId`
-- `DefectCode_Deprecate @Id, @AppUserId`
-- `DefectCode_BulkLoadFromSeed @CsvData NVARCHAR(MAX), @AppUserId` — initial load from `defect_codes.csv`
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `QualitySpec_List` | `@ItemId NULL, @OperationTemplateId NULL` | Filter by item or operation |
+| `QualitySpec_Get` | `@Id` | Header + active version + attributes |
+| `QualitySpec_Create` | `@Name, @ItemId NULL, @OperationTemplateId NULL, @AppUserId` | |
+| `QualitySpec_Deprecate` | `@Id, @AppUserId` | |
+
+**`QualitySpecVersion`** (versioned body):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `QualitySpecVersion_ListBySpec` | `@QualitySpecId` | |
+| `QualitySpecVersion_GetActive` | `@QualitySpecId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given time |
+| `QualitySpecVersion_Create` | `@QualitySpecId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty version |
+| `QualitySpecVersion_CreateNewVersion` | `@ParentVersionId, @EffectiveFrom, @AppUserId` | Copies attributes from prior version |
+| `QualitySpecVersion_Deprecate` | `@Id, @AppUserId` | |
+
+**`QualitySpecAttribute`**:
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `QualitySpecAttribute_ListByVersion` | `@QualitySpecVersionId` | |
+| `QualitySpecAttribute_Add` | `@QualitySpecVersionId, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | |
+| `QualitySpecAttribute_Update` | `@Id, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | |
+| `QualitySpecAttribute_Remove` | `@Id, @AppUserId` | |
+
+**`DefectCode`** (full CRUD + bulk seed):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `DefectCode_List` | `@AreaLocationId NULL, @IncludeDeprecated BIT = 0` | Filter by area |
+| `DefectCode_Get` | `@Id` | |
+| `DefectCode_Create` | `@Code, @Description, @AreaLocationId, @IsExcused, @AppUserId` | |
+| `DefectCode_Update` | `@Id, @Description, @AreaLocationId, @IsExcused, @AppUserId` | `Code` is immutable |
+| `DefectCode_Deprecate` | `@Id, @AppUserId` | |
+| `DefectCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `defect_codes.csv` |
 
 ### Frontend (Perspective Views)
 
@@ -536,25 +617,42 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 | `Shift` | Actual instances created from schedules (this is mostly populated at runtime; configuration tool only manages the schedules). |
 | (no SQL table for OPC tags) | OPC tag catalog from `opc_tags.csv` drives Ignition OPC connection configuration, not a SQL table. |
 
-### API Layer
+**Seed data to load:**
 
-`DowntimeReasonType`:
-- `DowntimeReasonType_List`
+| Table | Source | Rows | Notes |
+|---|---|---|---|
+| `DowntimeReasonType` | hard-coded | 6 | Equipment, Miscellaneous, Mold, Quality, Setup, Unscheduled |
+| `DowntimeReasonCode` | `reference/seed_data/downtime_reason_codes.csv` | 353 | DC=86, MS=242, TS=25. **Note:** ~25 rows have empty `TypeId` per `parse_warnings.md` — engineering must assign types before go-live. |
+| (Ignition OPC config) | `reference/seed_data/opc_tags.csv` | 161 | Drives Ignition OPC connection config (OmniServer + TOPServer), not a SQL table. 71 Omni + 90 TOP rows. |
 
-`DowntimeReasonCode`:
-- `DowntimeReasonCode_List @AreaLocationId NULL, @DowntimeReasonTypeId NULL, @IncludeDeprecated BIT = 0`
-- `DowntimeReasonCode_Get @Id`
-- `DowntimeReasonCode_Create @Code, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId`
-- `DowntimeReasonCode_Update @Id, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId`
-- `DowntimeReasonCode_Deprecate @Id, @AppUserId`
-- `DowntimeReasonCode_BulkLoadFromSeed @CsvData NVARCHAR(MAX), @AppUserId`
+### API Layer (Named Queries → Stored Procedures)
 
-`ShiftSchedule`:
-- `ShiftSchedule_List @ActiveOnly BIT = 1`
-- `ShiftSchedule_Get @Id`
-- `ShiftSchedule_Create @Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId`
-- `ShiftSchedule_Update @Id, @Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId`
-- `ShiftSchedule_Deprecate @Id, @AppUserId`
+**`DowntimeReasonType`** (read-only — seeded):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `DowntimeReasonType_List` | — | Returns 6 fixed types |
+
+**`DowntimeReasonCode`** (full CRUD + bulk seed):
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `DowntimeReasonCode_List` | `@AreaLocationId NULL, @DowntimeReasonTypeId NULL, @IncludeDeprecated BIT = 0` | Filter by area and/or type |
+| `DowntimeReasonCode_Get` | `@Id` | |
+| `DowntimeReasonCode_Create` | `@Code, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | |
+| `DowntimeReasonCode_Update` | `@Id, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | |
+| `DowntimeReasonCode_Deprecate` | `@Id, @AppUserId` | |
+| `DowntimeReasonCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `downtime_reason_codes.csv` |
+
+**`ShiftSchedule`**:
+
+| Procedure | Parameters | Notes |
+|---|---|---|
+| `ShiftSchedule_List` | `@ActiveOnly BIT = 1` | |
+| `ShiftSchedule_Get` | `@Id` | |
+| `ShiftSchedule_Create` | `@Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | |
+| `ShiftSchedule_Update` | `@Id, @Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | |
+| `ShiftSchedule_Deprecate` | `@Id, @AppUserId` | |
 
 ### Frontend (Perspective Views)
 
