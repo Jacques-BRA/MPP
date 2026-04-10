@@ -24,12 +24,13 @@ Start here and work down. Each document builds on the previous.
 
 | # | Document | What It Is | When to Read |
 |---|---|---|---|
+| 0 | `README.md` | Project map for humans (and Claude) — folder structure, regeneration workflow, current status | First-time orientation |
 | 1 | `MPP_MES_SUMMARY.md` | **Start here.** Master summary: project context, production flow, scope matrix (MVP/CONDITIONAL/FUTURE), data model overview, design decisions, reference doc findings, session notes, remaining tasks | Always — this is the project index |
 | 2 | `MPP_MES_DATA_MODEL.md` | Column-level specification for every table across 7 schemas (~50 tables). DDL-ready. | When you need to understand or modify the schema |
-| 3 | `MPP_MES_FDS.md` | Functional Design Specification v0.1 — all 15 sections + appendices. Numbered requirements (FDS-XX-NNN), FRS crosswalk, scope tags. Has its own Open Items Register (OI-01 through OI-10) at the bottom. | When working on design specifications or implementation |
+| 3 | `MPP_MES_FDS.md` | Functional Design Specification v0.4 — all 15 sections + appendices. Numbered requirements (FDS-XX-NNN), FRS crosswalk, scope tags. Has its own Open Items Register (OI-01 through OI-10) at the bottom. | When working on design specifications or implementation |
 | 4 | `MPP_MES_USER_JOURNEYS.md` | Two narrative arcs (Configuration Tool + Plant Floor "day in the life"). 19 validated assumptions/open decisions with an impact matrix. | When designing screens or understanding operator workflows |
 | 5 | `MPP_MES_ERD.html` | Interactive ERD — 8 tabs (one per schema + master), table descriptions, pan/zoom, dark theme | Visual reference for schema relationships |
-| 6 | `MPP_MES_Open_Issues_Register.docx` | Word document consolidating all open items and design decisions. Part A: 10 FDS open items (OI-01–OI-10). Part B: 21 additional design decisions from User Journeys. | When resolving open items or preparing for MPP meetings |
+| 6 | `MPP_MES_Open_Issues_Register.docx` | Word document (v2.3) consolidating all open items and design decisions. Part A: 10 FDS open items (OI-01–OI-10). Part B: 19 user journey items (UJ-01–UJ-19). Includes FRS/FDS reference crosswalk and status tags per item. | When resolving open items or preparing for MPP meetings |
 | 7 | `sql_best_practices_mes.md` | SQL design conventions and MES-specific patterns. Pre-existing — authored by Jacques. Governs all schema design decisions. | When writing or reviewing SQL |
 
 ## Reference Material
@@ -50,7 +51,7 @@ Start here and work down. Each document builds on the previous.
 - **Auth:** Active Directory + Ignition roles. Clock number + PIN for shop floor. No custom RBAC tables.
 - **PLC/OPC:** OmniServer (scales), TOPServer (assembly PLCs), Cognex (vision). MIP handshake for serialized lines.
 - **External:** AIM (Honda EDI) via direct calls logged to `InterfaceLog` (per OI-01 resolution — no outbox). Zebra printers via ZPL.
-- **Design patterns:** ISA-95 self-referential location hierarchy, adjacency list genealogy, spec-driven quality, versioned BOMs/routes/specs, append-only event tables, materialized OEE snapshots (FUTURE), `deprecated_at` soft deletes, surrogate PKs everywhere.
+- **Design patterns:** ISA-95 hierarchy with polymorphic three-tier location model (`LocationType` → `LocationTypeDefinition` → `LocationAttributeDefinition`), adjacency list genealogy, spec-driven quality, versioned BOMs/routes/specs, append-only event tables, materialized OEE snapshots (FUTURE), `DeprecatedAt` soft deletes, surrogate `Id` PKs everywhere.
 
 ## Scope Boundaries
 
