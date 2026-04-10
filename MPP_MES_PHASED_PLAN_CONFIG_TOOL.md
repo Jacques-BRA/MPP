@@ -15,6 +15,7 @@
 | 0.1 | 2026-04-10 | Blue Ridge Automation | Initial phased plan covering 8 configuration tool phases. Each phase scopes data model, API layer (Named Queries → stored procedures), and Perspective frontend requirements. Conceptual — no SQL scripts produced. |
 | 0.2 | 2026-04-10 | Blue Ridge Automation | Reformatted API Layer sections from bulleted lists to tables (Procedure / Parameters / Notes) for Word readability. Added explicit Seed Data tables to Phases 1, 7, and 8 with row counts and source CSVs. No content changes — purely a presentation pass. |
 | 0.3 | 2026-04-10 | Blue Ridge Automation | Restructured the phase ordering: new Phase 1 is **Identity & Audit Foundation** (formerly Phase 2), and the old Phase 1 (Plant Model) is now Phase 2. Added 3 shared **audit infrastructure procedures** (`Audit_LogConfigChange`, `Audit_LogOperation`, `Audit_LogInterfaceCall`) that every CRUD proc in every later phase must call instead of writing audit entries inline. Documented the bootstrap admin user (`Id = 1`, inserted via migration script) to break the chicken-and-egg dependency. Added a **Dependencies** column to every API table across all 8 phases — shows which other procs and tables each procedure relies on, plus which mutating procs call `Audit_LogConfigChange`. Updated cross-cutting concerns to reflect the shared-audit-proc pattern. |
+| 0.4 | 2026-04-10 | Blue Ridge Automation | Added **Executed When** and **Output** columns to every API table across all 8 phases. *Executed When* describes the user/system trigger that causes each proc to run (e.g., "Plant Hierarchy Browser expands a tree node", "Admin submits Add User modal", "Plant Floor production code looks up the active route for this LOT"). *Output* documents what each proc returns — rowset shape, scalar type, or rowcount — making the API contract explicit for the engineer building Named Queries. API tables now have 6 columns: Procedure / Parameters / Notes / Dependencies / Executed When / Output. |
 
 ---
 
@@ -130,41 +131,41 @@ The audit lookup tables (`LogSeverity`, `LogEventType`, `LogEntityType`) are als
 
 These are the **shared audit procs** that every other CRUD proc in the system calls. They are the single source of truth for how audit entries are written. If the audit schema changes, these are the only procs that change — everything else just keeps calling them.
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `Audit_LogConfigChange` | `@AppUserId, @LogEntityTypeId, @EntityId, @LogEventTypeId, @LogSeverityId, @Description, @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.ConfigLog`. **Called by every Create/Update/Deprecate proc in every Configuration Tool phase.** | `Audit.ConfigLog`, `Audit.LogEntityType`, `Audit.LogEventType`, `Audit.LogSeverity`, `AppUser` |
-| `Audit_LogOperation` | `@AppUserId, @TerminalLocationId, @LocationId, @LogEntityTypeId, @EntityId, @LogEventTypeId, @LogSeverityId, @Description, @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.OperationLog`. Called by every plant-floor mutation in the Arc 2 build (LOT creation, movement, production recording, holds, etc.). **Defined here, used in the Plant Floor phased plan.** | `Audit.OperationLog`, `Location`, `AppUser`, audit lookups |
-| `Audit_LogInterfaceCall` | `@SystemName VARCHAR(50), @Direction VARCHAR(10), @LogEventTypeId, @Description, @RequestPayload NVARCHAR(MAX) NULL, @ResponsePayload NVARCHAR(MAX) NULL, @ErrorCondition NVARCHAR(200) NULL, @IsHighFidelity BIT = 0` | Writes one row to `Audit.InterfaceLog`. Called by every AIM, Zebra, Macola, or Intelex call. Per FRS 3.17.4, `@IsHighFidelity` controls whether the full request/response payloads are stored or just the metadata. | `Audit.InterfaceLog`, audit lookups |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `Audit_LogConfigChange` | `@AppUserId, @LogEntityTypeId, @EntityId, @LogEventTypeId, @LogSeverityId, @Description, @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.ConfigLog`. **Called by every Create/Update/Deprecate proc in every Configuration Tool phase.** | `Audit.ConfigLog`, `Audit.LogEntityType`, `Audit.LogEventType`, `Audit.LogSeverity`, `AppUser` | Inside any Configuration Tool mutation proc, just before returning | Scalar: new `ConfigLog.Id` (BIGINT). Typically ignored by callers. |
+| `Audit_LogOperation` | `@AppUserId, @TerminalLocationId, @LocationId, @LogEntityTypeId, @EntityId, @LogEventTypeId, @LogSeverityId, @Description, @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.OperationLog`. Called by every plant-floor mutation in the Arc 2 build (LOT creation, movement, production recording, holds, etc.). **Defined here, used in the Plant Floor phased plan.** | `Audit.OperationLog`, `Location`, `AppUser`, audit lookups | Inside any Plant Floor mutation proc (Arc 2), just before returning | Scalar: new `OperationLog.Id` (BIGINT). Typically ignored by callers. |
+| `Audit_LogInterfaceCall` | `@SystemName VARCHAR(50), @Direction VARCHAR(10), @LogEventTypeId, @Description, @RequestPayload NVARCHAR(MAX) NULL, @ResponsePayload NVARCHAR(MAX) NULL, @ErrorCondition NVARCHAR(200) NULL, @IsHighFidelity BIT = 0` | Writes one row to `Audit.InterfaceLog`. Called by every AIM, Zebra, Macola, or Intelex call. Per FRS 3.17.4, `@IsHighFidelity` controls whether the full request/response payloads are stored or just the metadata. | `Audit.InterfaceLog`, audit lookups | Inside any external-system call wrapper (before and/or after the HTTP/API request) | Scalar: new `InterfaceLog.Id` (BIGINT). Typically ignored by callers. |
 
 ### API Layer (Named Queries → Stored Procedures)
 
 **`AppUser`** (full CRUD + lookup variants):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `AppUser_List` | `@IncludeDeprecated BIT = 0` | Active users by default | `AppUser` |
-| `AppUser_Get` | `@Id` | | `AppUser` |
-| `AppUser_GetByAdAccount` | `@AdAccount` | Session resolution at AD login | `AppUser` |
-| `AppUser_GetByClockNumber` | `@ClockNumber` | Shop-floor login lookup | `AppUser` |
-| `AppUser_Create` | `@AdAccount, @DisplayName, @ClockNumber, @PinHash, @IgnitionRole, @AppUserId` | `@AppUserId` is the admin creating the row | `AppUser`, calls `Audit_LogConfigChange` |
-| `AppUser_Update` | `@Id, @DisplayName, @ClockNumber, @IgnitionRole, @AppUserId` | PIN changes go through `_SetPin` | `AppUser`, calls `Audit_LogConfigChange` |
-| `AppUser_SetPin` | `@Id, @PinHash, @AppUserId` | Separate proc keeps PIN out of the general Update flow | `AppUser`, calls `Audit_LogConfigChange` (with redacted `@OldValue`/`@NewValue`) |
-| `AppUser_Deprecate` | `@Id, @AppUserId` | Rejects if active records reference this user as creator | `AppUser`, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `AppUser_List` | `@IncludeDeprecated BIT = 0` | Active users by default | `AppUser` | User Management screen loads | Rowset: `AppUser` rows |
+| `AppUser_Get` | `@Id` | | `AppUser` | Edit User modal opens | Rowset (0-1): one `AppUser` row |
+| `AppUser_GetByAdAccount` | `@AdAccount` | Session resolution at AD login | `AppUser` | User opens a Perspective session and Ignition resolves their AD identity | Rowset (0-1): one `AppUser` row |
+| `AppUser_GetByClockNumber` | `@ClockNumber` | Shop-floor login lookup | `AppUser` | Operator enters clock number + PIN at a shop-floor terminal (Arc 2 usage) | Rowset (0-1): one `AppUser` row |
+| `AppUser_Create` | `@AdAccount, @DisplayName, @ClockNumber, @PinHash, @IgnitionRole, @AppUserId` | `@AppUserId` is the admin creating the row | `AppUser`, calls `Audit_LogConfigChange` | Admin submits Add User modal | Scalar: new `AppUser.Id` (INT) |
+| `AppUser_Update` | `@Id, @DisplayName, @ClockNumber, @IgnitionRole, @AppUserId` | PIN changes go through `_SetPin` | `AppUser`, calls `Audit_LogConfigChange` | Admin saves Edit User form | Rowcount (0 on optimistic-lock mismatch) |
+| `AppUser_SetPin` | `@Id, @PinHash, @AppUserId` | Separate proc keeps PIN out of the general Update flow | `AppUser`, calls `Audit_LogConfigChange` (with redacted `@OldValue`/`@NewValue`) | User or admin submits PIN Reset form (hashed client-side first) | Rowcount |
+| `AppUser_Deprecate` | `@Id, @AppUserId` | Rejects if active records reference this user as creator | `AppUser`, calls `Audit_LogConfigChange` | Admin clicks Deprecate on a user row | Rowcount (0 if rejected due to active dependents) |
 
 **Audit lookup tables** (read-only after seeding):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `LogSeverity_List` | — | Info, Warning, Error, Critical | `Audit.LogSeverity` |
-| `LogEventType_List` | — | ConfigChanged, LotCreated, LotMoved, ProductionRecorded, etc. | `Audit.LogEventType` |
-| `LogEntityType_List` | — | Location, Item, Lot, BOM, AppUser, etc. | `Audit.LogEntityType` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `LogSeverity_List` | — | Info, Warning, Error, Critical | `Audit.LogSeverity` | Audit Log Browser filter dropdown loads | Rowset: `LogSeverity` rows |
+| `LogEventType_List` | — | ConfigChanged, LotCreated, LotMoved, ProductionRecorded, etc. | `Audit.LogEventType` | Audit Log Browser filter dropdown loads | Rowset: `LogEventType` rows |
+| `LogEntityType_List` | — | Location, Item, Lot, BOM, AppUser, etc. | `Audit.LogEntityType` | Audit Log Browser filter dropdown loads | Rowset: `LogEntityType` rows |
 
 **`Audit.ConfigLog`** (read-only from the Configuration Tool — written only by `Audit_LogConfigChange`):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `ConfigLog_List` | `@StartDate, @EndDate, @LogEntityTypeId NULL, @AppUserId NULL` | Paged, filterable | `Audit.ConfigLog`, `AppUser`, `Audit.LogEntityType` |
-| `ConfigLog_GetByEntity` | `@LogEntityTypeId, @EntityId` | "Show me everything ever changed about this Item / Location / BOM" | `Audit.ConfigLog` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `ConfigLog_List` | `@StartDate, @EndDate, @LogEntityTypeId NULL, @AppUserId NULL` | Paged, filterable | `Audit.ConfigLog`, `AppUser`, `Audit.LogEntityType` | Audit Log Browser loads or user changes filters | Rowset: `ConfigLog` rows joined to `AppUser.DisplayName` and `LogEntityType.Name` |
+| `ConfigLog_GetByEntity` | `@LogEntityTypeId, @EntityId` | "Show me everything ever changed about this Item / Location / BOM" | `Audit.ConfigLog` | User clicks "View Audit History" on any Configuration Tool screen | Rowset: `ConfigLog` rows for one entity, ordered newest first |
 
 ### Frontend (Perspective Views)
 
@@ -223,57 +224,57 @@ Tables involved (all from the `Location` schema, per `MPP_MES_DATA_MODEL.md` §1
 
 **`LocationType`** (read-only — seeded at deployment):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `LocationType_List` | — | Returns all 5 tiers | `LocationType` |
-| `LocationType_Get` | `@Id` | Single tier | `LocationType` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `LocationType_List` | — | Returns all 5 tiers | `LocationType` | Engineering opens a form that needs a tier dropdown (e.g., creating a new LocationTypeDefinition) | Rowset: 5 `LocationType` rows |
+| `LocationType_Get` | `@Id` | Single tier | `LocationType` | Rarely called directly; mostly used via joins from other procs | Rowset (0-1): one `LocationType` row |
 
 **`LocationTypeDefinition`** (full CRUD):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `LocationTypeDefinition_List` | `@LocationTypeId NULL` | Optional filter by tier | `LocationTypeDefinition`, `LocationType` |
-| `LocationTypeDefinition_Get` | `@Id` | | `LocationTypeDefinition` |
-| `LocationTypeDefinition_Create` | `@LocationTypeId, @Code, @Name, @Description, @AppUserId` | Returns new `Id` | `LocationType` (FK), calls `Audit_LogConfigChange` |
-| `LocationTypeDefinition_Update` | `@Id, @Name, @Description, @AppUserId` | `LocationTypeId` is immutable after create | calls `Audit_LogConfigChange` |
-| `LocationTypeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any active `Location` references it | reads `Location`, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `LocationTypeDefinition_List` | `@LocationTypeId NULL` | Optional filter by tier | `LocationTypeDefinition`, `LocationType` | Location Type Definition Editor loads; Add Location modal populates its kind dropdown | Rowset: `LocationTypeDefinition` rows with tier name |
+| `LocationTypeDefinition_Get` | `@Id` | | `LocationTypeDefinition` | Engineering opens a definition for editing | Rowset (0-1): one definition row |
+| `LocationTypeDefinition_Create` | `@LocationTypeId, @Code, @Name, @Description, @AppUserId` | Returns new `Id` | `LocationType` (FK), calls `Audit_LogConfigChange` | Engineering submits "New Definition" in the Editor | Scalar: new `LocationTypeDefinition.Id` (INT) |
+| `LocationTypeDefinition_Update` | `@Id, @Name, @Description, @AppUserId` | `LocationTypeId` is immutable after create | calls `Audit_LogConfigChange` | Engineering saves changes to a definition | Rowcount |
+| `LocationTypeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any active `Location` references it | reads `Location`, calls `Audit_LogConfigChange` | Engineering clicks Deprecate on a definition | Rowcount (0 if rejected due to active dependents) |
 
 **`LocationAttributeDefinition`** (full CRUD, scoped to a parent definition):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `LocationAttributeDefinition_ListByDefinition` | `@LocationTypeDefinitionId` | Attribute schema for one kind | `LocationAttributeDefinition` |
-| `LocationAttributeDefinition_Get` | `@Id` | | `LocationAttributeDefinition` |
-| `LocationAttributeDefinition_Create` | `@LocationTypeDefinitionId, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | | `LocationTypeDefinition` (FK), calls `Audit_LogConfigChange` |
-| `LocationAttributeDefinition_Update` | `@Id, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | | calls `Audit_LogConfigChange` |
-| `LocationAttributeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any `LocationAttribute` references it | reads `LocationAttribute`, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `LocationAttributeDefinition_ListByDefinition` | `@LocationTypeDefinitionId` | Attribute schema for one kind | `LocationAttributeDefinition` | Engineering opens a definition in the Editor; Location Details Panel renders the dynamic attribute form | Rowset: attribute definition rows |
+| `LocationAttributeDefinition_Get` | `@Id` | | `LocationAttributeDefinition` | Edit Attribute form opens | Rowset (0-1): one attribute definition row |
+| `LocationAttributeDefinition_Create` | `@LocationTypeDefinitionId, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | | `LocationTypeDefinition` (FK), calls `Audit_LogConfigChange` | Engineering adds an attribute to a definition | Scalar: new `LocationAttributeDefinition.Id` (INT) |
+| `LocationAttributeDefinition_Update` | `@Id, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering edits an attribute | Rowcount |
+| `LocationAttributeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any `LocationAttribute` references it | reads `LocationAttribute`, calls `Audit_LogConfigChange` | Engineering removes an attribute from a definition | Rowcount (0 if rejected) |
 
 **`Location`** (full CRUD + tree queries):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `Location_List` | `@ParentLocationId NULL, @LocationTypeDefinitionId NULL` | Children and/or filtered by kind | `Location`, `LocationTypeDefinition` |
-| `Location_GetTree` | `@RootLocationId` | Recursive CTE: full hierarchy from a root down | `Location` (recursive) |
-| `Location_GetAncestors` | `@LocationId` | Recursive CTE: from this location up to root | `Location` (recursive) |
-| `Location_GetDescendantsOfType` | `@LocationId, @LocationTypeId` | E.g., "all Cells under the Die Cast Area" | `Location` (recursive), `LocationTypeDefinition` |
-| `Location_Get` | `@Id` | Returns location + all current `LocationAttribute` values | `Location`, `LocationAttribute`, `LocationAttributeDefinition` |
-| `Location_Create` | `@LocationTypeDefinitionId, @ParentLocationId, @Name, @Code, @Description, @AppUserId` | | `LocationTypeDefinition` (FK), `Location` (parent FK), calls `Audit_LogConfigChange` |
-| `Location_Update` | `@Id, @Name, @Code, @Description, @AppUserId` | | calls `Audit_LogConfigChange` |
-| `Location_Deprecate` | `@Id, @AppUserId` | Rejects if active `Lot.CurrentLocationId` or `LotMovement` references exist | reads `Lot`, `LotMovement`, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `Location_List` | `@ParentLocationId NULL, @LocationTypeDefinitionId NULL` | Children and/or filtered by kind | `Location`, `LocationTypeDefinition` | Plant Hierarchy Browser expands a tree node to list its children | Rowset: `Location` rows with definition name and tier |
+| `Location_GetTree` | `@RootLocationId` | Recursive CTE: full hierarchy from a root down | `Location` (recursive) | Plant Hierarchy Browser initial load from the Enterprise root, or a deep refresh | Rowset: all descendant `Location` rows with `Depth` and materialized path |
+| `Location_GetAncestors` | `@LocationId` | Recursive CTE: from this location up to root | `Location` (recursive) | Breadcrumb navigation renders the path from root to the selected node | Rowset: ancestor `Location` rows ordered root→current |
+| `Location_GetDescendantsOfType` | `@LocationId, @LocationTypeId` | E.g., "all Cells under the Die Cast Area" | `Location` (recursive), `LocationTypeDefinition` | Eligibility Map Editor loads Cells for an area; Plant Floor looks up eligible machines (Arc 2 usage) | Rowset: matching descendant `Location` rows |
+| `Location_Get` | `@Id` | Returns location + all current `LocationAttribute` values | `Location`, `LocationAttribute`, `LocationAttributeDefinition` | User clicks a tree node to load its details panel | Rowset: one `Location` row plus a second rowset of its attribute values, OR a single joined rowset with one row per attribute |
+| `Location_Create` | `@LocationTypeDefinitionId, @ParentLocationId, @Name, @Code, @Description, @AppUserId` | | `LocationTypeDefinition` (FK), `Location` (parent FK), calls `Audit_LogConfigChange` | Engineering submits Add Location modal | Scalar: new `Location.Id` (INT) |
+| `Location_Update` | `@Id, @Name, @Code, @Description, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering saves Location Details Panel changes | Rowcount |
+| `Location_Deprecate` | `@Id, @AppUserId` | Rejects if active `Lot.CurrentLocationId` or `LotMovement` references exist | reads `Lot`, `LotMovement`, calls `Audit_LogConfigChange` | Engineering clicks Deprecate on a location node | Rowcount (0 if rejected) |
 
 **`LocationAttribute`** (per-instance values):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `LocationAttribute_GetByLocation` | `@LocationId` | All current values for one location | `LocationAttribute`, `LocationAttributeDefinition` |
-| `LocationAttribute_Set` | `@LocationId, @LocationAttributeDefinitionId, @AttributeValue, @AppUserId` | Upsert; validates definition belongs to location's kind | `Location`, `LocationAttributeDefinition`, calls `Audit_LogConfigChange` |
-| `LocationAttribute_Clear` | `@LocationId, @LocationAttributeDefinitionId, @AppUserId` | Remove value; rejects if `IsRequired` | `LocationAttributeDefinition`, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `LocationAttribute_GetByLocation` | `@LocationId` | All current values for one location | `LocationAttribute`, `LocationAttributeDefinition` | Loading the Location Details Panel's attribute form | Rowset: attribute rows joined to their definitions (name, data type, UOM, required flag) |
+| `LocationAttribute_Set` | `@LocationId, @LocationAttributeDefinitionId, @AttributeValue, @AppUserId` | Upsert; validates definition belongs to location's kind | `Location`, `LocationAttributeDefinition`, calls `Audit_LogConfigChange` | User saves a changed attribute value in the Details Panel (one call per changed attribute) | Rowcount |
+| `LocationAttribute_Clear` | `@LocationId, @LocationAttributeDefinitionId, @AppUserId` | Remove value; rejects if `IsRequired` | `LocationAttributeDefinition`, calls `Audit_LogConfigChange` | User clears a non-required attribute | Rowcount (0 if rejected) |
 
 **Seed loading** (one-time):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `Location_BulkLoadMachinesFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Loads `machines.csv`. Alternative: Ignition Gateway script calling `Location_Create` per row. | calls `Location_Create` per row (transitively `Audit_LogConfigChange`) |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `Location_BulkLoadMachinesFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Loads `machines.csv`. Alternative: Ignition Gateway script calling `Location_Create` per row. | calls `Location_Create` per row (transitively `Audit_LogConfigChange`) | Engineer runs the Bulk Seed Loader screen during initial deployment (one-time) | Scalar: count of rows inserted, or a result set summarizing inserts/failures |
 
 ### Frontend (Perspective Views)
 
@@ -324,20 +325,20 @@ Each table follows one of two standard patterns based on whether engineering can
 
 **Read-only pattern** (`LotOriginType`, `LotStatusCode`, `ContainerStatusCode`, `GenealogyRelationshipType`, `OperationStatus`, `WorkOrderStatus`):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `<Entity>_List` | — | Returns all rows | `<Entity>` table |
-| `<Entity>_Get` | `@Id` | Single row | `<Entity>` table |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `<Entity>_List` | — | Returns all rows | `<Entity>` table | Reference Data Manager tab loads; dropdown populates on any other screen needing this code table (e.g., LOT status dropdown on plant-floor screens) | Rowset: all `<Entity>` rows |
+| `<Entity>_Get` | `@Id` | Single row | `<Entity>` table | Detail view of a specific row (rare) | Rowset (0-1): one `<Entity>` row |
 
 **Mutable pattern** (`Uom`, `ItemType` — engineering can add new entries):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `<Entity>_List` | `@IncludeDeprecated BIT = 0` | | `<Entity>` table |
-| `<Entity>_Get` | `@Id` | | `<Entity>` table |
-| `<Entity>_Create` | `@Code, @Name, @Description, @AppUserId` | Returns new `Id` | calls `Audit_LogConfigChange` |
-| `<Entity>_Update` | `@Id, @Name, @Description, @AppUserId` | `Code` is immutable | calls `Audit_LogConfigChange` |
-| `<Entity>_Deprecate` | `@Id, @AppUserId` | Rejects on active dependents | reads referencing tables, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `<Entity>_List` | `@IncludeDeprecated BIT = 0` | | `<Entity>` table | Reference Data Manager tab loads; dropdown population on other screens (Item Master needs Uom + ItemType) | Rowset: `<Entity>` rows |
+| `<Entity>_Get` | `@Id` | | `<Entity>` table | Edit modal opens | Rowset (0-1): one row |
+| `<Entity>_Create` | `@Code, @Name, @Description, @AppUserId` | Returns new `Id` | calls `Audit_LogConfigChange` | Admin submits Add modal | Scalar: new `<Entity>.Id` (INT) |
+| `<Entity>_Update` | `@Id, @Name, @Description, @AppUserId` | `Code` is immutable | calls `Audit_LogConfigChange` | Admin saves Edit form | Rowcount |
+| `<Entity>_Deprecate` | `@Id, @AppUserId` | Rejects on active dependents | reads referencing tables, calls `Audit_LogConfigChange` | Admin clicks Deprecate | Rowcount (0 if rejected) |
 
 ### Frontend (Perspective Views)
 
@@ -374,23 +375,23 @@ This phase is intentionally minimal. The frontend is a generic CRUD grid that lo
 
 **`Item`**:
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `Item_List` | `@ItemTypeId NULL, @SearchText NULL, @IncludeDeprecated BIT = 0` | Filterable list | `Item`, `ItemType`, `Uom` |
-| `Item_Get` | `@Id` | | `Item` |
-| `Item_GetByPartNumber` | `@PartNumber` | For BOM/route construction lookups | `Item` |
-| `Item_Create` | `@PartNumber, @ItemTypeId, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | Returns new `Id` | `ItemType` (FK), `Uom` (FK), calls `Audit_LogConfigChange` |
-| `Item_Update` | `@Id, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | `PartNumber` and `ItemTypeId` are immutable — to change, deprecate and recreate | `Uom` (FK), calls `Audit_LogConfigChange` |
-| `Item_Deprecate` | `@Id, @AppUserId` | Rejects if active `Bom`, `RouteTemplate`, `ItemLocation`, or `ContainerConfig` references exist | reads `Bom`, `RouteTemplate`, `ItemLocation`, `ContainerConfig`, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `Item_List` | `@ItemTypeId NULL, @SearchText NULL, @IncludeDeprecated BIT = 0` | Filterable list | `Item`, `ItemType`, `Uom` | Item Master List loads; Item Picker component loads | Rowset: `Item` rows joined to `ItemType.Name` and `Uom.Code` |
+| `Item_Get` | `@Id` | | `Item` | Item Editor opens | Rowset (0-1): one `Item` row |
+| `Item_GetByPartNumber` | `@PartNumber` | For BOM/route construction lookups | `Item` | BOM/route construction validates a typed or scanned part number; Plant Floor validates a scanned source LOT's part (Arc 2 usage) | Rowset (0-1): one `Item` row |
+| `Item_Create` | `@PartNumber, @ItemTypeId, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | Returns new `Id` | `ItemType` (FK), `Uom` (FK), calls `Audit_LogConfigChange` | Engineering submits New Item form | Scalar: new `Item.Id` (INT) |
+| `Item_Update` | `@Id, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | `PartNumber` and `ItemTypeId` are immutable — to change, deprecate and recreate | `Uom` (FK), calls `Audit_LogConfigChange` | Engineering saves Item Editor changes | Rowcount |
+| `Item_Deprecate` | `@Id, @AppUserId` | Rejects if active `Bom`, `RouteTemplate`, `ItemLocation`, or `ContainerConfig` references exist | reads `Bom`, `RouteTemplate`, `ItemLocation`, `ContainerConfig`, calls `Audit_LogConfigChange` | Engineering clicks Deprecate on an item | Rowcount (0 if rejected) |
 
 **`ContainerConfig`**:
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `ContainerConfig_GetByItem` | `@ItemId` | Usually one config per item | `ContainerConfig` |
-| `ContainerConfig_Create` | `@ItemId, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | OI-02 may add `@ClosureMethod` and `@TargetWeight` | `Item` (FK), calls `Audit_LogConfigChange` |
-| `ContainerConfig_Update` | `@Id, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | | calls `Audit_LogConfigChange` |
-| `ContainerConfig_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `ContainerConfig_GetByItem` | `@ItemId` | Usually one config per item | `ContainerConfig` | Container Config tab opens in Item Editor; Plant Floor container lifecycle needs the packing rules (Arc 2 usage) | Rowset (0-1): one `ContainerConfig` row |
+| `ContainerConfig_Create` | `@ItemId, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | OI-02 may add `@ClosureMethod` and `@TargetWeight` | `Item` (FK), calls `Audit_LogConfigChange` | Engineering saves a new container config for a finished good | Scalar: new `ContainerConfig.Id` (INT) |
+| `ContainerConfig_Update` | `@Id, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering edits an existing container config | Rowcount |
+| `ContainerConfig_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering removes a container config | Rowcount |
 
 ### Frontend (Perspective Views)
 
@@ -433,43 +434,43 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 
 **`OperationTemplate`** (versioned):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `OperationTemplate_List` | `@AreaLocationId NULL, @ActiveOnly BIT = 1` | Filter by area | `OperationTemplate`, `Location` |
-| `OperationTemplate_Get` | `@Id` | | `OperationTemplate` |
-| `OperationTemplate_Create` | `@Name, @AreaLocationId, @CollectsDieInfo, @CollectsCavityInfo, @CollectsWeight, @CollectsGoodCount, @CollectsBadCount, @RequiresMaterialVerification, @RequiresSerialNumber, @AppUserId` | Creates version 1 | `Location` (Area FK), calls `Audit_LogConfigChange` |
-| `OperationTemplate_CreateNewVersion` | `@ParentOperationTemplateId, ..., @EffectiveFrom, @AppUserId` | New version preserves the previous | reads `OperationTemplate`, calls `Audit_LogConfigChange` |
-| `OperationTemplate_Deprecate` | `@Id, @AppUserId` | Soft-deletes a specific version | reads `RouteStep`, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `OperationTemplate_List` | `@AreaLocationId NULL, @ActiveOnly BIT = 1` | Filter by area | `OperationTemplate`, `Location` | Operation Template Library loads; Route Builder dropdown populates when adding a step | Rowset: `OperationTemplate` rows joined to area name |
+| `OperationTemplate_Get` | `@Id` | | `OperationTemplate` | Engineering opens a template in the Editor | Rowset (0-1): one template row |
+| `OperationTemplate_Create` | `@Name, @AreaLocationId, @CollectsDieInfo, @CollectsCavityInfo, @CollectsWeight, @CollectsGoodCount, @CollectsBadCount, @RequiresMaterialVerification, @RequiresSerialNumber, @AppUserId` | Creates version 1 | `Location` (Area FK), calls `Audit_LogConfigChange` | Engineering submits New Template form | Scalar: new `OperationTemplate.Id` (INT) |
+| `OperationTemplate_CreateNewVersion` | `@ParentOperationTemplateId, ..., @EffectiveFrom, @AppUserId` | New version preserves the previous | reads `OperationTemplate`, calls `Audit_LogConfigChange` | Engineering clicks "Save as New Version" | Scalar: new version `OperationTemplate.Id` (INT) |
+| `OperationTemplate_Deprecate` | `@Id, @AppUserId` | Soft-deletes a specific version | reads `RouteStep`, calls `Audit_LogConfigChange` | Engineering deprecates a template version | Rowcount (0 if rejected due to active route steps) |
 
 **`RouteTemplate`** (versioned):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `RouteTemplate_ListByItem` | `@ItemId, @ActiveOnly BIT = 1` | Usually one active route per item | `RouteTemplate` |
-| `RouteTemplate_Get` | `@Id` | Returns route header + steps in order | `RouteTemplate`, `RouteStep`, `OperationTemplate` |
-| `RouteTemplate_GetActiveForItem` | `@ItemId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given moment | `RouteTemplate` |
-| `RouteTemplate_Create` | `@ItemId, @Name, @EffectiveFrom, @AppUserId` | Empty route, version 1 | `Item` (FK), calls `Audit_LogConfigChange` |
-| `RouteTemplate_CreateNewVersion` | `@ParentRouteTemplateId, @EffectiveFrom, @AppUserId` | Copies steps from prior version | reads `RouteTemplate`, `RouteStep`; calls `Audit_LogConfigChange` |
-| `RouteTemplate_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `RouteTemplate_ListByItem` | `@ItemId, @ActiveOnly BIT = 1` | Usually one active route per item | `RouteTemplate` | Route Builder opens for an item; Item Editor's Routes tab loads | Rowset: `RouteTemplate` rows ordered by version |
+| `RouteTemplate_Get` | `@Id` | Returns route header + steps in order | `RouteTemplate`, `RouteStep`, `OperationTemplate` | Opening a specific route version in the Route Builder | Rowset: one route header + joined rowset of ordered steps with operation names |
+| `RouteTemplate_GetActiveForItem` | `@ItemId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given moment | `RouteTemplate` | Plant Floor production code looks up "what route governs this LOT right now?" (Arc 2 usage) | Rowset (0-1): one active route header |
+| `RouteTemplate_Create` | `@ItemId, @Name, @EffectiveFrom, @AppUserId` | Empty route, version 1 | `Item` (FK), calls `Audit_LogConfigChange` | Engineering creates a first route for an item | Scalar: new `RouteTemplate.Id` (INT) |
+| `RouteTemplate_CreateNewVersion` | `@ParentRouteTemplateId, @EffectiveFrom, @AppUserId` | Copies steps from prior version | reads `RouteTemplate`, `RouteStep`; calls `Audit_LogConfigChange` | Engineering clicks "New Version" in Route Builder | Scalar: new version `RouteTemplate.Id` (INT) |
+| `RouteTemplate_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering deprecates a route version | Rowcount |
 
 **`RouteStep`**:
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `RouteStep_ListByRoute` | `@RouteTemplateId` | | `RouteStep`, `OperationTemplate` |
-| `RouteStep_Add` | `@RouteTemplateId, @SequenceNumber, @OperationTemplateId, @AppUserId` | | `RouteTemplate` (FK), `OperationTemplate` (FK), calls `Audit_LogConfigChange` |
-| `RouteStep_Update` | `@Id, @SequenceNumber, @OperationTemplateId, @AppUserId` | | `OperationTemplate` (FK), calls `Audit_LogConfigChange` |
-| `RouteStep_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
-| `RouteStep_Reorder` | `@RouteTemplateId, @StepIds NVARCHAR(MAX), @AppUserId` | Comma-delimited new order — drag-and-drop reorder support | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `RouteStep_ListByRoute` | `@RouteTemplateId` | | `RouteStep`, `OperationTemplate` | Route Builder displays steps for the current route | Rowset: `RouteStep` rows joined to operation name, ordered by `SequenceNumber` |
+| `RouteStep_Add` | `@RouteTemplateId, @SequenceNumber, @OperationTemplateId, @AppUserId` | | `RouteTemplate` (FK), `OperationTemplate` (FK), calls `Audit_LogConfigChange` | Engineering adds a step in Route Builder | Scalar: new `RouteStep.Id` (INT) |
+| `RouteStep_Update` | `@Id, @SequenceNumber, @OperationTemplateId, @AppUserId` | | `OperationTemplate` (FK), calls `Audit_LogConfigChange` | Engineering edits a step's operation or sequence | Rowcount |
+| `RouteStep_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering removes a step from a route | Rowcount |
+| `RouteStep_Reorder` | `@RouteTemplateId, @StepIds NVARCHAR(MAX), @AppUserId` | Comma-delimited new order — drag-and-drop reorder support | calls `Audit_LogConfigChange` | User drops a step in a new position in the Route Builder | Rowcount: total steps reordered |
 
 **`ItemLocation`** (eligibility map):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `ItemLocation_ListByItem` | `@ItemId` | "Where can this part run?" | `ItemLocation`, `Location` |
-| `ItemLocation_ListByLocation` | `@LocationId` | "What parts can run on this machine?" | `ItemLocation`, `Item` |
-| `ItemLocation_Add` | `@ItemId, @LocationId, @AppUserId` | | `Item` (FK), `Location` (FK), calls `Audit_LogConfigChange` |
-| `ItemLocation_Remove` | `@ItemId, @LocationId, @AppUserId` | | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `ItemLocation_ListByItem` | `@ItemId` | "Where can this part run?" | `ItemLocation`, `Location` | Item Editor's Eligibility tab loads; Plant Floor validates a machine selection for a LOT (Arc 2 usage) | Rowset: `Location` rows eligible for this item |
+| `ItemLocation_ListByLocation` | `@LocationId` | "What parts can run on this machine?" | `ItemLocation`, `Item` | Eligibility Map Editor loads machine column; Plant Floor machine screen shows available parts (Arc 2 usage) | Rowset: `Item` rows eligible on this location |
+| `ItemLocation_Add` | `@ItemId, @LocationId, @AppUserId` | | `Item` (FK), `Location` (FK), calls `Audit_LogConfigChange` | Engineering checks a cell in the Eligibility Map matrix | Rowcount (1 if inserted, 0 if already existed) |
+| `ItemLocation_Remove` | `@ItemId, @LocationId, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering unchecks a cell in the Eligibility Map matrix | Rowcount |
 
 ### Frontend (Perspective Views)
 
@@ -508,23 +509,23 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 
 **`Bom`** (versioned):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `Bom_ListByParentItem` | `@ParentItemId, @ActiveOnly BIT = 1` | All BOM versions for a parent item | `Bom` |
-| `Bom_Get` | `@Id` | Header + all lines in sort order | `Bom`, `BomLine`, `Item` |
-| `Bom_GetActiveForItem` | `@ParentItemId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given moment | `Bom` |
-| `Bom_Create` | `@ParentItemId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty BOM, no lines | `Item` (FK), calls `Audit_LogConfigChange` |
-| `Bom_CreateNewVersion` | `@ParentBomId, @EffectiveFrom, @AppUserId` | Copies all lines from the prior version | reads `Bom`, `BomLine`; calls `Audit_LogConfigChange` |
-| `Bom_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `Bom_ListByParentItem` | `@ParentItemId, @ActiveOnly BIT = 1` | All BOM versions for a parent item | `Bom` | BOM tab opens in Item Editor; BOM Editor version selector loads | Rowset: `Bom` rows ordered by version |
+| `Bom_Get` | `@Id` | Header + all lines in sort order | `Bom`, `BomLine`, `Item` | Opening a BOM version in the BOM Editor | Rowset: one `Bom` header + joined rowset of `BomLine` rows with child item names |
+| `Bom_GetActiveForItem` | `@ParentItemId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given moment | `Bom` | Plant Floor assembly validates material against the BOM active at run time (Arc 2 usage) | Rowset (0-1): one active `Bom` header |
+| `Bom_Create` | `@ParentItemId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty BOM, no lines | `Item` (FK), calls `Audit_LogConfigChange` | Engineering creates a first BOM for an item | Scalar: new `Bom.Id` (INT) |
+| `Bom_CreateNewVersion` | `@ParentBomId, @EffectiveFrom, @AppUserId` | Copies all lines from the prior version | reads `Bom`, `BomLine`; calls `Audit_LogConfigChange` | Engineering clicks "New Version" in the BOM Editor | Scalar: new version `Bom.Id` (INT) |
+| `Bom_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering deprecates a BOM version | Rowcount |
 
 **`BomLine`**:
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `BomLine_ListByBom` | `@BomId` | | `BomLine`, `Item`, `Uom` |
-| `BomLine_Add` | `@BomId, @ChildItemId, @QtyPer, @UomId, @SortOrder, @AppUserId` | | `Bom` (FK), `Item` (FK), `Uom` (FK), calls `Audit_LogConfigChange` |
-| `BomLine_Update` | `@Id, @QtyPer, @UomId, @SortOrder, @AppUserId` | | `Uom` (FK), calls `Audit_LogConfigChange` |
-| `BomLine_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `BomLine_ListByBom` | `@BomId` | | `BomLine`, `Item`, `Uom` | BOM Editor renders the component lines for the active version | Rowset: `BomLine` rows joined to child item name and UOM code, ordered by `SortOrder` |
+| `BomLine_Add` | `@BomId, @ChildItemId, @QtyPer, @UomId, @SortOrder, @AppUserId` | | `Bom` (FK), `Item` (FK), `Uom` (FK), calls `Audit_LogConfigChange` | Engineering adds a component line via the Item Picker | Scalar: new `BomLine.Id` (INT) |
+| `BomLine_Update` | `@Id, @QtyPer, @UomId, @SortOrder, @AppUserId` | | `Uom` (FK), calls `Audit_LogConfigChange` | Engineering edits qty per, UOM, or sort order | Rowcount |
+| `BomLine_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering removes a component line | Rowcount |
 
 ### Frontend (Perspective Views)
 
@@ -569,42 +570,42 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 
 **`QualitySpec`** (header):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `QualitySpec_List` | `@ItemId NULL, @OperationTemplateId NULL` | Filter by item or operation | `QualitySpec` |
-| `QualitySpec_Get` | `@Id` | Header + active version + attributes | `QualitySpec`, `QualitySpecVersion`, `QualitySpecAttribute` |
-| `QualitySpec_Create` | `@Name, @ItemId NULL, @OperationTemplateId NULL, @AppUserId` | | `Item` (FK, optional), `OperationTemplate` (FK, optional), calls `Audit_LogConfigChange` |
-| `QualitySpec_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `QualitySpec_List` | `@ItemId NULL, @OperationTemplateId NULL` | Filter by item or operation | `QualitySpec` | Quality Spec Library loads; Item Editor's Quality Specs tab loads | Rowset: `QualitySpec` rows |
+| `QualitySpec_Get` | `@Id` | Header + active version + attributes | `QualitySpec`, `QualitySpecVersion`, `QualitySpecAttribute` | Opening a spec in the Editor | Rowset: one `QualitySpec` header + joined rowsets for active version and its attributes |
+| `QualitySpec_Create` | `@Name, @ItemId NULL, @OperationTemplateId NULL, @AppUserId` | | `Item` (FK, optional), `OperationTemplate` (FK, optional), calls `Audit_LogConfigChange` | Engineering creates a new quality spec | Scalar: new `QualitySpec.Id` (INT) |
+| `QualitySpec_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering deprecates a spec | Rowcount |
 
 **`QualitySpecVersion`** (versioned body):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `QualitySpecVersion_ListBySpec` | `@QualitySpecId` | | `QualitySpecVersion` |
-| `QualitySpecVersion_GetActive` | `@QualitySpecId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given time | `QualitySpecVersion` |
-| `QualitySpecVersion_Create` | `@QualitySpecId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty version | `QualitySpec` (FK), calls `Audit_LogConfigChange` |
-| `QualitySpecVersion_CreateNewVersion` | `@ParentVersionId, @EffectiveFrom, @AppUserId` | Copies attributes from prior version | reads `QualitySpecVersion`, `QualitySpecAttribute`; calls `Audit_LogConfigChange` |
-| `QualitySpecVersion_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `QualitySpecVersion_ListBySpec` | `@QualitySpecId` | | `QualitySpecVersion` | Quality Spec Editor version dropdown loads | Rowset: `QualitySpecVersion` rows ordered by version |
+| `QualitySpecVersion_GetActive` | `@QualitySpecId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given time | `QualitySpecVersion` | Plant Floor inspection screen loads "what spec governs this inspection right now?" (Arc 2 usage) | Rowset (0-1): one active version row |
+| `QualitySpecVersion_Create` | `@QualitySpecId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty version | `QualitySpec` (FK), calls `Audit_LogConfigChange` | Engineering creates a first version of a spec | Scalar: new `QualitySpecVersion.Id` (INT) |
+| `QualitySpecVersion_CreateNewVersion` | `@ParentVersionId, @EffectiveFrom, @AppUserId` | Copies attributes from prior version | reads `QualitySpecVersion`, `QualitySpecAttribute`; calls `Audit_LogConfigChange` | Engineering clicks "New Version" in the Spec Editor | Scalar: new version `QualitySpecVersion.Id` (INT) |
+| `QualitySpecVersion_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering deprecates a spec version | Rowcount |
 
 **`QualitySpecAttribute`**:
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `QualitySpecAttribute_ListByVersion` | `@QualitySpecVersionId` | | `QualitySpecAttribute`, `Uom` |
-| `QualitySpecAttribute_Add` | `@QualitySpecVersionId, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | | `QualitySpecVersion` (FK), `Uom` (FK), calls `Audit_LogConfigChange` |
-| `QualitySpecAttribute_Update` | `@Id, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | | `Uom` (FK), calls `Audit_LogConfigChange` |
-| `QualitySpecAttribute_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `QualitySpecAttribute_ListByVersion` | `@QualitySpecVersionId` | | `QualitySpecAttribute`, `Uom` | Spec Editor renders the attribute grid for the active version | Rowset: attribute rows joined to UOM code, ordered by `SortOrder` |
+| `QualitySpecAttribute_Add` | `@QualitySpecVersionId, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | | `QualitySpecVersion` (FK), `Uom` (FK), calls `Audit_LogConfigChange` | Engineering adds a measurable attribute to a spec version | Scalar: new `QualitySpecAttribute.Id` (INT) |
+| `QualitySpecAttribute_Update` | `@Id, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | | `Uom` (FK), calls `Audit_LogConfigChange` | Engineering edits an attribute's target/limits | Rowcount |
+| `QualitySpecAttribute_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering removes an attribute from a spec version | Rowcount |
 
 **`DefectCode`** (full CRUD + bulk seed):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `DefectCode_List` | `@AreaLocationId NULL, @IncludeDeprecated BIT = 0` | Filter by area | `DefectCode`, `Location` |
-| `DefectCode_Get` | `@Id` | | `DefectCode` |
-| `DefectCode_Create` | `@Code, @Description, @AreaLocationId, @IsExcused, @AppUserId` | | `Location` (Area FK), calls `Audit_LogConfigChange` |
-| `DefectCode_Update` | `@Id, @Description, @AreaLocationId, @IsExcused, @AppUserId` | `Code` is immutable | `Location` (Area FK), calls `Audit_LogConfigChange` |
-| `DefectCode_Deprecate` | `@Id, @AppUserId` | | reads `RejectEvent`, calls `Audit_LogConfigChange` |
-| `DefectCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `defect_codes.csv` | calls `DefectCode_Create` per row (transitively `Audit_LogConfigChange`) |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `DefectCode_List` | `@AreaLocationId NULL, @IncludeDeprecated BIT = 0` | Filter by area | `DefectCode`, `Location` | Defect Code Manager loads; Plant Floor reject entry populates its defect dropdown filtered to the current area (Arc 2 usage) | Rowset: `DefectCode` rows joined to area name |
+| `DefectCode_Get` | `@Id` | | `DefectCode` | Edit modal opens | Rowset (0-1): one defect code row |
+| `DefectCode_Create` | `@Code, @Description, @AreaLocationId, @IsExcused, @AppUserId` | | `Location` (Area FK), calls `Audit_LogConfigChange` | Engineering adds a new defect code | Scalar: new `DefectCode.Id` (INT) |
+| `DefectCode_Update` | `@Id, @Description, @AreaLocationId, @IsExcused, @AppUserId` | `Code` is immutable | `Location` (Area FK), calls `Audit_LogConfigChange` | Engineering edits a defect code | Rowcount |
+| `DefectCode_Deprecate` | `@Id, @AppUserId` | | reads `RejectEvent`, calls `Audit_LogConfigChange` | Engineering deprecates a defect code | Rowcount |
+| `DefectCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `defect_codes.csv` | calls `DefectCode_Create` per row (transitively `Audit_LogConfigChange`) | Engineer clicks "Bulk Load" during initial deployment (one-time) | Scalar: count of rows inserted |
 
 ### Frontend (Perspective Views)
 
@@ -652,30 +653,30 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 
 **`DowntimeReasonType`** (read-only — seeded):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `DowntimeReasonType_List` | — | Returns 6 fixed types | `DowntimeReasonType` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `DowntimeReasonType_List` | — | Returns 6 fixed types | `DowntimeReasonType` | Downtime Reason Code Manager filter dropdown loads; Plant Floor downtime entry screen populates its type dropdown (Arc 2 usage) | Rowset: 6 `DowntimeReasonType` rows |
 
 **`DowntimeReasonCode`** (full CRUD + bulk seed):
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `DowntimeReasonCode_List` | `@AreaLocationId NULL, @DowntimeReasonTypeId NULL, @IncludeDeprecated BIT = 0` | Filter by area and/or type | `DowntimeReasonCode`, `Location`, `DowntimeReasonType` |
-| `DowntimeReasonCode_Get` | `@Id` | | `DowntimeReasonCode` |
-| `DowntimeReasonCode_Create` | `@Code, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | | `Location` (Area FK), `DowntimeReasonType` (FK), calls `Audit_LogConfigChange` |
-| `DowntimeReasonCode_Update` | `@Id, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | | `Location` (Area FK), `DowntimeReasonType` (FK), calls `Audit_LogConfigChange` |
-| `DowntimeReasonCode_Deprecate` | `@Id, @AppUserId` | | reads `DowntimeEvent`, calls `Audit_LogConfigChange` |
-| `DowntimeReasonCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `downtime_reason_codes.csv` | calls `DowntimeReasonCode_Create` per row (transitively `Audit_LogConfigChange`) |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `DowntimeReasonCode_List` | `@AreaLocationId NULL, @DowntimeReasonTypeId NULL, @IncludeDeprecated BIT = 0` | Filter by area and/or type | `DowntimeReasonCode`, `Location`, `DowntimeReasonType` | Downtime Reason Code Manager loads; Plant Floor operator picks a reason code filtered to their area (Arc 2 usage) | Rowset: `DowntimeReasonCode` rows joined to area name and type name |
+| `DowntimeReasonCode_Get` | `@Id` | | `DowntimeReasonCode` | Edit modal opens | Rowset (0-1): one reason code row |
+| `DowntimeReasonCode_Create` | `@Code, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | | `Location` (Area FK), `DowntimeReasonType` (FK), calls `Audit_LogConfigChange` | Engineering adds a new downtime code | Scalar: new `DowntimeReasonCode.Id` (INT) |
+| `DowntimeReasonCode_Update` | `@Id, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | | `Location` (Area FK), `DowntimeReasonType` (FK), calls `Audit_LogConfigChange` | Engineering edits a downtime code (including assigning a type to a previously untyped row) | Rowcount |
+| `DowntimeReasonCode_Deprecate` | `@Id, @AppUserId` | | reads `DowntimeEvent`, calls `Audit_LogConfigChange` | Engineering deprecates a downtime code | Rowcount |
+| `DowntimeReasonCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `downtime_reason_codes.csv` | calls `DowntimeReasonCode_Create` per row (transitively `Audit_LogConfigChange`) | Engineer clicks "Bulk Load" during initial deployment (one-time) | Scalar: count of rows inserted |
 
 **`ShiftSchedule`**:
 
-| Procedure | Parameters | Notes | Dependencies |
-|---|---|---|---|
-| `ShiftSchedule_List` | `@ActiveOnly BIT = 1` | | `ShiftSchedule` |
-| `ShiftSchedule_Get` | `@Id` | | `ShiftSchedule` |
-| `ShiftSchedule_Create` | `@Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | | calls `Audit_LogConfigChange` |
-| `ShiftSchedule_Update` | `@Id, @Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | | calls `Audit_LogConfigChange` |
-| `ShiftSchedule_Deprecate` | `@Id, @AppUserId` | | reads `Shift`, calls `Audit_LogConfigChange` |
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `ShiftSchedule_List` | `@ActiveOnly BIT = 1` | | `ShiftSchedule` | Shift Schedule Editor loads; Plant Floor shift context resolution at login (Arc 2 usage) | Rowset: `ShiftSchedule` rows |
+| `ShiftSchedule_Get` | `@Id` | | `ShiftSchedule` | Edit modal opens | Rowset (0-1): one shift schedule row |
+| `ShiftSchedule_Create` | `@Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering adds a new shift schedule | Scalar: new `ShiftSchedule.Id` (INT) |
+| `ShiftSchedule_Update` | `@Id, @Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | | calls `Audit_LogConfigChange` | Engineering edits a shift schedule | Rowcount |
+| `ShiftSchedule_Deprecate` | `@Id, @AppUserId` | | reads `Shift`, calls `Audit_LogConfigChange` | Engineering deprecates a shift schedule | Rowcount |
 
 ### Frontend (Perspective Views)
 
