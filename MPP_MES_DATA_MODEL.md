@@ -14,6 +14,7 @@
 | 0.2 | 2026-04-09 | Blue Ridge Automation | Eliminated `Terminal` table — terminals are now `Location` records (type=Terminal) with config as `LocationAttribute`. Renamed `TerminalId` FKs to `TerminalLocationId` across all event tables. Added `ShotCount` to `DowntimeEvent` for warm-up tracking (UJ-14). Added hardware interlock bypass flag discussion on `ContainerSerial` (UJ-16). Updated workorder schema scope to MVP-LITE (OI-07). |
 | 0.3 | 2026-04-09 | Blue Ridge Automation | Naming convention changed from snake_case to UpperCamelCase for all DB identifiers. Merged Department into Area per ISA-95 — `DepartmentLocationId` FKs renamed to `AreaLocationId`, `ChargeToDepartment` renamed to `ChargeToArea`. Added Enterprise (level 0) to `LocationType`. Updated `LocationType` seed rows. |
 | 0.4 | 2026-04-10 | Blue Ridge Automation | Major restructure of location schema: `LocationType` reduced to 5 ISA-95 tiers (Enterprise, Site, Area, WorkCenter, Cell). `LocationTypeDefinition` repurposed from "attribute definitions" to "polymorphic kinds" (Terminal, DieCastMachine, CNCMachine, etc. — all under Cell). New `LocationAttributeDefinition` table holds attribute schemas per kind. `Location.LocationTypeId` replaced by `Location.LocationTypeDefinitionId`. `LocationAttribute.LocationTypeDefinitionId` renamed to `LocationAttributeDefinitionId`. Added seed data tables for LocationType, LocationTypeDefinition, and sample LocationAttributeDefinition sets. |
+| 0.4.1 | 2026-04-10 | Blue Ridge Automation | Consistency pass: normalized terminal FK columns on append-only Lot event tables (LotGenealogy, LotStatusHistory, LotMovement, LotAttributeChange) to `TerminalLocationId` — were previously `EventTerminalId` / `ChangedAtTerminalId` / `MovedAtTerminalId`. Fixed stale UPPER_CASE code values in column descriptions (Split/Merge/Consumption, Good/Hold/Scrap/Closed, Open/Complete/Shipped/Hold/Void, Manufactured/Received/ReceivedOffsite, Initial/ReprintDamaged/Split/Merge/SortCageReIdentify, UseAsIs/Rework/etc.). Fixed snake_case in UJ-14 warm-up note and UJ-16 interlock bypass note. |
 
 ---
 
@@ -371,7 +372,7 @@ Honda-specified packing rules per product.
 
 > **Scope:** All tables MVP. Core tracking entity schema. Serialization is MVP-EXPANDED (expanded beyond legacy two-line support).
 >
-> **Note on pass-through parts:** Receiving pass-through parts into MES is MVP (Scope Matrix row 3) — supported via `LotOriginType` RECEIVED/RECEIVED_OFFSITE. Full in-plant pass-through tracking workflows are noted as Future (Scope Matrix row 20). The existing `Lot` + `LotMovement` tables handle both; the future work is operational workflow design, not schema.
+> **Note on pass-through parts:** Receiving pass-through parts into MES is MVP (Scope Matrix row 3) — supported via `LotOriginType` Received/ReceivedOffsite. Full in-plant pass-through tracking workflows are noted as Future (Scope Matrix row 20). The existing `Lot` + `LotMovement` tables handle both; the future work is operational workflow design, not schema.
 
 LOT lifecycle, genealogy, containers, serialized parts, shipping.
 
@@ -380,7 +381,7 @@ LOT lifecycle, genealogy, containers, serialized parts, shipping.
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | INT | PK | |
-| Code | VARCHAR(30) | NOT NULL, UNIQUE | Manufactured, RECEIVED, RECEIVED_OFFSITE |
+| Code | VARCHAR(30) | NOT NULL, UNIQUE | Manufactured, Received, ReceivedOffsite |
 | Name | VARCHAR(100) | NOT NULL | |
 
 ### LotStatusCode
@@ -388,7 +389,7 @@ LOT lifecycle, genealogy, containers, serialized parts, shipping.
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | INT | PK | |
-| Code | VARCHAR(20) | NOT NULL, UNIQUE | Good, HOLD, SCRAP, CLOSED |
+| Code | VARCHAR(20) | NOT NULL, UNIQUE | Good, Hold, Scrap, Closed |
 | Name | VARCHAR(100) | NOT NULL | |
 | BlocksProduction | BIT | NOT NULL, DEFAULT 0 | Hold = true, drives interlocks |
 
@@ -397,7 +398,7 @@ LOT lifecycle, genealogy, containers, serialized parts, shipping.
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | INT | PK | |
-| Code | VARCHAR(20) | NOT NULL, UNIQUE | Split, MERGE, CONSUMPTION |
+| Code | VARCHAR(20) | NOT NULL, UNIQUE | Split, Merge, Consumption |
 | Name | VARCHAR(100) | NOT NULL | |
 
 ### Lot
@@ -437,10 +438,10 @@ Edge table for the genealogy graph. Adjacency list supporting recursive CTE trav
 | Id | INT | PK | |
 | ParentLotId | INT | FK → Lot.Id, NOT NULL | |
 | ChildLotId | INT | FK → Lot.Id, NOT NULL | |
-| RelationshipTypeId | INT | FK → GenealogyRelationshipType.Id, NOT NULL | Split, MERGE, CONSUMPTION |
+| RelationshipTypeId | INT | FK → GenealogyRelationshipType.Id, NOT NULL | Split, Merge, Consumption |
 | PieceCount | INT | NULL | Pieces transferred in this relationship |
 | EventUserId | INT | FK → AppUser.Id, NOT NULL | |
-| EventTerminalId | INT | FK → Location.Id (Terminal), NULL | |
+| TerminalLocationId | INT | FK → Location.Id (Terminal), NULL | Terminal where action was performed |
 | EventAt | DATETIME2(3) | NOT NULL | |
 
 ### LotStatusHistory
@@ -455,7 +456,7 @@ Immutable log of every status transition.
 | NewStatusId | INT | FK → LotStatusCode.Id, NOT NULL | |
 | Reason | VARCHAR(500) | NULL | |
 | ChangedByUserId | INT | FK → AppUser.Id, NOT NULL | |
-| ChangedAtTerminalId | INT | FK → Location.Id (Terminal), NULL | |
+| TerminalLocationId | INT | FK → Location.Id (Terminal), NULL | Terminal where action was performed |
 | ChangedAt | DATETIME2(3) | NOT NULL | |
 
 ### LotMovement
@@ -469,7 +470,7 @@ Append-only location change log.
 | FromLocationId | INT | FK → Location.Id, NULL | NULL on first placement |
 | ToLocationId | INT | FK → Location.Id, NOT NULL | |
 | MovedByUserId | INT | FK → AppUser.Id, NOT NULL | |
-| MovedAtTerminalId | INT | FK → Location.Id (Terminal), NULL | |
+| TerminalLocationId | INT | FK → Location.Id (Terminal), NULL | Terminal where action was performed |
 | MovedAt | DATETIME2(3) | NOT NULL | |
 
 ### LotAttributeChange
@@ -480,11 +481,11 @@ Audit log for attribute modifications.
 |---|---|---|---|
 | Id | INT | PK | |
 | LotId | INT | FK → Lot.Id, NOT NULL | |
-| AttributeName | VARCHAR(100) | NOT NULL | e.g., piece_count, weight |
+| AttributeName | VARCHAR(100) | NOT NULL | e.g., PieceCount, Weight |
 | OldValue | VARCHAR(255) | NULL | |
 | NewValue | VARCHAR(255) | NOT NULL | |
 | ChangedByUserId | INT | FK → AppUser.Id, NOT NULL | |
-| ChangedAtTerminalId | INT | FK → Location.Id (Terminal), NULL | |
+| TerminalLocationId | INT | FK → Location.Id (Terminal), NULL | Terminal where action was performed |
 | ChangedAt | DATETIME2(3) | NOT NULL | |
 
 ### LotLabel
@@ -495,7 +496,7 @@ LTT barcode label print/reprint tracking.
 |---|---|---|---|
 | Id | INT | PK | |
 | LotId | INT | FK → Lot.Id, NOT NULL | |
-| PrintReason | VARCHAR(100) | NOT NULL | INITIAL, REPRINT_DAMAGED, SPLIT, MERGE, SORT_CAGE |
+| PrintReason | VARCHAR(100) | NOT NULL | Initial, ReprintDamaged, Split, Merge, SortCageReIdentify |
 | ZplContent | VARCHAR(MAX) | NULL | Full ZPL payload |
 | PrinterName | VARCHAR(100) | NULL | |
 | PrintedByUserId | INT | FK → AppUser.Id, NOT NULL | |
@@ -507,7 +508,7 @@ LTT barcode label print/reprint tracking.
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | INT | PK | |
-| Code | VARCHAR(20) | NOT NULL, UNIQUE | Open, COMPLETE, SHIPPED, HOLD, VOID |
+| Code | VARCHAR(20) | NOT NULL, UNIQUE | Open, Complete, Shipped, Hold, Void |
 | Name | VARCHAR(100) | NOT NULL | |
 
 ### Container
@@ -564,9 +565,9 @@ Junction: serial numbers in container tray positions.
 
 > 🔶 **PENDING INTERNAL REVIEW — UJ-16:** When `HardwareInterlockEnable=false`, parts enter containers without MES serial validation. A flag is needed to record that interlock was bypassed and serial validation was skipped. Two options under discussion:
 >
-> **(a)** Add `hardware_interlock_bypassed BIT DEFAULT 0` to `ContainerSerial` — marks the specific serial-to-container assignment that skipped validation.
+> **(a)** Add `HardwareInterlockBypassed BIT DEFAULT 0` to `ContainerSerial` — marks the specific serial-to-container assignment that skipped validation.
 >
-> **(b)** Add `hardware_interlock_bypassed BIT DEFAULT 0` to `ProductionEvent` — marks the broader production event as having occurred without interlock.
+> **(b)** Add `HardwareInterlockBypassed BIT DEFAULT 0` to `ProductionEvent` — marks the broader production event as having occurred without interlock.
 >
 > The circumstances under which MPP bypasses the interlock are not yet understood. Both options are presented for discussion with Ben. The flag may belong on both tables if bypass affects traceability at both levels.
 
@@ -813,7 +814,7 @@ Specification-driven inspections, non-conformance, hold management.
 | LotId | INT | FK → Lot.Id, NOT NULL | |
 | DefectCodeId | INT | FK → DefectCode.Id, NOT NULL | |
 | Quantity | INT | NOT NULL | |
-| Disposition | VARCHAR(50) | NOT NULL | Pending, USE_AS_IS, REWORK, SCRAP, RETURN_TO_VENDOR |
+| Disposition | VARCHAR(50) | NOT NULL | Pending, UseAsIs, Rework, Scrap, ReturnToVendor |
 | Remarks | VARCHAR(500) | NULL | |
 | ReportedByUserId | INT | FK → AppUser.Id, NOT NULL | |
 | TerminalLocationId | INT | FK → Location.Id (Terminal), NULL | Terminal where action was performed |
@@ -912,7 +913,7 @@ Append-only. Never overwrite started_at.
 | Remarks | VARCHAR(500) | NULL | |
 | CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
 
-> 🔶 **PENDING INTERNAL REVIEW — UJ-14:** Warm-up shots are tracked as a downtime sub-category (reason_type = Setup) with the `ShotCount` attribute on the downtime event itself. This keeps warm-up time and shot count in a single record. The Die Cast production screen records good/bad shot counts on the `ProductionEvent`; warm-up shot counts go here. Needs review with Ben.
+> 🔶 **PENDING INTERNAL REVIEW — UJ-14:** Warm-up shots are tracked as a downtime sub-category (`DowntimeReasonType` = Setup) with the `ShotCount` column on the `DowntimeEvent` record itself. This keeps warm-up time and shot count in a single record. The Die Cast production screen records good/bad shot counts on the `ProductionEvent`; warm-up shot counts go here. Needs review with Ben.
 
 ### OeeSnapshot
 
@@ -959,7 +960,7 @@ Normalized vocabulary for what happened. Shared across all log tables.
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | INT | PK | |
-| Code | VARCHAR(50) | NOT NULL, UNIQUE | LOT_CREATED, LOT_MOVED, PRODUCTION_RECORDED, HOLD_PLACED, etc. |
+| Code | VARCHAR(50) | NOT NULL, UNIQUE | LotCreated, LotMoved, ProductionRecorded, HoldPlaced, etc. |
 | Name | VARCHAR(200) | NOT NULL | |
 | Description | VARCHAR(500) | NULL | |
 

@@ -181,12 +181,13 @@
 
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
-    <p>Madison Precision Products — MES Database Schema (7 schemas, ~45 tables)</p>
+    <p>Madison Precision Products — MES Database Schema (7 schemas, ~50 tables)</p>
+    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-10 — includes three-tier location model (LocationType → LocationTypeDefinition → LocationAttributeDefinition), UpperCamelCase naming, Area replaces Department, MVP-Lite WO scope.</p>
     <div class="conventions">
-        <span>snake_case</span>
+        <span>UpperCamelCase</span>
         <span>singular nouns</span>
-        <span>surrogate PKs</span>
-        <span>deprecated_at soft deletes</span>
+        <span>surrogate Id PKs</span>
+        <span>DeprecatedAt soft deletes</span>
         <span>DATETIME2(3)</span>
         <span>UOM first-class</span>
         <span>status via code tables</span>
@@ -345,35 +346,35 @@ erDiagram
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
-            <h4>item</h4>
+            <h4>Item</h4>
             <p>The part/product master. Every raw material, component, sub-assembly, and finished good. Carries MPP part number, optional Macola ERP number, default sub-lot quantity, max lot size, and unit weight.</p>
         </div>
         <div class="table-card">
-            <h4>item_type</h4>
+            <h4>ItemType</h4>
             <p>Classifies items: Raw Material, Component, Sub-Assembly, Finished Good, Pass-Through. Drives UI behavior and routing logic.</p>
         </div>
         <div class="table-card">
-            <h4>uom</h4>
+            <h4>Uom</h4>
             <p>Unit of measure reference (EA, LB, KG, etc.). First-class column on every quantitative field per best practices.</p>
         </div>
         <div class="table-card">
-            <h4>bom / bom_line</h4>
+            <h4>Bom / BomLine</h4>
             <p>Versioned bill of materials. Header links parent item to component structure with <code>EffectiveFrom</code> / <code>DeprecatedAt</code>. Lines specify child items and quantities per parent.</p>
         </div>
         <div class="table-card">
-            <h4>route_template / route_step</h4>
+            <h4>RouteTemplate / RouteStep</h4>
             <p>Versioned manufacturing routes. Each template defines the ordered sequence of operations for a product. Steps reference operation templates and carry sequence numbers.</p>
         </div>
         <div class="table-card">
-            <h4>operation_template</h4>
+            <h4>OperationTemplate</h4>
             <p>Defines what data to collect at a given operation type: die info, cavity, weight, counts, material verification, serial numbers. Linked to an area.</p>
         </div>
         <div class="table-card">
-            <h4>item_location</h4>
+            <h4>ItemLocation</h4>
             <p>Part-to-machine eligibility mapping. Certain parts can only run on certain machines. MES uses this to prevent operators from entering LOTs on incompatible equipment. References the <code>location</code> table.</p>
         </div>
         <div class="table-card">
-            <h4>container_config</h4>
+            <h4>ContainerConfig</h4>
             <p>Honda-specified packing rules per product: trays per container, parts per tray, serialized flag, returnable dunnage code, customer code.</p>
         </div>
     </div>
@@ -514,39 +515,39 @@ erDiagram
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
-            <h4>lot_origin_type</h4>
-            <p>How a LOT entered the system: <code>MANUFACTURED</code> (created at die cast), <code>RECEIVED</code> (pass-through parts received on-site), <code>RECEIVED_OFFSITE</code> (pass-through parts received at a remote warehouse). Enables filtering and reporting by origin path.</p>
+            <h4>LotOriginType</h4>
+            <p>How a LOT entered the system: <code>Manufactured</code> (created at die cast), <code>Received</code> (pass-through parts received on-site), <code>ReceivedOffsite</code> (pass-through parts received at a remote warehouse). Enables filtering and reporting by origin path.</p>
         </div>
         <div class="table-card">
-            <h4>lot</h4>
+            <h4>Lot</h4>
             <p>The central entity. Unique lot name (LTT barcode), links to item and origin type, carries piece count, weight, die/cavity info, vendor LOT reference, quality status, and current location. <code>ParentLotId</code> provides the adjacency-list link for sub-LOTs.</p>
         </div>
         <div class="table-card">
-            <h4>lot_status_code</h4>
-            <p>LOT quality states: GOOD, HOLD, SCRAP, CLOSED. <code>BlocksProduction</code> drives interlock logic.</p>
+            <h4>LotStatusCode</h4>
+            <p>LOT quality states: Good, Hold, Scrap, Closed. <code>BlocksProduction</code> drives interlock logic.</p>
         </div>
         <div class="table-card">
-            <h4>lot_genealogy</h4>
+            <h4>LotGenealogy</h4>
             <p>Edge table for the genealogy graph. Records every split, merge, and consumption relationship. Supports recursive CTE traversal in both directions.</p>
         </div>
         <div class="table-card">
-            <h4>lot_status_history / lot_movement / lot_attribute_change</h4>
+            <h4>LotStatusHistory / LotMovement / LotAttributeChange</h4>
             <p>Immutable append-only logs for status transitions, location changes, and attribute modifications. Every record captures who, when, and which terminal location.</p>
         </div>
         <div class="table-card">
-            <h4>lot_label</h4>
-            <p>Tracks every LTT barcode label printed or reprinted for a LOT. Covers initial label at die cast, reprints for damaged labels, new labels for split/merge operations, re-identification at Sort Cage, and labels printed at off-site receiving. Each record captures the print reason, ZPL content, printer, and operator.</p>
+            <h4>LotLabel</h4>
+            <p>Tracks every LTT barcode label printed or reprinted by the MES. Print reasons: <code>Initial</code> (only for Received / ReceivedOffsite LOTs — Die Cast LTTs are pre-printed outside the MES per FDS-05-020), <code>ReprintDamaged</code>, <code>Split</code>, <code>Merge</code>, <code>SortCageReIdentify</code>. Each record captures the print reason, ZPL content, printer, and operator.</p>
         </div>
         <div class="table-card">
-            <h4>container / container_tray</h4>
+            <h4>Container / ContainerTray</h4>
             <p>Shipping containers with trays. Tracks status, AIM shipper ID, hold state, and current location. Container config comes from the parts schema.</p>
         </div>
         <div class="table-card">
-            <h4>serialized_part / container_serial</h4>
+            <h4>SerializedPart / ContainerSerial</h4>
             <p>Individual laser-etched serial numbers linked to source LOTs. Junction table maps serials to container tray positions. Critical for Sort Cage re-inspection.</p>
         </div>
         <div class="table-card">
-            <h4>shipping_label</h4>
+            <h4>ShippingLabel</h4>
             <p>Every label printed for a container: AIM shipper ID, ZPL content, print time, void status. Labels can be voided and reprinted during Sort Cage workflow.</p>
         </div>
     </div>
@@ -606,7 +607,7 @@ erDiagram
         int RelationshipTypeId FK
         int PieceCount
         int EventUserId FK
-        int EventTerminalId FK
+        int TerminalLocationId FK
         datetime2 EventAt
     }
 
@@ -617,7 +618,7 @@ erDiagram
         int NewStatusId FK
         varchar Reason
         int ChangedByUserId FK
-        int ChangedAtTerminalId FK
+        int TerminalLocationId FK
         datetime2 ChangedAt
     }
 
@@ -627,7 +628,7 @@ erDiagram
         int FromLocationId FK
         int ToLocationId FK
         int MovedByUserId FK
-        int MovedAtTerminalId FK
+        int TerminalLocationId FK
         datetime2 MovedAt
     }
 
@@ -638,7 +639,7 @@ erDiagram
         varchar OldValue
         varchar NewValue
         int ChangedByUserId FK
-        int ChangedAtTerminalId FK
+        int TerminalLocationId FK
         datetime2 ChangedAt
     }
 
@@ -733,29 +734,29 @@ erDiagram
     <div class="schema-desc">
         <h2>workorder <span class="scope-badge scope-mixed">Mixed Scope</span></h2>
         <p>Internal work order context that operators never see. Auto-generated when production activity begins, providing bookkeeping for production events, material consumption, and reject tracking. Links LOTs to machines, routes, and operators. Every good count, bad count, and material consumption is recorded as an immutable event.</p>
-        <p class="scope-note">Work order tables (work_order, work_order_operation) are CONDITIONAL &mdash; included subject to design decision. Production/consumption/reject event tables are MVP. Events have nullable FKs to work_order_operation, so they function independently.</p>
+        <p class="scope-note">Work order tables (<code>WorkOrder</code>, <code>WorkOrderOperation</code>) are <strong>MVP-LITE</strong> per OI-07 — auto-generated and populated, but invisible to operators (no WO screens). Production/consumption/reject event tables are <strong>MVP</strong>. Events have nullable FKs to <code>WorkOrderOperation</code>, so they function independently.</p>
     </div>
 
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
-            <h4>work_order <span class="scope-badge scope-conditional">Conditional</span></h4>
-            <p>Auto-generated internal work order. Links an item to a route template. Operators never interact with this &mdash; it provides context for aggregating production data.</p>
+            <h4>WorkOrder <span class="scope-badge scope-mvp">MVP-Lite</span></h4>
+            <p>Auto-generated internal work order. Links an item to a route template. Operators never interact with this &mdash; it provides context for aggregating production data. (OI-07 resolved to MVP-Lite: included but hidden, no WO screens.)</p>
         </div>
         <div class="table-card">
-            <h4>work_order_operation <span class="scope-badge scope-conditional">Conditional</span></h4>
+            <h4>WorkOrderOperation <span class="scope-badge scope-mvp">MVP-Lite</span></h4>
             <p>Individual operation execution within a work order. Links a route step to a specific machine, tracks start/completion times and operator.</p>
         </div>
         <div class="table-card">
-            <h4>production_event <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>Immutable record of production activity: good count, no-good count, die/cavity info, operator, terminal, timestamp against a LOT and machine.</p>
+            <h4>ProductionEvent <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Immutable record of production activity: good count, no-good count, operator, terminal location, timestamp against a LOT and machine. Die/cavity info lives on the <code>Lot</code> record (one LOT = one die/cavity), not on the event.</p>
         </div>
         <div class="table-card">
-            <h4>consumption_event <span class="scope-badge scope-mvp">MVP</span></h4>
+            <h4>ConsumptionEvent <span class="scope-badge scope-mvp">MVP</span></h4>
             <p>Records which source LOT supplied parts and which output LOT or container was produced. The backbone of genealogy across the assembly boundary.</p>
         </div>
         <div class="table-card">
-            <h4>reject_event <span class="scope-badge scope-mvp">MVP</span></h4>
+            <h4>RejectEvent <span class="scope-badge scope-mvp">MVP</span></h4>
             <p>Detailed reject/scrap records linked to production events. Defect code, quantity, charge-to area, operator remarks. Feeds quality analysis and OEE quality-rate.</p>
         </div>
     </div>
@@ -857,33 +858,33 @@ erDiagram
     <div class="schema-desc">
         <h2>quality <span class="scope-badge scope-mixed">Mixed Scope</span></h2>
         <p>Specification-driven inspection, sample tracking, non-conformance records, and hold management. Quality specs are versioned so production records reference the spec active at time of inspection. Hold events integrate with LOT status transitions to enforce manufacturing interlocks. Supports file attachments for test result documentation.</p>
-        <p class="scope-note">Holds and inspections are MVP. Sampling workflows are CONDITIONAL. NCM/Failure Analysis is FUTURE &mdash; the non_conformance table is retained to preserve the hold&harr;NCM design separation and will activate without schema changes.</p>
+        <p class="scope-note">Holds and inspections are MVP. Sampling workflows are CONDITIONAL. NCM/Failure Analysis is FUTURE &mdash; the <code>NonConformance</code> table is retained to preserve the hold&harr;NCM design separation and will activate without schema changes.</p>
     </div>
 
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
-            <h4>defect_code <span class="scope-badge scope-mvp">MVP</span></h4>
+            <h4>DefectCode <span class="scope-badge scope-mvp">MVP</span></h4>
             <p>~170 reject/defect reason codes by area. <code>IsExcused</code> flag affects OEE quality calculations. Supports both reject tracking (MVP) and future NCM.</p>
         </div>
         <div class="table-card">
-            <h4>quality_spec / quality_spec_version / quality_spec_attribute <span class="scope-badge scope-mvp">MVP</span></h4>
+            <h4>QualitySpec / QualitySpecVersion / QualitySpecAttribute <span class="scope-badge scope-mvp">MVP</span></h4>
             <p>Specification-driven quality schema. Specs define what to inspect per item/operation. Versions ensure historical accuracy. Attributes define measurable values with targets and limits.</p>
         </div>
         <div class="table-card">
-            <h4>quality_sample / quality_result <span class="scope-badge scope-conditional">Conditional</span></h4>
+            <h4>QualitySample / QualityResult <span class="scope-badge scope-conditional">Conditional</span></h4>
             <p>Inspection events against LOTs. Each sample records overall result; individual results capture measured values against spec attributes. MVP for basic inspections; expanded sampling workflows are conditional.</p>
         </div>
         <div class="table-card">
-            <h4>non_conformance <span class="scope-badge scope-future">Future</span></h4>
+            <h4>NonConformance <span class="scope-badge scope-future">Future</span></h4>
             <p>Formal NC record against a LOT: defect code, quantity, disposition, resolution tracking. <em>Not in current scope &mdash; retained for future NCM/Failure Analysis activation. Completes the hold&harr;NCM design separation.</em></p>
         </div>
         <div class="table-card">
-            <h4>hold_event <span class="scope-badge scope-mvp-expanded">MVP-Expanded</span></h4>
+            <h4>HoldEvent <span class="scope-badge scope-mvp-expanded">MVP-Expanded</span></h4>
             <p>Records when a LOT is placed on or released from quality hold. Drives LOT status transitions to/from HOLD. Expanded beyond legacy capabilities.</p>
         </div>
         <div class="table-card">
-            <h4>quality_attachment <span class="scope-badge scope-mvp">MVP</span></h4>
+            <h4>QualityAttachment <span class="scope-badge scope-mvp">MVP</span></h4>
             <p>File uploads (CSV, XLSX, PDF, images) linked to samples or non-conformances.</p>
         </div>
     </div>
@@ -1017,23 +1018,23 @@ erDiagram
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
-            <h4>downtime_reason_type <span class="scope-badge scope-mvp">MVP</span></h4>
+            <h4>DowntimeReasonType <span class="scope-badge scope-mvp">MVP</span></h4>
             <p>Top-level categorization: Equipment, Miscellaneous, Mold, Quality, Setup, Unscheduled.</p>
         </div>
         <div class="table-card">
-            <h4>downtime_reason_code <span class="scope-badge scope-mvp">MVP</span></h4>
+            <h4>DowntimeReasonCode <span class="scope-badge scope-mvp">MVP</span></h4>
             <p>~660 specific reasons by area and type. <code>IsExcused</code> determines OEE availability impact.</p>
         </div>
         <div class="table-card">
-            <h4>shift_schedule / shift <span class="scope-badge scope-mvp">MVP</span></h4>
+            <h4>ShiftSchedule / Shift <span class="scope-badge scope-mvp">MVP</span></h4>
             <p>Named shift patterns and actual shift instances. Time boundaries for downtime context and production reporting.</p>
         </div>
         <div class="table-card">
-            <h4>downtime_event <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>Append-only. Machine, reason code, start/end, source (manual/PLC), operator. Open events have null <code>EndedAt</code>. <code>ShotCount</code> captures warm-up/setup shots when reason_type = Setup (per UJ-14).</p>
+            <h4>DowntimeEvent <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Append-only. Machine, reason code, start/end, source (manual/PLC), operator. Open events have null <code>EndedAt</code>. <code>ShotCount</code> captures warm-up/setup shots when ReasonType = Setup (per UJ-14).</p>
         </div>
         <div class="table-card">
-            <h4>oee_snapshot <span class="scope-badge scope-future">Future</span></h4>
+            <h4>OeeSnapshot <span class="scope-badge scope-future">Future</span></h4>
             <p>Materialized Availability &times; Performance &times; Quality per machine per shift. Recalculated by scheduled job, never the system of record. <em>Not in current scope &mdash; retained as a natural derivative of MVP downtime and production data.</em></p>
         </div>
     </div>
@@ -1128,27 +1129,27 @@ erDiagram
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
-            <h4>log_severity</h4>
+            <h4>LogSeverity</h4>
             <p>Error, Warning, Informational.</p>
         </div>
         <div class="table-card">
-            <h4>log_event_type</h4>
-            <p>Normalized vocabulary for what happened: LOT_CREATED, LOT_MOVED, LOT_SPLIT, LOT_STATUS_CHANGED, PRODUCTION_RECORDED, CONSUMPTION_RECORDED, HOLD_PLACED, HOLD_RELEASED, LABEL_PRINTED, CONTAINER_COMPLETED, USER_LOGIN, etc. Shared across operation_log and config_log. Prevents free-text drift across Ignition scripts.</p>
+            <h4>LogEventType</h4>
+            <p>Normalized vocabulary for what happened: <code>LotCreated</code>, <code>LotMoved</code>, <code>LotSplit</code>, <code>LotStatusChanged</code>, <code>ProductionRecorded</code>, <code>ConsumptionRecorded</code>, <code>HoldPlaced</code>, <code>HoldReleased</code>, <code>LabelPrinted</code>, <code>ContainerCompleted</code>, <code>UserLogin</code>, etc. Shared across <code>OperationLog</code> and <code>ConfigLog</code>. Prevents free-text drift across Ignition scripts.</p>
         </div>
         <div class="table-card">
-            <h4>log_entity_type</h4>
+            <h4>LogEntityType</h4>
             <p>Normalized vocabulary for what was affected: LOT, CONTAINER, SERIALIZED_PART, WORK_ORDER, ITEM, LOCATION, ROUTE_TEMPLATE, QUALITY_SAMPLE, NON_CONFORMANCE, DEFECT_CODE, etc. Shared across operation_log and config_log.</p>
         </div>
         <div class="table-card">
-            <h4>operation_log</h4>
+            <h4>OperationLog</h4>
             <p>Every shop-floor action: user, terminal, location, affected entity (by type and ID), old/new values. Primary regulatory audit trail.</p>
         </div>
         <div class="table-card">
-            <h4>config_log</h4>
+            <h4>ConfigLog</h4>
             <p>Engineering and admin configuration changes: plant model edits, item master updates, route modifications.</p>
         </div>
         <div class="table-card">
-            <h4>interface_log</h4>
+            <h4>InterfaceLog</h4>
             <p>External system communications: AIM EDI, PLC/OPC, future Macola/Intelex. Direction, payloads, errors. No user FK &mdash; system-initiated.</p>
         </div>
     </div>
@@ -1280,7 +1281,7 @@ erDiagram
     loc__LocationAttributeDefinition { int id PK }
     loc__Location { int id PK }
     loc__LocationAttribute { int id PK }
-    %% terminal table removed — terminals are location records with location_type=Terminal
+    %% terminal table removed — terminals are location records with LocationTypeDefinition = Terminal
     loc__AppUser { int id PK }
 
     parts__ItemType { int id PK }
