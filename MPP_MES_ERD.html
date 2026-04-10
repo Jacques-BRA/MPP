@@ -181,8 +181,8 @@
 
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
-    <p>Madison Precision Products — MES Database Schema (7 schemas, ~50 tables)</p>
-    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-10 — includes three-tier location model (LocationType → LocationTypeDefinition → LocationAttributeDefinition), UpperCamelCase naming, Area replaces Department, MVP-Lite WO scope.</p>
+    <p>Madison Precision Products — MES Database Schema (7 schemas, ~51 tables)</p>
+    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-10 — includes three-tier location model, UpperCamelCase naming, Area replaces Department, MVP-Lite WO scope, and <strong>Audit.FailureLog</strong> for tracking attempted-but-rejected operations.</p>
     <div class="conventions">
         <span>UpperCamelCase</span>
         <span>singular nouns</span>
@@ -1123,34 +1123,38 @@ erDiagram
 <div id="tab-audit" class="tab-content">
     <div class="schema-desc">
         <h2>audit <span class="scope-badge scope-mvp">MVP</span></h2>
-        <p>Immutable, append-only logging. Three log types: operations (shop-floor actions), configuration (admin changes), and interface (AIM, PLC, ERP communications). 20-year retention. <code>BIGINT</code> PKs for high-volume append. High-fidelity interface logging is configurable for full request/response payload capture.</p>
+        <p>Immutable, append-only logging. <strong>Four</strong> log streams: <code>OperationLog</code> (shop-floor actions), <code>ConfigLog</code> (admin changes that succeeded), <code>InterfaceLog</code> (AIM/PLC/ERP communications), and <code>FailureLog</code> (attempted-but-rejected operations). 20-year retention. <code>BIGINT</code> PKs for high-volume append. All writes flow through four shared stored procedures (<code>Audit_LogOperation</code>, <code>Audit_LogConfigChange</code>, <code>Audit_LogInterfaceCall</code>, <code>Audit_LogFailure</code>) — entity-specific procs never write to log tables directly.</p>
     </div>
 
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
             <h4>LogSeverity</h4>
-            <p>Error, Warning, Informational.</p>
+            <p>Info, Warning, Error, Critical.</p>
         </div>
         <div class="table-card">
             <h4>LogEventType</h4>
-            <p>Normalized vocabulary for what happened: <code>LotCreated</code>, <code>LotMoved</code>, <code>LotSplit</code>, <code>LotStatusChanged</code>, <code>ProductionRecorded</code>, <code>ConsumptionRecorded</code>, <code>HoldPlaced</code>, <code>HoldReleased</code>, <code>LabelPrinted</code>, <code>ContainerCompleted</code>, <code>UserLogin</code>, etc. Shared across <code>OperationLog</code> and <code>ConfigLog</code>. Prevents free-text drift across Ignition scripts.</p>
+            <p>Normalized vocabulary for what happened: <code>Created</code>, <code>Updated</code>, <code>Deprecated</code>, <code>LotCreated</code>, <code>LotMoved</code>, <code>LotSplit</code>, <code>LotStatusChanged</code>, <code>ProductionRecorded</code>, <code>ConsumptionRecorded</code>, <code>HoldPlaced</code>, <code>HoldReleased</code>, <code>LabelPrinted</code>, <code>ContainerCompleted</code>, <code>UserLogin</code>, etc. Shared across <code>OperationLog</code>, <code>ConfigLog</code>, and <code>FailureLog</code>. Prevents free-text drift.</p>
         </div>
         <div class="table-card">
             <h4>LogEntityType</h4>
-            <p>Normalized vocabulary for what was affected: LOT, CONTAINER, SERIALIZED_PART, WORK_ORDER, ITEM, LOCATION, ROUTE_TEMPLATE, QUALITY_SAMPLE, NON_CONFORMANCE, DEFECT_CODE, etc. Shared across operation_log and config_log.</p>
+            <p>Normalized vocabulary for what was affected: <code>Lot</code>, <code>Container</code>, <code>SerializedPart</code>, <code>WorkOrder</code>, <code>Item</code>, <code>Location</code>, <code>LocationTypeDefinition</code>, <code>AppUser</code>, <code>Bom</code>, <code>RouteTemplate</code>, <code>OperationTemplate</code>, <code>QualitySpec</code>, <code>DefectCode</code>, <code>DowntimeReasonCode</code>, <code>HoldEvent</code>, etc. Shared across all four log tables.</p>
         </div>
         <div class="table-card">
             <h4>OperationLog</h4>
-            <p>Every shop-floor action: user, terminal, location, affected entity (by type and ID), old/new values. Primary regulatory audit trail.</p>
+            <p>Every successful shop-floor action: user, terminal location, machine location, affected entity, old/new values. Written by <code>Audit_LogOperation</code> inside the mutating proc's transaction &mdash; atomic with the data. Primary regulatory audit trail.</p>
         </div>
         <div class="table-card">
             <h4>ConfigLog</h4>
-            <p>Engineering and admin configuration changes: plant model edits, item master updates, route modifications.</p>
+            <p>Every successful engineering/admin configuration change: plant model edits, item master updates, route modifications, BOM edits, quality spec versions. Written by <code>Audit_LogConfigChange</code> inside the transaction &mdash; atomic with the data.</p>
         </div>
         <div class="table-card">
             <h4>InterfaceLog</h4>
-            <p>External system communications: AIM EDI, PLC/OPC, future Macola/Intelex. Direction, payloads, errors. No user FK &mdash; system-initiated.</p>
+            <p>External system communications: AIM EDI, PLC/OPC, future Macola/Intelex. Direction, payloads, errors. Written by <code>Audit_LogInterfaceCall</code>. No user FK &mdash; system-initiated. High-fidelity mode captures full request/response payloads per FRS 3.17.4.</p>
+        </div>
+        <div class="table-card">
+            <h4>FailureLog</h4>
+            <p>Attempted-but-<strong>rejected</strong> stored procedure calls: parameter failures, business-rule violations ("can't deprecate with active dependents"), FK mismatches, and caught exceptions. Written by <code>Audit_LogFailure</code> from every validation-failure path and every CATCH handler. Writes happen <em>outside</em> the rolled-back transaction so the failure record survives. Drives the Configuration Tool's Failure Log Browser (top rejection reasons, top failing procs). Complements <code>ConfigLog</code>/<code>OperationLog</code> which record what succeeded.</p>
         </div>
     </div>
 
@@ -1220,13 +1224,27 @@ erDiagram
         bit IsHighFidelity
     }
 
+    FailureLog {
+        bigint Id PK
+        datetime2 AttemptedAt
+        int AppUserId FK
+        int LogEntityTypeId FK
+        int EntityId
+        int LogEventTypeId FK
+        varchar FailureReason
+        varchar ProcedureName
+        varchar AttemptedParameters
+    }
+
     LogSeverity ||--o{ OperationLog : severity
     LogSeverity ||--o{ ConfigLog : severity
     LogEventType ||--o{ OperationLog : "event type"
     LogEventType ||--o{ ConfigLog : "event type"
     LogEventType ||--o{ InterfaceLog : "event type"
+    LogEventType ||--o{ FailureLog : "event type"
     LogEntityType ||--o{ OperationLog : "entity type"
     LogEntityType ||--o{ ConfigLog : "entity type"
+    LogEntityType ||--o{ FailureLog : "entity type"
         </div>
     </div>
 </div>
@@ -1342,6 +1360,7 @@ erDiagram
     audit__OperationLog { bigint id PK }
     audit__ConfigLog { bigint id PK }
     audit__InterfaceLog { bigint id PK }
+    audit__FailureLog { bigint id PK }
 
     loc__LocationType ||--o{ loc__LocationTypeDefinition : categorizes
     loc__LocationTypeDefinition ||--o{ loc__LocationAttributeDefinition : "defines attrs"
@@ -1442,10 +1461,13 @@ erDiagram
     audit__LogEventType ||--o{ audit__OperationLog : event
     audit__LogEventType ||--o{ audit__ConfigLog : event
     audit__LogEventType ||--o{ audit__InterfaceLog : event
+    audit__LogEventType ||--o{ audit__FailureLog : event
     audit__LogEntityType ||--o{ audit__OperationLog : entity
     audit__LogEntityType ||--o{ audit__ConfigLog : entity
+    audit__LogEntityType ||--o{ audit__FailureLog : entity
     loc__AppUser ||--o{ audit__OperationLog : user
     loc__AppUser ||--o{ audit__ConfigLog : user
+    loc__AppUser ||--o{ audit__FailureLog : user
     loc__Location ||--o{ audit__OperationLog : "terminal_location"
     loc__Location ||--o{ audit__OperationLog : machine
         </div>

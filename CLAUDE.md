@@ -31,7 +31,9 @@ Start here and work down. Each document builds on the previous.
 | 4 | `MPP_MES_USER_JOURNEYS.md` | Two narrative arcs (Configuration Tool + Plant Floor "day in the life"). 19 validated assumptions/open decisions with an impact matrix. | When designing screens or understanding operator workflows |
 | 5 | `MPP_MES_ERD.html` | Interactive ERD — 8 tabs (one per schema + master), table descriptions, pan/zoom, dark theme | Visual reference for schema relationships |
 | 6 | `MPP_MES_Open_Issues_Register.docx` | Word document (v2.3) consolidating all open items and design decisions. Part A: 10 FDS open items (OI-01–OI-10). Part B: 19 user journey items (UJ-01–UJ-19). Includes FRS/FDS reference crosswalk and status tags per item. | When resolving open items or preparing for MPP meetings |
-| 7 | `sql_best_practices_mes.md` | SQL design conventions and MES-specific patterns. Pre-existing — authored by Jacques. Governs all schema design decisions. | When writing or reviewing SQL |
+| 7 | `MPP_MES_PHASED_PLAN_CONFIG_TOOL.md` | Phased development plan for the Configuration Tool (Arc 1) — 8 phases covering data model, Ignition Named Queries → stored proc layer, and Perspective frontend. Includes the Stored Procedure Template and Conventions section with the full template, error hierarchy, audit placement rules, and code-review checklist. | When planning Configuration Tool work or writing stored procedures |
+| 8 | `MPP_MES_TASK_LIST_CONFIG_TOOL.csv` | 100-task derivative of the Phased Plan with estimates, dependencies, and status columns. Excel workbook at `MPP_MES_TASK_LIST_CONFIG_TOOL.xlsx` with three sheets (Tasks, By Phase, By Category). | When tracking Configuration Tool execution |
+| 9 | `sql_best_practices_mes.md` | SQL design conventions and MES-specific patterns. Pre-existing — authored by Jacques. Governs all schema design decisions. Note: still references snake_case from before the 2026-04-09 convention change — needs refresh. | When writing or reviewing SQL |
 
 ## Reference Material
 
@@ -68,12 +70,13 @@ When in doubt about scope, check `reference/MPP_Scope_Matrix.xlsx` — it is the
 
 ## Current State (as of 2026-04-10)
 
-- **Data model:** v0.4 — 7 schemas, ~50 tables. Location schema restructured into three-tier polymorphic model (`LocationType` → `LocationTypeDefinition` → `LocationAttributeDefinition`). Tool life tracking remains a gap (OI-10).
-- **FDS:** v0.4 working draft — all 15 sections + appendix placeholders. Of 10 open items: 3 resolved, 4 pending customer validation, 1 pending internal review (Ben), 2 remain open.
+- **Data model:** v0.5 — 7 schemas, ~51 tables. Location schema uses three-tier polymorphic model (`LocationType` → `LocationTypeDefinition` → `LocationAttributeDefinition`). Audit schema has 4 log streams: `OperationLog`, `ConfigLog`, `InterfaceLog`, `FailureLog` (new). Tool life tracking remains a gap (OI-10).
+- **FDS:** v0.5 working draft — all 15 sections + appendix placeholders. §11 Audit expanded to 4 log streams with code-string audit proc signatures. Of 10 open items: 3 resolved, 4 pending customer validation, 1 pending internal review (Ben), 2 remain open.
 - **User Journeys:** v0.4 — 19 assumptions, all with decision text and status tags.
 - **Open Issues Register:** Word doc v2.3 with 29 items total. Full FRS/FDS reference crosswalk added.
-- **ERD:** Interactive HTML with 8 tabs, updated for new location model.
-- **Word output:** All 4 markdown docs have bordered + alternating-row styled Word versions. Regenerate via `pandoc ... --reference-doc=reference.docx` + `node style_docx_tables.js <file.docx>`.
+- **ERD:** Interactive HTML with 8 tabs, updated for new location model and FailureLog.
+- **Phased Development Plan (Configuration Tool):** v0.5 — 8 phases scoping data model, API layer (Ignition Named Queries → stored procs), and Perspective frontend. Includes the Stored Procedure Template and Conventions section (output contract, three-tier error hierarchy, transaction boilerplate, full template example, code-review checklist). Separate file: `MPP_MES_PHASED_PLAN_CONFIG_TOOL.md`. Task list derived as `MPP_MES_TASK_LIST_CONFIG_TOOL.csv` (100 tasks, ~470h).
+- **Word output:** All 5 markdown docs have bordered + alternating-row styled Word versions. Regenerate via `pandoc ... --reference-doc=reference.docx` + `node style_docx_tables.js <file.docx>`.
 - **Seed data:** 876 rows extracted from FRS Appendices B/C/D/E into CSVs in `reference/seed_data/`, plus auto-generated `reference/seed_data.xlsx`. Per-appendix Node.js parsers in `reference/seed_data/parsers/` handle multi-line wrapped descriptions. Source PDF is `reference/MPP_FRS_Draft.pdf`.
 - **NOT started:** Ignition project, Perspective screens, SQL DDL scripts, **seed data loading** (CSVs ready), PLC integration, testing.
 
