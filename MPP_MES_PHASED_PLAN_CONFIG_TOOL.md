@@ -14,6 +14,7 @@
 |---|---|---|---|
 | 0.1 | 2026-04-10 | Blue Ridge Automation | Initial phased plan covering 8 configuration tool phases. Each phase scopes data model, API layer (Named Queries → stored procedures), and Perspective frontend requirements. Conceptual — no SQL scripts produced. |
 | 0.2 | 2026-04-10 | Blue Ridge Automation | Reformatted API Layer sections from bulleted lists to tables (Procedure / Parameters / Notes) for Word readability. Added explicit Seed Data tables to Phases 1, 7, and 8 with row counts and source CSVs. No content changes — purely a presentation pass. |
+| 0.3 | 2026-04-10 | Blue Ridge Automation | Restructured the phase ordering: new Phase 1 is **Identity & Audit Foundation** (formerly Phase 2), and the old Phase 1 (Plant Model) is now Phase 2. Added 3 shared **audit infrastructure procedures** (`Audit_LogConfigChange`, `Audit_LogOperation`, `Audit_LogInterfaceCall`) that every CRUD proc in every later phase must call instead of writing audit entries inline. Documented the bootstrap admin user (`Id = 1`, inserted via migration script) to break the chicken-and-egg dependency. Added a **Dependencies** column to every API table across all 8 phases — shows which other procs and tables each procedure relies on, plus which mutating procs call `Audit_LogConfigChange`. Updated cross-cutting concerns to reflect the shared-audit-proc pattern. |
 
 ---
 
@@ -67,7 +68,7 @@ In the Ignition Perspective architecture, **the "API layer" is Ignition Named Qu
 
 These rules apply to every entity in every phase. The plan does not repeat them per phase.
 
-1. **Audit attribution.** Every Create/Update/Deprecate stored procedure takes `@AppUserId INT` and writes a row to `Audit.ConfigLog` capturing the user, the entity type and Id, the action, the old and new values where applicable, and the timestamp.
+1. **Audit attribution via shared procs.** Every Create/Update/Deprecate stored procedure takes `@AppUserId INT` and **calls the shared `Audit_LogConfigChange` proc** (defined in Phase 1) to write a row to `Audit.ConfigLog`. The shared proc is the single source of truth for how audit entries are written — entity-specific procs do not write to `ConfigLog` directly. This means a future change to the audit schema only touches `Audit_LogConfigChange`, not 100+ entity procs.
 2. **Soft delete only.** Hard `DELETE` is forbidden for any table with downstream references. Use `DeprecatedAt` (set non-null to deactivate). Procedures should validate that an entity has no active dependents before deprecating.
 3. **Versioning where applicable.** BOMs, route templates, quality specs, and operation templates all carry `VersionNumber` + `EffectiveFrom` + `DeprecatedAt`. Production records reference the version that was active at the time, not the latest.
 4. **No reference loops.** Validate parent-child relationships server-side (e.g., a `Location.ParentLocationId` cannot equal its own `Id`, and the chain cannot cycle).
@@ -75,7 +76,7 @@ These rules apply to every entity in every phase. The plan does not repeat them 
 6. **Parameterized procedure calls.** Named Queries always use named parameters. No string concatenation, no dynamic SQL on the Perspective side.
 7. **Optimistic locking** on Update procedures: pass `@RowVersion` (or `@UpdatedAt`) and the procedure rejects the update if it doesn't match. Prevents lost updates from concurrent edits.
 8. **Server-side validation.** Validation lives in the stored procedure, not just the Perspective form. The frontend may pre-validate for UX, but the proc is the authority.
-9. **`AppUser` must exist before any other CRUD work.** Every Create/Update/Deprecate references a user. Phase 2 establishes this baseline before Phase 4+ depends on it.
+9. **`AppUser` and audit infrastructure exist before any other phase.** Phase 1 establishes the bootstrap admin user (`Id = 1`, inserted via the migration script) and the shared audit procs. No CRUD work in Phases 2–8 can be written until Phase 1 is complete.
 10. **Perspective permissions.** Each Configuration Tool screen is gated by an Ignition role (Engineering, Admin). Operators cannot reach Configuration screens — enforced at the Perspective view security level, not just hidden.
 
 ---
@@ -83,27 +84,115 @@ These rules apply to every entity in every phase. The plan does not repeat them 
 ## Phase Map and Dependencies
 
 ```
-Phase 1 (Plant Model)
-  ├──→ Phase 2 (Identity & Audit Foundation)        (depends only on Phase 1's Location for terminal attribution)
-  │     └──→ Phase 3 (Reference Lookups)            (small fixed code tables; no real deps)
-  │           ├──→ Phase 4 (Item Master & Container Config)
-  │           │     ├──→ Phase 5 (Process Definition: Routes & Operations)
-  │           │     │     └──→ Phase 6 (BOM Management)
-  │           │     └──→ Phase 7 (Quality Configuration)
-  │           └──→ Phase 8 (Operations Reference Data: Downtime, Shifts, OPC)
+Phase 1 (Identity & Audit Foundation — AppUser, Audit infrastructure procs)
+  └──→ Phase 2 (Plant Model & Location Schema)
+        └──→ Phase 3 (Reference Lookups)
+              ├──→ Phase 4 (Item Master & Container Config)
+              │     ├──→ Phase 5 (Process Definition: Routes & Operations)
+              │     │     └──→ Phase 6 (BOM Management)
+              │     └──→ Phase 7 (Quality Configuration)
+              └──→ Phase 8 (Operations Reference Data: Downtime, Shifts, OPC)
 ```
 
-Phases 1, 2, and 3 are **foundation** and must run roughly in order. Phases 4–8 can be parallelized once 1–3 are done; the only hard dependency among them is Phase 6 (BOMs) needing Phase 4 (Items).
+Phases 1, 2, and 3 are **foundation** and must run in order. **Phase 1 is the new bedrock** — the audit infrastructure procs (`Audit_LogConfigChange` etc.) must exist before any other CRUD proc can be written, since every Create/Update/Deprecate proc in every later phase calls them. Phases 4–8 can be parallelized once 1–3 are done; the only hard dependency among them is Phase 6 (BOMs) needing Phase 4 (Items).
+
+**Bootstrap problem solved:** The very first `AppUser` row (a system/admin account, `Id = 1`) is inserted directly via the deployment migration script — not via `AppUser_Create` — to break the chicken-and-egg dependency on `@AppUserId` for audit attribution. All subsequent admin accounts are created by this bootstrap user.
 
 ---
 
-## Phase 1 — Foundation: Plant Model & Location Schema
+## Phase 1 — Identity & Audit Foundation
 
-**Goal:** Stand up the three-tier polymorphic location model and load the seed machine list. Without this, nothing else can be created.
+**Goal:** Establish the audit log infrastructure and the `AppUser` table. Every other phase calls into this — every Create/Update/Deprecate proc anywhere in the system invokes one of the shared audit procs defined here. Without this phase, no other CRUD work can be written.
 
-**Dependencies:** None.
+**Dependencies:** None. This is the bedrock.
 
-**Status:** Unblocked. Ready to start.
+**Status:** Unblocked. **Must be the first thing built.**
+
+### Bootstrap Note
+
+The very first `AppUser` row (a system/admin account) is inserted directly via the deployment migration script — not via `AppUser_Create` — to break the chicken-and-egg dependency on `@AppUserId` for audit attribution. By convention, this row has `Id = 1`, `AdAccount = 'system.bootstrap'`, and `IgnitionRole = 'Admin'`. All subsequent admin accounts are created by this bootstrap user.
+
+The audit lookup tables (`LogSeverity`, `LogEventType`, `LogEntityType`) are also seeded by the migration script, since the audit infrastructure procs need them to exist before they can write any rows.
+
+### Data Model
+
+| Table | Role |
+|---|---|
+| `AppUser` | One row per MES user. Backed by AD identity. Captures clock number + PIN hash for shop-floor convenience login. Referenced for audit attribution everywhere. |
+| `Audit.LogSeverity` | Code table: Info, Warning, Error, Critical. Seeded. |
+| `Audit.LogEventType` | Code table: ConfigChanged, LotCreated, LotMoved, ProductionRecorded, etc. Seeded with the initial set, extensible. |
+| `Audit.LogEntityType` | Code table: Location, Item, Lot, BOM, AppUser, etc. Seeded from the entity table list. |
+| `Audit.ConfigLog` | Destination for all Configuration Tool audit entries. Every config mutation writes here via `Audit_LogConfigChange`. |
+| `Audit.OperationLog` | Destination for plant-floor mutations (used by Arc 2, but the proc lives here). Every shop-floor action writes via `Audit_LogOperation`. |
+| `Audit.InterfaceLog` | Destination for external system calls (AIM, Zebra, Macola, etc.). Every external call writes via `Audit_LogInterfaceCall`. |
+
+### Audit Infrastructure Procedures
+
+These are the **shared audit procs** that every other CRUD proc in the system calls. They are the single source of truth for how audit entries are written. If the audit schema changes, these are the only procs that change — everything else just keeps calling them.
+
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `Audit_LogConfigChange` | `@AppUserId, @LogEntityTypeId, @EntityId, @LogEventTypeId, @LogSeverityId, @Description, @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.ConfigLog`. **Called by every Create/Update/Deprecate proc in every Configuration Tool phase.** | `Audit.ConfigLog`, `Audit.LogEntityType`, `Audit.LogEventType`, `Audit.LogSeverity`, `AppUser` |
+| `Audit_LogOperation` | `@AppUserId, @TerminalLocationId, @LocationId, @LogEntityTypeId, @EntityId, @LogEventTypeId, @LogSeverityId, @Description, @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.OperationLog`. Called by every plant-floor mutation in the Arc 2 build (LOT creation, movement, production recording, holds, etc.). **Defined here, used in the Plant Floor phased plan.** | `Audit.OperationLog`, `Location`, `AppUser`, audit lookups |
+| `Audit_LogInterfaceCall` | `@SystemName VARCHAR(50), @Direction VARCHAR(10), @LogEventTypeId, @Description, @RequestPayload NVARCHAR(MAX) NULL, @ResponsePayload NVARCHAR(MAX) NULL, @ErrorCondition NVARCHAR(200) NULL, @IsHighFidelity BIT = 0` | Writes one row to `Audit.InterfaceLog`. Called by every AIM, Zebra, Macola, or Intelex call. Per FRS 3.17.4, `@IsHighFidelity` controls whether the full request/response payloads are stored or just the metadata. | `Audit.InterfaceLog`, audit lookups |
+
+### API Layer (Named Queries → Stored Procedures)
+
+**`AppUser`** (full CRUD + lookup variants):
+
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `AppUser_List` | `@IncludeDeprecated BIT = 0` | Active users by default | `AppUser` |
+| `AppUser_Get` | `@Id` | | `AppUser` |
+| `AppUser_GetByAdAccount` | `@AdAccount` | Session resolution at AD login | `AppUser` |
+| `AppUser_GetByClockNumber` | `@ClockNumber` | Shop-floor login lookup | `AppUser` |
+| `AppUser_Create` | `@AdAccount, @DisplayName, @ClockNumber, @PinHash, @IgnitionRole, @AppUserId` | `@AppUserId` is the admin creating the row | `AppUser`, calls `Audit_LogConfigChange` |
+| `AppUser_Update` | `@Id, @DisplayName, @ClockNumber, @IgnitionRole, @AppUserId` | PIN changes go through `_SetPin` | `AppUser`, calls `Audit_LogConfigChange` |
+| `AppUser_SetPin` | `@Id, @PinHash, @AppUserId` | Separate proc keeps PIN out of the general Update flow | `AppUser`, calls `Audit_LogConfigChange` (with redacted `@OldValue`/`@NewValue`) |
+| `AppUser_Deprecate` | `@Id, @AppUserId` | Rejects if active records reference this user as creator | `AppUser`, calls `Audit_LogConfigChange` |
+
+**Audit lookup tables** (read-only after seeding):
+
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `LogSeverity_List` | — | Info, Warning, Error, Critical | `Audit.LogSeverity` |
+| `LogEventType_List` | — | ConfigChanged, LotCreated, LotMoved, ProductionRecorded, etc. | `Audit.LogEventType` |
+| `LogEntityType_List` | — | Location, Item, Lot, BOM, AppUser, etc. | `Audit.LogEntityType` |
+
+**`Audit.ConfigLog`** (read-only from the Configuration Tool — written only by `Audit_LogConfigChange`):
+
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `ConfigLog_List` | `@StartDate, @EndDate, @LogEntityTypeId NULL, @AppUserId NULL` | Paged, filterable | `Audit.ConfigLog`, `AppUser`, `Audit.LogEntityType` |
+| `ConfigLog_GetByEntity` | `@LogEntityTypeId, @EntityId` | "Show me everything ever changed about this Item / Location / BOM" | `Audit.ConfigLog` |
+
+### Frontend (Perspective Views)
+
+| View | Purpose |
+|---|---|
+| **User Management** | Admin-only. List of `AppUser` rows with filter (active/deprecated). Add User modal: enter AD account, display name, clock number, optional initial PIN, Ignition role. Edit User modal: same fields plus "Deprecate" action. |
+| **PIN Reset** | Self-service or admin flow: set a new PIN with confirmation field. Hashes the PIN client-side before calling `AppUser_SetPin`. PIN storage uses `PinHash`, never plaintext. |
+| **Audit Log Browser** | Admin-only. Filterable view of `Audit.ConfigLog` with filters for entity type, user, date range. Click a row to expand and see the old/new values diff. Deep-linkable from every other Config Tool screen ("View audit history for this Item"). |
+
+### Phase 1 complete when
+
+- The bootstrap `AppUser` row exists (`Id = 1`, system account)
+- The audit lookup tables are seeded (severity, event types, entity types)
+- The 3 audit infrastructure procs (`Audit_LogConfigChange`, `Audit_LogOperation`, `Audit_LogInterfaceCall`) are deployed and tested
+- The full `AppUser` CRUD is wired through Named Queries — and every mutating proc calls `Audit_LogConfigChange`
+- Admin can create a real engineering admin user via the User Management screen
+- Admin can browse the audit log via the Audit Log Browser
+- Every later phase's CRUD proc template **must** include a `CALL Audit_LogConfigChange(...)` step before returning
+
+---
+
+## Phase 2 — Plant Model & Location Schema
+
+**Goal:** Stand up the three-tier polymorphic location model and load the seed machine list. Without this, nothing else can be physically configured.
+
+**Dependencies:** Phase 1 (audit infrastructure procs and at least one `AppUser` for `@AppUserId` attribution).
+
+**Status:** Unblocked once Phase 1 is complete.
 
 ### Data Model
 
@@ -134,57 +223,57 @@ Tables involved (all from the `Location` schema, per `MPP_MES_DATA_MODEL.md` §1
 
 **`LocationType`** (read-only — seeded at deployment):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `LocationType_List` | — | Returns all 5 tiers |
-| `LocationType_Get` | `@Id` | Single tier |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `LocationType_List` | — | Returns all 5 tiers | `LocationType` |
+| `LocationType_Get` | `@Id` | Single tier | `LocationType` |
 
 **`LocationTypeDefinition`** (full CRUD):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `LocationTypeDefinition_List` | `@LocationTypeId NULL` | Optional filter by tier |
-| `LocationTypeDefinition_Get` | `@Id` | |
-| `LocationTypeDefinition_Create` | `@LocationTypeId, @Code, @Name, @Description, @AppUserId` | Returns new `Id` |
-| `LocationTypeDefinition_Update` | `@Id, @Name, @Description, @AppUserId` | `LocationTypeId` is immutable after create |
-| `LocationTypeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any active `Location` references it |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `LocationTypeDefinition_List` | `@LocationTypeId NULL` | Optional filter by tier | `LocationTypeDefinition`, `LocationType` |
+| `LocationTypeDefinition_Get` | `@Id` | | `LocationTypeDefinition` |
+| `LocationTypeDefinition_Create` | `@LocationTypeId, @Code, @Name, @Description, @AppUserId` | Returns new `Id` | `LocationType` (FK), calls `Audit_LogConfigChange` |
+| `LocationTypeDefinition_Update` | `@Id, @Name, @Description, @AppUserId` | `LocationTypeId` is immutable after create | calls `Audit_LogConfigChange` |
+| `LocationTypeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any active `Location` references it | reads `Location`, calls `Audit_LogConfigChange` |
 
 **`LocationAttributeDefinition`** (full CRUD, scoped to a parent definition):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `LocationAttributeDefinition_ListByDefinition` | `@LocationTypeDefinitionId` | Attribute schema for one kind |
-| `LocationAttributeDefinition_Get` | `@Id` | |
-| `LocationAttributeDefinition_Create` | `@LocationTypeDefinitionId, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | |
-| `LocationAttributeDefinition_Update` | `@Id, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | |
-| `LocationAttributeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any `LocationAttribute` references it |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `LocationAttributeDefinition_ListByDefinition` | `@LocationTypeDefinitionId` | Attribute schema for one kind | `LocationAttributeDefinition` |
+| `LocationAttributeDefinition_Get` | `@Id` | | `LocationAttributeDefinition` |
+| `LocationAttributeDefinition_Create` | `@LocationTypeDefinitionId, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | | `LocationTypeDefinition` (FK), calls `Audit_LogConfigChange` |
+| `LocationAttributeDefinition_Update` | `@Id, @AttributeName, @DataType, @IsRequired, @DefaultValue, @Uom, @SortOrder, @Description, @AppUserId` | | calls `Audit_LogConfigChange` |
+| `LocationAttributeDefinition_Deprecate` | `@Id, @AppUserId` | Rejects if any `LocationAttribute` references it | reads `LocationAttribute`, calls `Audit_LogConfigChange` |
 
 **`Location`** (full CRUD + tree queries):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `Location_List` | `@ParentLocationId NULL, @LocationTypeDefinitionId NULL` | Children and/or filtered by kind |
-| `Location_GetTree` | `@RootLocationId` | Recursive CTE: full hierarchy from a root down |
-| `Location_GetAncestors` | `@LocationId` | Recursive CTE: from this location up to root |
-| `Location_GetDescendantsOfType` | `@LocationId, @LocationTypeId` | E.g., "all Cells under the Die Cast Area" |
-| `Location_Get` | `@Id` | Returns location + all current `LocationAttribute` values |
-| `Location_Create` | `@LocationTypeDefinitionId, @ParentLocationId, @Name, @Code, @Description, @AppUserId` | |
-| `Location_Update` | `@Id, @Name, @Code, @Description, @AppUserId` | |
-| `Location_Deprecate` | `@Id, @AppUserId` | Rejects if active `Lot.CurrentLocationId` or `LotMovement` references exist |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `Location_List` | `@ParentLocationId NULL, @LocationTypeDefinitionId NULL` | Children and/or filtered by kind | `Location`, `LocationTypeDefinition` |
+| `Location_GetTree` | `@RootLocationId` | Recursive CTE: full hierarchy from a root down | `Location` (recursive) |
+| `Location_GetAncestors` | `@LocationId` | Recursive CTE: from this location up to root | `Location` (recursive) |
+| `Location_GetDescendantsOfType` | `@LocationId, @LocationTypeId` | E.g., "all Cells under the Die Cast Area" | `Location` (recursive), `LocationTypeDefinition` |
+| `Location_Get` | `@Id` | Returns location + all current `LocationAttribute` values | `Location`, `LocationAttribute`, `LocationAttributeDefinition` |
+| `Location_Create` | `@LocationTypeDefinitionId, @ParentLocationId, @Name, @Code, @Description, @AppUserId` | | `LocationTypeDefinition` (FK), `Location` (parent FK), calls `Audit_LogConfigChange` |
+| `Location_Update` | `@Id, @Name, @Code, @Description, @AppUserId` | | calls `Audit_LogConfigChange` |
+| `Location_Deprecate` | `@Id, @AppUserId` | Rejects if active `Lot.CurrentLocationId` or `LotMovement` references exist | reads `Lot`, `LotMovement`, calls `Audit_LogConfigChange` |
 
 **`LocationAttribute`** (per-instance values):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `LocationAttribute_GetByLocation` | `@LocationId` | All current values for one location |
-| `LocationAttribute_Set` | `@LocationId, @LocationAttributeDefinitionId, @AttributeValue, @AppUserId` | Upsert; validates definition belongs to location's kind |
-| `LocationAttribute_Clear` | `@LocationId, @LocationAttributeDefinitionId, @AppUserId` | Remove value; rejects if `IsRequired` |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `LocationAttribute_GetByLocation` | `@LocationId` | All current values for one location | `LocationAttribute`, `LocationAttributeDefinition` |
+| `LocationAttribute_Set` | `@LocationId, @LocationAttributeDefinitionId, @AttributeValue, @AppUserId` | Upsert; validates definition belongs to location's kind | `Location`, `LocationAttributeDefinition`, calls `Audit_LogConfigChange` |
+| `LocationAttribute_Clear` | `@LocationId, @LocationAttributeDefinitionId, @AppUserId` | Remove value; rejects if `IsRequired` | `LocationAttributeDefinition`, calls `Audit_LogConfigChange` |
 
 **Seed loading** (one-time):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `Location_BulkLoadMachinesFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Loads `machines.csv`. Alternative: Ignition Gateway script that calls `Location_Create` per row. Implementation choice deferred — both work. |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `Location_BulkLoadMachinesFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Loads `machines.csv`. Alternative: Ignition Gateway script calling `Location_Create` per row. | calls `Location_Create` per row (transitively `Audit_LogConfigChange`) |
 
 ### Frontend (Perspective Views)
 
@@ -196,7 +285,7 @@ Tables involved (all from the `Location` schema, per `MPP_MES_DATA_MODEL.md` §1
 | **Location Type Definition Editor** | Engineering/Admin only. List of all `LocationTypeDefinition` rows grouped by `LocationType`. Add/edit definitions, with an embedded sub-table of `LocationAttributeDefinition` rows (the attribute schema). |
 | **Bulk Seed Loader** | One-time-use screen (or Gateway script) for loading `machines.csv` into `Location` rows. Shows a preview table from the CSV, lets the engineer map process types to definitions (e.g., MachDesc starting with "DieCast" → `DieCastMachine`), and triggers the bulk load. |
 
-### Phase 1 complete when
+### Phase 2 complete when
 
 - 5 `LocationType` rows seeded
 - ~15 `LocationTypeDefinition` rows seeded with their attribute schemas
@@ -205,72 +294,6 @@ Tables involved (all from the `Location` schema, per `MPP_MES_DATA_MODEL.md` §1
 - Engineering can browse the tree, click a machine, and see/edit its attributes
 - Engineering can add a new `LocationTypeDefinition` (e.g., "TestStand" if a new kind is needed)
 - Every mutation lands in `Audit.ConfigLog` with the user's clock number recorded
-
----
-
-## Phase 2 — Identity & Audit Foundation
-
-**Goal:** Establish `AppUser` records and the audit log lookup tables. Without this, no other phase can record `CreatedByUserId` / `UpdatedByUserId` references or audit log entries.
-
-**Dependencies:** Phase 1 (need at least one `Location` of definition `Terminal` for engineering workstations).
-
-**Status:** Unblocked. Should run immediately after Phase 1.
-
-### Data Model
-
-| Table | Role |
-|---|---|
-| `AppUser` | One row per MES user. Backed by AD identity. Captures clock number + PIN hash for shop-floor convenience login. Referenced for audit attribution everywhere. |
-| `Audit.LogSeverity` | Code table: Info, Warning, Error, Critical. Seeded. |
-| `Audit.LogEventType` | Code table: LotCreated, LotMoved, ProductionRecorded, ConfigChanged, etc. Seeded with the initial set, extensible. |
-| `Audit.LogEntityType` | Code table: Location, Item, Lot, BOM, etc. Seeded from the entity table list. |
-| `Audit.ConfigLog` | The destination for all Configuration Tool audit entries. Every mutation in every phase writes here. |
-
-### API Layer (Named Queries → Stored Procedures)
-
-**`AppUser`** (full CRUD + lookup variants):
-
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `AppUser_List` | `@IncludeDeprecated BIT = 0` | Active users by default |
-| `AppUser_Get` | `@Id` | |
-| `AppUser_GetByAdAccount` | `@AdAccount` | Session resolution at AD login |
-| `AppUser_GetByClockNumber` | `@ClockNumber` | Shop-floor login lookup |
-| `AppUser_Create` | `@AdAccount, @DisplayName, @ClockNumber, @PinHash, @IgnitionRole, @AppUserId` | `@AppUserId` is the admin creating the row |
-| `AppUser_Update` | `@Id, @DisplayName, @ClockNumber, @IgnitionRole, @AppUserId` | PIN changes go through `_SetPin` |
-| `AppUser_SetPin` | `@Id, @PinHash, @AppUserId` | Separate proc keeps PIN out of the general Update flow |
-| `AppUser_Deprecate` | `@Id, @AppUserId` | Rejects if active records reference this user as creator |
-
-**Audit lookup tables** (read-only after seeding):
-
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `LogSeverity_List` | — | Info, Warning, Error, Critical |
-| `LogEventType_List` | — | LotCreated, LotMoved, ProductionRecorded, ConfigChanged, etc. |
-| `LogEntityType_List` | — | Location, Item, Lot, BOM, etc. |
-
-**`Audit.ConfigLog`** (read-only from the Configuration Tool — written only by other procs):
-
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `ConfigLog_List` | `@StartDate, @EndDate, @LogEntityTypeId NULL, @AppUserId NULL` | Paged, filterable |
-| `ConfigLog_GetByEntity` | `@LogEntityTypeId, @EntityId` | "Show me everything ever changed about this Item / Location / BOM" |
-
-### Frontend (Perspective Views)
-
-| View | Purpose |
-|---|---|
-| **User Management** | Admin-only screen. List of `AppUser` rows with filter (active/deprecated). Add User modal: enter AD account, display name, clock number, optional initial PIN, Ignition role. Edit User modal: same fields plus "Deprecate" action. |
-| **PIN Reset** | Self-service or admin: a separate flow to set a new PIN, with confirmation field. Hashes the PIN before calling `AppUser_SetPin`. Pin storage uses `pin_hash` (per `MPP_MES_DATA_MODEL.md`), not plaintext. |
-| **Audit Log Browser** | Admin-only. Filterable view of `Audit.ConfigLog` with filters for entity type, user, date range. Click a row to expand and see the old/new values diff. Deep-link from any other Config Tool screen ("View audit history for this Item"). |
-
-### Phase 2 complete when
-
-- All MPP MES users exist in `AppUser` with their AD accounts and clock numbers
-- The audit lookup tables are seeded
-- The Audit Log Browser shows entries from Phase 1's seed loading work
-- Every Phase 1 stored procedure has been retroactively wired to write `ConfigLog` rows with proper `AppUserId` attribution
-- Admin can reset a user's PIN
 
 ---
 
@@ -301,20 +324,20 @@ Each table follows one of two standard patterns based on whether engineering can
 
 **Read-only pattern** (`LotOriginType`, `LotStatusCode`, `ContainerStatusCode`, `GenealogyRelationshipType`, `OperationStatus`, `WorkOrderStatus`):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `<Entity>_List` | — | Returns all rows |
-| `<Entity>_Get` | `@Id` | Single row |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `<Entity>_List` | — | Returns all rows | `<Entity>` table |
+| `<Entity>_Get` | `@Id` | Single row | `<Entity>` table |
 
 **Mutable pattern** (`Uom`, `ItemType` — engineering can add new entries):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `<Entity>_List` | `@IncludeDeprecated BIT = 0` | |
-| `<Entity>_Get` | `@Id` | |
-| `<Entity>_Create` | `@Code, @Name, @Description, @AppUserId` | Returns new `Id` |
-| `<Entity>_Update` | `@Id, @Name, @Description, @AppUserId` | `Code` is immutable |
-| `<Entity>_Deprecate` | `@Id, @AppUserId` | Rejects on active dependents |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `<Entity>_List` | `@IncludeDeprecated BIT = 0` | | `<Entity>` table |
+| `<Entity>_Get` | `@Id` | | `<Entity>` table |
+| `<Entity>_Create` | `@Code, @Name, @Description, @AppUserId` | Returns new `Id` | calls `Audit_LogConfigChange` |
+| `<Entity>_Update` | `@Id, @Name, @Description, @AppUserId` | `Code` is immutable | calls `Audit_LogConfigChange` |
+| `<Entity>_Deprecate` | `@Id, @AppUserId` | Rejects on active dependents | reads referencing tables, calls `Audit_LogConfigChange` |
 
 ### Frontend (Perspective Views)
 
@@ -351,23 +374,23 @@ This phase is intentionally minimal. The frontend is a generic CRUD grid that lo
 
 **`Item`**:
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `Item_List` | `@ItemTypeId NULL, @SearchText NULL, @IncludeDeprecated BIT = 0` | Filterable list |
-| `Item_Get` | `@Id` | |
-| `Item_GetByPartNumber` | `@PartNumber` | For BOM/route construction lookups |
-| `Item_Create` | `@PartNumber, @ItemTypeId, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | Returns new `Id` |
-| `Item_Update` | `@Id, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | `PartNumber` and `ItemTypeId` are immutable after create — to change them, deprecate the old item and create new |
-| `Item_Deprecate` | `@Id, @AppUserId` | Rejects if active `Bom`, `RouteTemplate`, `ItemLocation`, or `ContainerConfig` references exist |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `Item_List` | `@ItemTypeId NULL, @SearchText NULL, @IncludeDeprecated BIT = 0` | Filterable list | `Item`, `ItemType`, `Uom` |
+| `Item_Get` | `@Id` | | `Item` |
+| `Item_GetByPartNumber` | `@PartNumber` | For BOM/route construction lookups | `Item` |
+| `Item_Create` | `@PartNumber, @ItemTypeId, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | Returns new `Id` | `ItemType` (FK), `Uom` (FK), calls `Audit_LogConfigChange` |
+| `Item_Update` | `@Id, @Description, @MacolaPartNumber, @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId, @AppUserId` | `PartNumber` and `ItemTypeId` are immutable — to change, deprecate and recreate | `Uom` (FK), calls `Audit_LogConfigChange` |
+| `Item_Deprecate` | `@Id, @AppUserId` | Rejects if active `Bom`, `RouteTemplate`, `ItemLocation`, or `ContainerConfig` references exist | reads `Bom`, `RouteTemplate`, `ItemLocation`, `ContainerConfig`, calls `Audit_LogConfigChange` |
 
 **`ContainerConfig`**:
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `ContainerConfig_GetByItem` | `@ItemId` | Usually one config per item |
-| `ContainerConfig_Create` | `@ItemId, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | OI-02 may add `@ClosureMethod` and `@TargetWeight` |
-| `ContainerConfig_Update` | `@Id, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | |
-| `ContainerConfig_Deprecate` | `@Id, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `ContainerConfig_GetByItem` | `@ItemId` | Usually one config per item | `ContainerConfig` |
+| `ContainerConfig_Create` | `@ItemId, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | OI-02 may add `@ClosureMethod` and `@TargetWeight` | `Item` (FK), calls `Audit_LogConfigChange` |
+| `ContainerConfig_Update` | `@Id, @TraysPerContainer, @PartsPerTray, @IsSerialized, @DunnageCode, @CustomerCode, @AppUserId` | | calls `Audit_LogConfigChange` |
+| `ContainerConfig_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
 
 ### Frontend (Perspective Views)
 
@@ -410,43 +433,43 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 
 **`OperationTemplate`** (versioned):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `OperationTemplate_List` | `@AreaLocationId NULL, @ActiveOnly BIT = 1` | Filter by area |
-| `OperationTemplate_Get` | `@Id` | |
-| `OperationTemplate_Create` | `@Name, @AreaLocationId, @CollectsDieInfo, @CollectsCavityInfo, @CollectsWeight, @CollectsGoodCount, @CollectsBadCount, @RequiresMaterialVerification, @RequiresSerialNumber, @AppUserId` | Creates version 1 |
-| `OperationTemplate_CreateNewVersion` | `@ParentOperationTemplateId, ..., @EffectiveFrom, @AppUserId` | New version preserves the previous |
-| `OperationTemplate_Deprecate` | `@Id, @AppUserId` | Soft-deletes a specific version |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `OperationTemplate_List` | `@AreaLocationId NULL, @ActiveOnly BIT = 1` | Filter by area | `OperationTemplate`, `Location` |
+| `OperationTemplate_Get` | `@Id` | | `OperationTemplate` |
+| `OperationTemplate_Create` | `@Name, @AreaLocationId, @CollectsDieInfo, @CollectsCavityInfo, @CollectsWeight, @CollectsGoodCount, @CollectsBadCount, @RequiresMaterialVerification, @RequiresSerialNumber, @AppUserId` | Creates version 1 | `Location` (Area FK), calls `Audit_LogConfigChange` |
+| `OperationTemplate_CreateNewVersion` | `@ParentOperationTemplateId, ..., @EffectiveFrom, @AppUserId` | New version preserves the previous | reads `OperationTemplate`, calls `Audit_LogConfigChange` |
+| `OperationTemplate_Deprecate` | `@Id, @AppUserId` | Soft-deletes a specific version | reads `RouteStep`, calls `Audit_LogConfigChange` |
 
 **`RouteTemplate`** (versioned):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `RouteTemplate_ListByItem` | `@ItemId, @ActiveOnly BIT = 1` | Usually one active route per item |
-| `RouteTemplate_Get` | `@Id` | Returns route header + steps in order |
-| `RouteTemplate_GetActiveForItem` | `@ItemId, @AsOfDate DATETIME2 = NULL` | Used by production code to pick the version active at a given moment |
-| `RouteTemplate_Create` | `@ItemId, @Name, @EffectiveFrom, @AppUserId` | Empty route, version 1 |
-| `RouteTemplate_CreateNewVersion` | `@ParentRouteTemplateId, @EffectiveFrom, @AppUserId` | Copies steps from prior version |
-| `RouteTemplate_Deprecate` | `@Id, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `RouteTemplate_ListByItem` | `@ItemId, @ActiveOnly BIT = 1` | Usually one active route per item | `RouteTemplate` |
+| `RouteTemplate_Get` | `@Id` | Returns route header + steps in order | `RouteTemplate`, `RouteStep`, `OperationTemplate` |
+| `RouteTemplate_GetActiveForItem` | `@ItemId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given moment | `RouteTemplate` |
+| `RouteTemplate_Create` | `@ItemId, @Name, @EffectiveFrom, @AppUserId` | Empty route, version 1 | `Item` (FK), calls `Audit_LogConfigChange` |
+| `RouteTemplate_CreateNewVersion` | `@ParentRouteTemplateId, @EffectiveFrom, @AppUserId` | Copies steps from prior version | reads `RouteTemplate`, `RouteStep`; calls `Audit_LogConfigChange` |
+| `RouteTemplate_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
 
 **`RouteStep`**:
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `RouteStep_ListByRoute` | `@RouteTemplateId` | |
-| `RouteStep_Add` | `@RouteTemplateId, @SequenceNumber, @OperationTemplateId, @AppUserId` | |
-| `RouteStep_Update` | `@Id, @SequenceNumber, @OperationTemplateId, @AppUserId` | |
-| `RouteStep_Remove` | `@Id, @AppUserId` | |
-| `RouteStep_Reorder` | `@RouteTemplateId, @StepIds NVARCHAR(MAX), @AppUserId` | Comma-delimited new order — drag-and-drop reorder support |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `RouteStep_ListByRoute` | `@RouteTemplateId` | | `RouteStep`, `OperationTemplate` |
+| `RouteStep_Add` | `@RouteTemplateId, @SequenceNumber, @OperationTemplateId, @AppUserId` | | `RouteTemplate` (FK), `OperationTemplate` (FK), calls `Audit_LogConfigChange` |
+| `RouteStep_Update` | `@Id, @SequenceNumber, @OperationTemplateId, @AppUserId` | | `OperationTemplate` (FK), calls `Audit_LogConfigChange` |
+| `RouteStep_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
+| `RouteStep_Reorder` | `@RouteTemplateId, @StepIds NVARCHAR(MAX), @AppUserId` | Comma-delimited new order — drag-and-drop reorder support | calls `Audit_LogConfigChange` |
 
 **`ItemLocation`** (eligibility map):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `ItemLocation_ListByItem` | `@ItemId` | "Where can this part run?" |
-| `ItemLocation_ListByLocation` | `@LocationId` | "What parts can run on this machine?" |
-| `ItemLocation_Add` | `@ItemId, @LocationId, @AppUserId` | |
-| `ItemLocation_Remove` | `@ItemId, @LocationId, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `ItemLocation_ListByItem` | `@ItemId` | "Where can this part run?" | `ItemLocation`, `Location` |
+| `ItemLocation_ListByLocation` | `@LocationId` | "What parts can run on this machine?" | `ItemLocation`, `Item` |
+| `ItemLocation_Add` | `@ItemId, @LocationId, @AppUserId` | | `Item` (FK), `Location` (FK), calls `Audit_LogConfigChange` |
+| `ItemLocation_Remove` | `@ItemId, @LocationId, @AppUserId` | | calls `Audit_LogConfigChange` |
 
 ### Frontend (Perspective Views)
 
@@ -485,23 +508,23 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 
 **`Bom`** (versioned):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `Bom_ListByParentItem` | `@ParentItemId, @ActiveOnly BIT = 1` | All BOM versions for a parent item |
-| `Bom_Get` | `@Id` | Header + all lines in sort order |
-| `Bom_GetActiveForItem` | `@ParentItemId, @AsOfDate DATETIME2 = NULL` | Picks the version active at a given moment |
-| `Bom_Create` | `@ParentItemId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty BOM, no lines |
-| `Bom_CreateNewVersion` | `@ParentBomId, @EffectiveFrom, @AppUserId` | Copies all lines from the prior version |
-| `Bom_Deprecate` | `@Id, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `Bom_ListByParentItem` | `@ParentItemId, @ActiveOnly BIT = 1` | All BOM versions for a parent item | `Bom` |
+| `Bom_Get` | `@Id` | Header + all lines in sort order | `Bom`, `BomLine`, `Item` |
+| `Bom_GetActiveForItem` | `@ParentItemId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given moment | `Bom` |
+| `Bom_Create` | `@ParentItemId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty BOM, no lines | `Item` (FK), calls `Audit_LogConfigChange` |
+| `Bom_CreateNewVersion` | `@ParentBomId, @EffectiveFrom, @AppUserId` | Copies all lines from the prior version | reads `Bom`, `BomLine`; calls `Audit_LogConfigChange` |
+| `Bom_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
 
 **`BomLine`**:
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `BomLine_ListByBom` | `@BomId` | |
-| `BomLine_Add` | `@BomId, @ChildItemId, @QtyPer, @UomId, @SortOrder, @AppUserId` | |
-| `BomLine_Update` | `@Id, @QtyPer, @UomId, @SortOrder, @AppUserId` | |
-| `BomLine_Remove` | `@Id, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `BomLine_ListByBom` | `@BomId` | | `BomLine`, `Item`, `Uom` |
+| `BomLine_Add` | `@BomId, @ChildItemId, @QtyPer, @UomId, @SortOrder, @AppUserId` | | `Bom` (FK), `Item` (FK), `Uom` (FK), calls `Audit_LogConfigChange` |
+| `BomLine_Update` | `@Id, @QtyPer, @UomId, @SortOrder, @AppUserId` | | `Uom` (FK), calls `Audit_LogConfigChange` |
+| `BomLine_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
 
 ### Frontend (Perspective Views)
 
@@ -546,42 +569,42 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 
 **`QualitySpec`** (header):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `QualitySpec_List` | `@ItemId NULL, @OperationTemplateId NULL` | Filter by item or operation |
-| `QualitySpec_Get` | `@Id` | Header + active version + attributes |
-| `QualitySpec_Create` | `@Name, @ItemId NULL, @OperationTemplateId NULL, @AppUserId` | |
-| `QualitySpec_Deprecate` | `@Id, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `QualitySpec_List` | `@ItemId NULL, @OperationTemplateId NULL` | Filter by item or operation | `QualitySpec` |
+| `QualitySpec_Get` | `@Id` | Header + active version + attributes | `QualitySpec`, `QualitySpecVersion`, `QualitySpecAttribute` |
+| `QualitySpec_Create` | `@Name, @ItemId NULL, @OperationTemplateId NULL, @AppUserId` | | `Item` (FK, optional), `OperationTemplate` (FK, optional), calls `Audit_LogConfigChange` |
+| `QualitySpec_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
 
 **`QualitySpecVersion`** (versioned body):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `QualitySpecVersion_ListBySpec` | `@QualitySpecId` | |
-| `QualitySpecVersion_GetActive` | `@QualitySpecId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given time |
-| `QualitySpecVersion_Create` | `@QualitySpecId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty version |
-| `QualitySpecVersion_CreateNewVersion` | `@ParentVersionId, @EffectiveFrom, @AppUserId` | Copies attributes from prior version |
-| `QualitySpecVersion_Deprecate` | `@Id, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `QualitySpecVersion_ListBySpec` | `@QualitySpecId` | | `QualitySpecVersion` |
+| `QualitySpecVersion_GetActive` | `@QualitySpecId, @AsOfDate DATETIME2 = NULL` | Picks version active at a given time | `QualitySpecVersion` |
+| `QualitySpecVersion_Create` | `@QualitySpecId, @VersionNumber, @EffectiveFrom, @AppUserId` | Empty version | `QualitySpec` (FK), calls `Audit_LogConfigChange` |
+| `QualitySpecVersion_CreateNewVersion` | `@ParentVersionId, @EffectiveFrom, @AppUserId` | Copies attributes from prior version | reads `QualitySpecVersion`, `QualitySpecAttribute`; calls `Audit_LogConfigChange` |
+| `QualitySpecVersion_Deprecate` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
 
 **`QualitySpecAttribute`**:
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `QualitySpecAttribute_ListByVersion` | `@QualitySpecVersionId` | |
-| `QualitySpecAttribute_Add` | `@QualitySpecVersionId, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | |
-| `QualitySpecAttribute_Update` | `@Id, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | |
-| `QualitySpecAttribute_Remove` | `@Id, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `QualitySpecAttribute_ListByVersion` | `@QualitySpecVersionId` | | `QualitySpecAttribute`, `Uom` |
+| `QualitySpecAttribute_Add` | `@QualitySpecVersionId, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | | `QualitySpecVersion` (FK), `Uom` (FK), calls `Audit_LogConfigChange` |
+| `QualitySpecAttribute_Update` | `@Id, @AttributeName, @DataType, @TargetValue, @LowerLimit, @UpperLimit, @UomId, @SampleTrigger, @SortOrder, @AppUserId` | | `Uom` (FK), calls `Audit_LogConfigChange` |
+| `QualitySpecAttribute_Remove` | `@Id, @AppUserId` | | calls `Audit_LogConfigChange` |
 
 **`DefectCode`** (full CRUD + bulk seed):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `DefectCode_List` | `@AreaLocationId NULL, @IncludeDeprecated BIT = 0` | Filter by area |
-| `DefectCode_Get` | `@Id` | |
-| `DefectCode_Create` | `@Code, @Description, @AreaLocationId, @IsExcused, @AppUserId` | |
-| `DefectCode_Update` | `@Id, @Description, @AreaLocationId, @IsExcused, @AppUserId` | `Code` is immutable |
-| `DefectCode_Deprecate` | `@Id, @AppUserId` | |
-| `DefectCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `defect_codes.csv` |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `DefectCode_List` | `@AreaLocationId NULL, @IncludeDeprecated BIT = 0` | Filter by area | `DefectCode`, `Location` |
+| `DefectCode_Get` | `@Id` | | `DefectCode` |
+| `DefectCode_Create` | `@Code, @Description, @AreaLocationId, @IsExcused, @AppUserId` | | `Location` (Area FK), calls `Audit_LogConfigChange` |
+| `DefectCode_Update` | `@Id, @Description, @AreaLocationId, @IsExcused, @AppUserId` | `Code` is immutable | `Location` (Area FK), calls `Audit_LogConfigChange` |
+| `DefectCode_Deprecate` | `@Id, @AppUserId` | | reads `RejectEvent`, calls `Audit_LogConfigChange` |
+| `DefectCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `defect_codes.csv` | calls `DefectCode_Create` per row (transitively `Audit_LogConfigChange`) |
 
 ### Frontend (Perspective Views)
 
@@ -629,30 +652,30 @@ Note: per FDS-03-009, route steps do **not** prescribe a specific machine — th
 
 **`DowntimeReasonType`** (read-only — seeded):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `DowntimeReasonType_List` | — | Returns 6 fixed types |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `DowntimeReasonType_List` | — | Returns 6 fixed types | `DowntimeReasonType` |
 
 **`DowntimeReasonCode`** (full CRUD + bulk seed):
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `DowntimeReasonCode_List` | `@AreaLocationId NULL, @DowntimeReasonTypeId NULL, @IncludeDeprecated BIT = 0` | Filter by area and/or type |
-| `DowntimeReasonCode_Get` | `@Id` | |
-| `DowntimeReasonCode_Create` | `@Code, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | |
-| `DowntimeReasonCode_Update` | `@Id, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | |
-| `DowntimeReasonCode_Deprecate` | `@Id, @AppUserId` | |
-| `DowntimeReasonCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `downtime_reason_codes.csv` |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `DowntimeReasonCode_List` | `@AreaLocationId NULL, @DowntimeReasonTypeId NULL, @IncludeDeprecated BIT = 0` | Filter by area and/or type | `DowntimeReasonCode`, `Location`, `DowntimeReasonType` |
+| `DowntimeReasonCode_Get` | `@Id` | | `DowntimeReasonCode` |
+| `DowntimeReasonCode_Create` | `@Code, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | | `Location` (Area FK), `DowntimeReasonType` (FK), calls `Audit_LogConfigChange` |
+| `DowntimeReasonCode_Update` | `@Id, @Description, @AreaLocationId, @DowntimeReasonTypeId, @IsExcused, @AppUserId` | | `Location` (Area FK), `DowntimeReasonType` (FK), calls `Audit_LogConfigChange` |
+| `DowntimeReasonCode_Deprecate` | `@Id, @AppUserId` | | reads `DowntimeEvent`, calls `Audit_LogConfigChange` |
+| `DowntimeReasonCode_BulkLoadFromSeed` | `@CsvData NVARCHAR(MAX), @AppUserId` | Initial load from `downtime_reason_codes.csv` | calls `DowntimeReasonCode_Create` per row (transitively `Audit_LogConfigChange`) |
 
 **`ShiftSchedule`**:
 
-| Procedure | Parameters | Notes |
-|---|---|---|
-| `ShiftSchedule_List` | `@ActiveOnly BIT = 1` | |
-| `ShiftSchedule_Get` | `@Id` | |
-| `ShiftSchedule_Create` | `@Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | |
-| `ShiftSchedule_Update` | `@Id, @Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | |
-| `ShiftSchedule_Deprecate` | `@Id, @AppUserId` | |
+| Procedure | Parameters | Notes | Dependencies |
+|---|---|---|---|
+| `ShiftSchedule_List` | `@ActiveOnly BIT = 1` | | `ShiftSchedule` |
+| `ShiftSchedule_Get` | `@Id` | | `ShiftSchedule` |
+| `ShiftSchedule_Create` | `@Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | | calls `Audit_LogConfigChange` |
+| `ShiftSchedule_Update` | `@Id, @Name, @StartTime, @EndTime, @DaysOfWeek, @EffectiveFrom, @AppUserId` | | calls `Audit_LogConfigChange` |
+| `ShiftSchedule_Deprecate` | `@Id, @AppUserId` | | reads `Shift`, calls `Audit_LogConfigChange` |
 
 ### Frontend (Perspective Views)
 
