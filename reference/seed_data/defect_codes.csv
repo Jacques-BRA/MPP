@@ -1,0 +1,154 @@
+DefectCode,DefectDescription,DeptId,DeptDesc,Excused
+100,Soldering,10,Die Cast,0
+101,Broken/Bent Pin,10,Die Cast,0
+102,Bent Pin,10,Die Cast,1
+103,Trim Damage,10,Die Cast,0
+104,Flatness/Bent Parts,10,Die Cast,0
+105,Breakout (Broken Die),10,Die Cast,0
+106,Broken Gate,10,Die Cast,0
+107,Test Part,10,Die Cast,0
+108,Blisters,10,Die Cast,0
+109,Stuck Part/Stuck Piece,10,Die Cast,0
+110,Flow Lines,10,Die Cast,0
+111,Flash,10,Die Cast,0
+112,Short Shot,10,Die Cast,0
+113,Broken Post,10,Die Cast,0
+114,Pin Size,10,Die Cast,0
+115,Computer Reject,10,Die Cast,1
+116,Double Shot,10,Die Cast,1
+117,Raised/Recessed Ejector Pins,10,Die Cast,0
+118,Broken Date Pin,10,Die Cast,0
+119,Egg-shaped Hole,10,Die Cast,0
+120,Porosity in Gate Area,10,Die Cast,0
+121,Cracks,10,Die Cast,0
+122,Dimensional (All dimensional except pin size and or depth/height),10,Die Cast,0
+123,Galling/Drags,10,Die Cast,0
+124,Bad Repair,10,Die Cast,1
+125,Drags,10,Die Cast,1
+126,Contamination (Grease/Oil),10,Die Cast,0
+127,Holes Not Punched,10,Die Cast,0
+128,Flaking,10,Die Cast,0
+129,Chipped Bolt Pad,10,Die Cast,0
+130,Over File,10,Die Cast,0
+131,Flash In Bolt Hole,10,Die Cast,0
+132,Robot Dropping Parts,10,Die Cast,0
+133,Hit Damage/Dent/Scratch/Nick,10,Die Cast,0
+134,Discoloration,10,Die Cast,0
+135,Porosity,10,Die Cast,0
+136,Hard Spot,10,Die Cast,0
+137,Failed Leak Test,10,Die Cast,0
+138,NCU - Non Clean Up,10,Die Cast,0
+139,Surface Void (not including caused by broken gate),10,Die Cast,0
+191,Snout Damage,10,Die Cast,0
+197,Lamination,10,Die Cast,0
+206,Mixed Parts,10,Die Cast,0
+210,NG Condition (DC),10,Die Cast,0
+214,Computer reject/High Speed,10,Die Cast,0
+215,Computer reject/Cycle time,10,Die Cast,0
+216,Computer reject/Cast Pressure,10,Die Cast,0
+217,Computer reject/Biscuit Size,10,Die Cast,0
+218,Computer reject/Rise up time,10,Die Cast,0
+219,Computer reject/High Speed Length,10,Die Cast,0
+220,Computer reject/Press up time,10,Die Cast,0
+221,Computer reject/Low Speed,10,Die Cast,0
+222,Telesis,10,Die Cast,0
+226,Gate breakout,10,Die Cast,0
+229,Trial Part,10,Die Cast,0
+230,Assembled on to NG part DC,10,Die Cast,0
+231,Tow motor dropped,10,Die Cast,0
+255,Incorrect Quantity,10,Die Cast,0
+256,InventoryBalance,10,Die Cast,0
+247,Missing Supply Part,35,HSP,0
+248,Damaged Supply Part,35,HSP,0
+249,Dowel Pin High,35,HSP,0
+250,Dowel Pin Low,35,HSP,0
+252,Baffle Plate NG,35,HSP,0
+253,NG Bolt Assembly,35,HSP,0
+146,Chatter,12,Machine Shop,0
+147,Cycle Stop,12,Machine Shop,0
+148,Dropped,12,Machine Shop,0
+149,Flatness,12,Machine Shop,1
+150,Holesize,12,Machine Shop,0
+151,Thickness,12,Machine Shop,0
+152,Thread Damage,12,Machine Shop,0
+153,Tool Break,12,Machine Shop,0
+154,Tool Mark,12,Machine Shop,0
+156,Hole Off Center,12,Machine Shop,0
+157,Pin Damage,12,Machine Shop,0
+158,Pin Height,12,Machine Shop,0
+159,Pin Missing,12,Machine Shop,0
+160,Low Pin Pressure,12,Machine Shop,0
+161,Torque No Good,12,Machine Shop,0
+162,Misset,12,Machine Shop,0
+163,Chamfer No Good,12,Machine Shop,0
+164,Incomplete Machining,12,Machine Shop,0
+165,Contamination,12,Machine Shop,0
+166,High Pin Pressure,12,Machine Shop,0
+167,Clamp Marks,12,Machine Shop,0
+168,Seal Damage,12,Machine Shop,0
+169,Skipped Proccess,12,Machine Shop,0
+170,Machine Trial,12,Machine Shop,0
+171,Double Cycle,12,Machine Shop,0
+172,Step Height,12,Machine Shop,0
+173,Stamp No Good,12,Machine Shop,0
+174,Over Machining,12,Machine Shop,0
+175,Diameter,12,Machine Shop,0
+176,Unidentified Part,12,Machine Shop,0
+177,Roundness,12,Machine Shop,0
+178,NG Face Height,12,Machine Shop,0
+179,Hole Depth,12,Machine Shop,0
+180,Part/Tower Height,12,Machine Shop,0
+181,Doesn't Fit on Jig,12,Machine Shop,0
+182,Stuck in Washer Conveyor,12,Machine Shop,0
+183,Ledge,12,Machine Shop,0
+184,No Cup,12,Machine Shop,1
+185,No Clip Ring,12,Machine Shop,1
+186,Studbolt Backward,12,Machine Shop,0
+187,Concentricity,12,Machine Shop,0
+188,Cylindricity,12,Machine Shop,0
+189,Parallellism,12,Machine Shop,0
+190,Supply Part Defect,12,Machine Shop,0
+192,Tube Press Damage,12,Machine Shop,0
+194,Missing Material,12,Machine Shop,0
+195,Fail QA Machine,12,Machine Shop,0
+198,Tide Journals,12,Machine Shop,0
+199,Assembled on to NG part MS,12,Machine Shop,0
+200,Fail Leak Test (Equipment Failure),12,Machine Shop,0
+207,Stripped Studbolts,12,Machine Shop,0
+208,Cross Threads,12,Machine Shop,0
+209,Low Studbolt,12,Machine Shop,0
+211,NG Condition (MS),12,Machine Shop,0
+213,Thread Depth,12,Machine Shop,0
+223,Double Cup,12,Machine Shop,0
+224,Out of Sequence,12,Machine Shop,0
+227,Failed Leak Test- Seal,12,Machine Shop,0
+228,Failed Leak Test- Bolt,12,Machine Shop,0
+232,Abnormal clamp,12,Machine Shop,0
+233,Missing O-Ring,12,Machine Shop,0
+234,Missing Bolt,12,Machine Shop,0
+235,Unapproved Die,12,Machine Shop,0
+236,Oil Hole No Good,12,Machine Shop,0
+237,High Studbolt,12,Machine Shop,0
+238,Bolt Hole No Good,12,Machine Shop,0
+239,Steel Ball No Good,12,Machine Shop,0
+240,Over Grind,12,Machine Shop,0
+241,Clinch No Good,12,Machine Shop,0
+242,Joint Tube Height/Dimension,12,Machine Shop,0
+243,Angle Exceeded,12,Machine Shop,0
+244,Dents,12,Machine Shop,0
+245,No Oil Hole,12,Machine Shop,0
+246,No Stud Bolt,12,Machine Shop,0
+254,True Position,12,Machine Shop,0
+225,Labels ( incorrect or missing ),16,Prod. Control,0
+201,Returned in empty dunnage,19,Quality Control,0
+202,Damaged in Transit,19,Quality Control,0
+203,Dropped Parts,19,Quality Control,0
+204,Incorrect Scan/labels,19,Quality Control,0
+205,Missed Shipment,19,Quality Control,0
+212,ISO Audit,19,Quality Control,0
+140,Stuck Media,11,Trim Shop,0
+141,Sanding Damage,11,Trim Shop,0
+142,N/G Blast N/G Tumble,11,Trim Shop,0
+143,Surface Roughness,11,Trim Shop,0
+144,White-Rust,11,Trim Shop,0
+145,Drill Damage,11,Trim Shop,0

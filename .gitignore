@@ -37,6 +37,9 @@ Thumbs.db
 test_*.docx
 *_draft.docx
 
+# Seed data intermediate extracts (regenerable from PDF via pdftotext)
+reference/seed_data/_appendix_*_raw.txt
+
 # Claude Code local state (keep CLAUDE.md; ignore local settings)
 .claude/settings.local.json
 

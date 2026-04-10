@@ -1,0 +1,210 @@
+MachId,MachNo,MachDesc,Tonnage,DeptDesc,MinPerShift,RefCycleTime,ProdPerShift,CycleTime,OeeTarget,PlannedQty100p,DeptCode,DeptCode2Desc,ProcId,ProcDesc,OrigProc
+1,1,DieCast#1,125,Die Cast,450,31,0,,,,DC,Die Cast,1,Diecast,1
+2,2,DieCast#2,125,Die Cast,450,31,0,,,,DC,Die Cast,1,Diecast,1
+3,3,DieCast#3,125,Die Cast,450,31,0,,,,DC,Die Cast,1,Diecast,1
+4,4,DieCast#4,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+5,5,Diecast#5,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+6,6,Diecast#6,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+7,7,DieCast#7,250,Die Cast,450,40,0,,,,DC,Die Cast,1,Diecast,1
+8,8,DieCast#8,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+9,9,DieCast#9,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+10,10,DieCast#10,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+11,11,DieCast#11,250,Die Cast,450,40,0,,,,DC,Die Cast,1,Diecast,1
+12,12,DieCast#12,250,Die Cast,450,40,0,,,,DC,Die Cast,1,Diecast,1
+13,61,DieCast#61,350,Die Cast,450,32,0,,,,DC,Die Cast,1,Diecast,1
+14,62,DieCast#62,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+15,63,DieCast#63,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+16,64,DieCast#64,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+17,65,DieCast#65,350,Die Cast,450,43,0,,,,DC,Die Cast,1,Diecast,1
+18,66,DieCast#66,500,Die Cast,450,50,0,,,,DC,Die Cast,1,Diecast,1
+19,67,DieCast#67,500,Die Cast,450,50,0,,,,DC,Die Cast,1,Diecast,1
+20,70,DieCast#70,350,Die Cast,450,32,0,,,,DC,Die Cast,1,Diecast,1
+21,73,DieCast#73,1250,Die Cast,460,86,0,,,,DC,Die Cast,1,Diecast,1
+22,74,DieCast#74,800,Die Cast,460,72,0,,,,DC,Die Cast,1,Diecast,1
+23,75,DieCast#75,1650,Die Cast,460,120,0,,,,DC,Die Cast,1,Diecast,1
+24,76,DieCast#76,1250,Die Cast,460,86,0,,,,DC,Die Cast,1,Diecast,1
+25,113,Debur#113,,Die Cast,450,0,,,,,DC,Die Cast,6,Debur- Mach 27,0
+26,114,Debur#114,,Die Cast,450,0,,,,,DC,Die Cast,6,Debur- Mach 27,0
+27,22,22 - Debur,,Trim Shop,450,0,,,,,TS,Trim Shop,6,Debur- Mach 27,0
+28,28,TS Assoc,,Trim Shop,480,0,,,,,TS,Trim Shop,7,Debur- Hand 27,0
+30,30,MS Assoc,,Machine Shop,480,0,,,,,MS,Machine Shop,8,Machine,0
+31,31,PC Assoc,,Prod. Control,480,0,,,,,PC,Prod. Control,,,
+32,32,DC Assoc,,Die Cast,480,0,,,,,DC,Die Cast,,,
+33,535,Leak Test,,Machine Shop,450,0,,,,,MS,Machine Shop,13,Leak Test,0
+34,1165,Leak Test,,Machine Shop,450,0,,,,,MS,Machine Shop,13,Leak Test,0
+35,798,First Cut,,Machine Shop,450,0,,,,,MS,Machine Shop,8,Machine,0
+36,880,First Cut,,Machine Shop,450,0,,,,,MS,Machine Shop,8,Machine,0
+37,908,First Cut,,Machine Shop,450,0,,,,,MS,Machine Shop,8,Machine,0
+38,909,First Cut,,Machine Shop,450,0,,,,,MS,Machine Shop,8,Machine,0
+39,910,Leak Test,,Machine Shop,450,0,,,,,MS,Machine Shop,13,Leak Test,0
+40,40,New Administer Model,480,,0,,,,,,NM,New Model,21,Administer,0
+41,77,Diecast#77,700,Die Cast,480,0,,,,,DC,Die Cast,1,Diecast,1
+42,50,Hoffman DC,,Die Cast,450,0,,,,,DC,Die Cast,1,Diecast,1
+43,51,ACP,,Die Cast,450,0,,,,,DC,Die Cast,1,Diecast,1
+44,69,Diecast#69,350,Die Cast,450,0,,,,,DC,Die Cast,1,Diecast,1
+45,1665,KensCorp,,Die Cast,450,0,,,,,DC,Die Cast,6,Debur- Mach 27,0
+46,1166,PNA Op 10-1,,Machine Shop,91,753,,,,,MS,Machine Shop,8,Machine,0
+47,1167,PNA Op 10-2,,Machine Shop,91,753,,,,,MS,Machine Shop,8,Machine,0
+48,1168,PNA Op 10-3,,Machine Shop,91,753,,,,,MS,Machine Shop,8,Machine,0
+49,1169,PNA Op 10-4,,Machine Shop,91,753,,,,,MS,Machine Shop,8,Machine,0
+50,1170,PNA Op 10-5,,Machine Shop,91,753,,,,,MS,Machine Shop,8,Machine,0
+51,1171,PNA Op 10-6,,Machine Shop,91,753,,,,,MS,Machine Shop,8,Machine,0
+52,1172,PNA Op 10-7,,Machine Shop,91,753,,,,,MS,Machine Shop,8,Machine,0
+53,1173,PNA Op 20-1,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+54,1174,PNA Op 20-2,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+55,1175,PNA Op 20-3,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+56,1176,PNA Op 30-1,,Machine Shop,753,29,0.85,881,,,MS,Machine Shop,8,Machine,0
+57,1177,PNA Op 30-2,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+58,1178,PNA Op 30-3,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+59,1181,PNA Op 60,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+60,1179,PNA Op 40,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+61,1180,PNA Op 50,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+63,1093,PNA Washer,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+64,2153,PNA Op 60 FEC,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+65,1182,PNA Op 70A,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+68,1183,PNA Op 70B,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+69,501,VCM #501,,Die Cast,0,,,,,,DC,Die Cast,1,Diecast,1
+70,502,VCM #502,,Die Cast,0,,,,,,DC,Die Cast,1,Diecast,1
+71,68,DieCast#68,500,Die Cast,450,50,0,,,,DC,Die Cast,1,Diecast,1
+73,1763,OP10,,Machine Shop,413,,,,,,MS,Machine Shop,8,Machine,0
+74,2477,PNA DOWEL PIN PRESS,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+75,2371,PNA FACE HEIGHT,,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+76,1692,PNA TC CAP OP30 L/T (1692A),,Machine Shop,753,,,,,,MS,Machine Shop,8,Machine,0
+77,2494,KIRA ELESYS,,Machine Shop,1022,,,,,,MS,Machine Shop,8,Machine,0
+78,2186,ELESYS HEAT SINK OP10,,Machine Shop,1022,,,,,,MS,Machine Shop,8,Machine,0
+79,2506,OP-10,,Machine Shop,344,,,,,,MS,Machine Shop,8,Machine,0
+80,2507,Assembly,,Machine Shop,344,,,,,,MS,Machine Shop,8,Machine,0
+81,2508,Leaktest,,Machine Shop,344,,,,,,MS,Machine Shop,8,Machine,0
+82,2742,RV2 CAP AL ASY,,Machine Shop,577,,,,,,MS,Machine Shop,8,Machine,0
+83,2741,RJF CAP AL ASY,,Machine Shop,577,,,,,,MS,Machine Shop,8,Machine,0
+84,1761,CAP AL RV2/RJF OP10-A (1761A),,Machine Shop,577,,,,,,MS,Machine Shop,8,Machine,0
+86,650,OP10-1,,Machine Shop,710,82,,,,,MS,Machine Shop,8,Machine,0
+87,656,OP10-2,,Machine Shop,710,82,,,,,MS,Machine Shop,8,Machine,0
+88,1687,OP20/30-1,,Machine Shop,710,140,,,,,MS,Machine Shop,8,Machine,0
+89,1688,OP20/30-2,,Machine Shop,710,140,,,,,MS,Machine Shop,8,Machine,0
+90,2340,LOST MOTION OP40 DEBURR,,Machine Shop,710,22,,,,,MS,Machine Shop,8,Machine,0
+91,1689,LOST MOTION DOWEL PIN ASY (1689A),,Machine Shop,710,10,,,,,MS,Machine Shop,8,Machine,0
+92,1690,LOST MOTION FLATNESS,,Machine Shop,710,5,,,,,MS,Machine Shop,8,Machine,0
+96,1851,OP10-1,,Machine Shop,241,,,,,,MS,Machine Shop,8,Machine,0
+97,1852,RNA MAKINO OP10-2,,Machine Shop,241,,,,,,MS,Machine Shop,8,Machine,0
+98,1959,R70 ASY & L/T V6,,Machine Shop,645,,,,,,MS,Machine Shop,8,Machine,0
+99,1660,RNO OP30,,Machine Shop,645,,,,,,MS,Machine Shop,8,Machine,0
+100,2003,OP20-1,,Machine Shop,241,,,,,,MS,Machine Shop,8,Machine,0
+102,2002,OP20-2,,Machine Shop,241,,,,,,MS,Machine Shop,8,Machine,0
+103,1663,RNA/R1B ASY L/T,,Machine Shop,241,,,,,,MS,Machine Shop,8,Machine,0
+104,1658,OP30-2,,Machine Shop,241,,,,,,MS,Machine Shop,8,Machine,0
+105,1659,OP30-1,,Machine Shop,241,,,,,,MS,Machine Shop,8,Machine,0
+109,2001,OP20-3,,Machine Shop,241,,,,,,MS,Machine Shop,8,Machine,0
+111,2482,RXO/R5A OIL PAN ASY,,Machine Shop,472,,,,,,MS,Machine Shop,8,Machine,0
+112,1757,OP10,,Machine Shop,472,,,,,,MS,Machine Shop,8,Machine,0
+113,2530,OP30-1,,Machine Shop,472,,,,,,MS,Machine Shop,8,Machine,0
+114,2531,OP20-1,,Machine Shop,472,,,,,,MS,Machine Shop,8,Machine,0
+115,2532,OP30-2,,Machine Shop,472,,,,,,MS,Machine Shop,8,Machine,0
+116,2533,OP20-2,,Machine Shop,472,,,,,,MS,Machine Shop,8,Machine,0
+117,2190,OP10-20 B,,Machine Shop,515,,,,,,MS,Machine Shop,8,Machine,0
+118,2191,OP10-20 A,,Machine Shop,515,,,,,,MS,Machine Shop,8,Machine,0
+119,2564,OP-30,,Machine Shop,515,,,,,,MS,Machine Shop,8,Machine,0
+121,2449,OP20/30,,Machine Shop,553,,,,,,MS,Machine Shop,8,Machine,0
+122,2606,OP10-2C,,Machine Shop,0,29,0.85,881,,,MS,Machine Shop,8,Machine,0
+123,2607,OP10-1C,,Machine Shop,0,29,0.85,881,,,MS,Machine Shop,8,Machine,0
+124,2608,OP10,,Machine Shop,0,26.3,0.85,972,,,MS,Machine Shop,8,Machine,0
+125,2628,OP60C,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+126,2609,OP10-1A,,Machine Shop,0,33.75,0.85,757,,,MS,Machine Shop,8,Machine,0
+127,2610,OP10-2A,,Machine Shop,0,33.75,0.85,757,,,MS,Machine Shop,8,Machine,0
+128,2611,OP20-1A,,Machine Shop,0,33,0.85,775,,,MS,Machine Shop,8,Machine,0
+129,2612,OP30-1A,,Machine Shop,0,32,0.85,799,,,MS,Machine Shop,8,Machine,0
+130,2613,OP30-2A,,Machine Shop,0,32,0.85,799,,,MS,Machine Shop,8,Machine,0
+131,2631,OP50,,Machine Shop,0,31,0.85,825,,,MS,Machine Shop,8,Machine,0
+132,2629,OP60A,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+133,2630,OP60B,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+134,2614,OP10-1B,,Machine Shop,0,34,0.85,752,,,MS,Machine Shop,8,Machine,0
+135,2615,OP10-2B,,Machine Shop,0,34,0.85,752,,,MS,Machine Shop,8,Machine,0
+136,2616,OP10.5-2B,,Machine Shop,0,34,0.85,752,,,MS,Machine Shop,8,Machine,0
+137,2617,OP20-1B,,Machine Shop,0,33,0.85,775,,,MS,Machine Shop,8,Machine,0
+138,2618,OP30-1B,,Machine Shop,0,32,0.85,799,,,MS,Machine Shop,8,Machine,0
+139,2619,OP30-2B,,Machine Shop,0,32,0.85,799,,,MS,Machine Shop,8,Machine,0
+140,2620,OP10-1D,,Machine Shop,0,36.25,0.85,705,,,MS,Machine Shop,8,Machine,0
+141,2621,OP20-1D,,Machine Shop,0,36.25,0.85,705,,,MS,Machine Shop,8,Machine,0
+142,2635,OP40,,Machine Shop,0,31,0.85,825,,,MS,Machine Shop,8,Machine,0
+143,2622,OP20-2E,,Machine Shop,0,38,0.85,673,,,MS,Machine Shop,8,Machine,0
+144,2623,OP10-2E,,Machine Shop,0,36.25,0.85,705,,,MS,Machine Shop,8,Machine,0
+145,2624,OP10-2D,,Machine Shop,0,36.25,0.85,705,,,MS,Machine Shop,8,Machine,0
+146,2625,OP20-2D,,Machine Shop,0,36.75,0.85,696,,,MS,Machine Shop,8,Machine,0
+147,2626,OP20-1E,,Machine Shop,0,38,0.85,673,,,MS,Machine Shop,8,Machine,0
+148,2627,OP10-1E,,Machine Shop,0,36.25,0.85,705,,,MS,Machine Shop,8,Machine,0
+149,1643,WATER OUTLET ASY,,Machine Shop,706,36,,,,,MS,Machine Shop,8,Machine,0
+150,503,VCM #503,,Die Cast,0,,,,,,DC,Die Cast,1,Diecast,1
+151,504,VCM #504,,Die Cast,0,,,,,,DC,Die Cast,1,Diecast,1
+152,2720,OP30,,Machine Shop,0,36,0.85,710,,,MS,Machine Shop,8,Machine,0
+154,2722,OP0,,Machine Shop,0,32.75,0.85,780,,,MS,Machine Shop,8,Machine,0
+155,2723,OP10.5-1B,,Machine Shop,0,34,0.85,752,,,MS,Machine Shop,8,Machine,0
+156,2636,OP70A,,Machine Shop,0,23,0.85,1111,,,MS,Machine Shop,8,Machine,0
+157,2637,OP70-C2A,,Machine Shop,0,26.5,0.85,965,,,MS,Machine Shop,8,Machine,0
+158,2707,OP70-B1,,Machine Shop,0,23.6,0.85,1083,,,MS,Machine Shop,8,Machine,0
+159,2708,OP70-C1,,Machine Shop,0,26.5,0.85,965,,,MS,Machine Shop,8,Machine,0
+160,2724,OP70-C2B,,Machine Shop,0,26.5,0.85,965,,,MS,Machine Shop,8,Machine,0
+161,2725,OP70-B2,,Machine Shop,0,23.6,0.85,1083,,,MS,Machine Shop,8,Machine,0
+162,2721,OP30,,Machine Shop,0,34.5,0.85,741,,,MS,Machine Shop,8,Machine,0
+163,0,N/A,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+164,1486,COS OKUMA,,Machine Shop,0,190,,,,,MS,Machine Shop,8,Machine,0
+166,1135,COS MAZAK,,Machine Shop,0,215,,,,,MS,Machine Shop,8,Machine,0
+167,663,COS ROBO DRILL (OP-20),,Machine Shop,0,36,,,,,MS,Machine Shop,8,Machine,0
+169,1957,COS DOWEL PRESS LEAK TESTER,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+170,1958,COS DOWELL PRESS LEAK TESTER,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+171,1955,COS SEAL PRESS,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+172,2423,COS WASHER,,Machine Shop,0,402,,,,,MS,Machine Shop,8,Machine,0
+173,662,THERMO COVER ROBO DRILL,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+174,585,THERMO COVER LEAK TESTER,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+175,659,HEATER OUTLET ROBO DRILL OP-10,,Machine Shop,0,54,,,,,MS,Machine Shop,8,Machine,0
+176,657,HEATER OUTLET ROBO DRILL OP-20,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+177,1667,HEATER OUTLET WASHER,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+178,1666,HEATER OUTLET ASSEMBLY/LEAK TEST,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+179,2341,Parts Washer,,Machine Shop,0,60,,,,,MS,Machine Shop,8,Machine,0
+180,1164,Bolt Torque Machine,,Machine Shop,0,22,,,,,MS,Machine Shop,8,Machine,0
+182,1641,Thermo Case,,,0,36,,,,,,,,,
+183,1755,Side Case OP20-1,,,280,77.5,,,,,,,,,
+184,1756,Side Case OP20-2,,,280,77.5,,,,,,,,,
+185,1758,Side Case Leak Tester,,,280,77.5,,,,,,,,,
+186,1759,Side Case OP40 Washer,,,280,77.5,,,,,,,,,
+187,1784,Side Case OP10,,,280,77.5,,,,,,,,,
+188,1785,Side Case OP30-2,,,280,77.5,,,,,,,,,
+189,1965,OP10-1,,,400,40,,,,,,,,,
+190,1966,OP10-2,,,400,40,,,,,,,,,
+191,1978,Assembly Bridge Line 1,,,480,47.5,,,,,,,,,
+192,1989,OP40-2,,,400,40,,,,,,,,,
+193,1995,OP50-1 Washer,,,548,20,,,,,,,,,
+194,1998,OP0-1,,,400,40,,,,,,,,,
+195,1999,OP0-2,,,400,40,,,,,,,,,
+196,2166,Assembly Bridge Line 2,,,540,46,,,,,,,,,
+197,2182,OP40-3,,,400,40,,,,,,,,,
+198,2187,OP10/20-3 #1/#3,,,548,20,,,,,,,,,
+199,2188,OP50-2 Washer,,,400,40,,,,,,,,,
+200,2189,OP10/20-3 #2,,,1096,40,,,,,,,,,
+201,2363,OP20/30 Transfer,,,400,40,,,,,,,,,
+202,2424,Housing B Leak Tester,,,630,35.5,,,,,,,,,
+203,2425,Motor Holder Leak Tester,,,630,35.5,,,,,,,,,
+204,2426,Housing B OP10,,,630,35.5,,,,,,,,,
+206,2428,Motor Holder OP20,,,630,35.5,,,,,,,,,
+207,2555,Showa Washer,,,630,35.5,,,,,,,,,
+208,2555,Showa Washer,,,630,35.5,,,,,,,,,
+209,2638,OP10/20-1 #1/#3,,,548,20,,,,,,,,,
+210,2639,OP10/20-2 #1/#3,,,548,20,,,,,,,,,
+211,2640,OP10/20-1 #2,,,1096,40,,,,,,,,,
+212,2641,OP10/20-2 #2,,,1096,40,,,,,,,,,
+213,2642,Assembly 5G0 Rear,,,593,37,,,,,,,,,
+214,2653,Assembly 5G0 Front,,,593,37,,,,,,,,,
+215,652,Housing B OP20-1,,,630,35.5,,,,,,,,,
+216,654,Motor Holder OP30,,,630,35.5,,,,,,,,,
+217,661,Housing B OP20-2,,,630,35.5,,,,,,,,,
+218,1771,CAP A L OP10,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+219,1668,CAP A L OP10,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+220,641,CAP COOLER ROBODRILL,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+221,2654,CAP COOLER ROBODRILL,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+222,2655,HEAT SINK ROBODRILL OP 10-4,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+223,648,GUIDE PRESSURE OP20,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+224,649,TK8 HOUSING ROBO DRILL OP-10,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+225,1611,CIVIC WATER PUMP L/T & ASY,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+226,2562,RJ2 OIL PAN L/T,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+227,1797,CIVIC MAKINO,,Machine Shop,0,,,,,,MS,Machine Shop,8,Machine,0
+228,2719,CH EX1-2 OP20,,Machine Shop,826,26.3,,,,,MS,Machine Shop,1,Diecast,1
+230,1755,Side Case OP20-1,,Machine Shop,280,77.5,,,,,MS,Machine Shop,8,Machine,0
