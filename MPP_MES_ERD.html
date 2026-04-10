@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPP MES — Entity Relationship Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-raised: #222633;
+            --border: #2e3345;
+            --text: #e1e4ed;
+            --text-muted: #8b90a0;
+            --accent: #6c8aff;
+            --tab-hover: #2e3345;
+            --tag-bg: #2a2f3f;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 2rem 3rem 1rem;
+        }
+        header h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 0.25rem; }
+        header p { color: var(--text-muted); font-size: 0.9rem; }
+        .conventions {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .conventions span {
+            background: var(--tag-bg);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+        }
+        .tab-bar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 3rem;
+            display: flex;
+            gap: 0;
+            overflow-x: auto;
+        }
+        .tab-bar button {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.75rem 1.25rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            font-family: inherit;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .tab-bar button:hover { color: var(--text); background: var(--tab-hover); }
+        .tab-bar button.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-content {
+            display: none;
+            padding: 2rem 3rem 4rem;
+            max-width: 100%;
+        }
+        .tab-content.active { display: block; }
+        .schema-desc {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .schema-desc h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+        .schema-desc p { color: var(--text-muted); font-size: 0.92rem; }
+        .table-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+        }
+        .table-card h4 {
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 0.88rem;
+            color: var(--accent);
+            margin-bottom: 0.35rem;
+        }
+        .table-card p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+        .erd-container {
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            overflow-x: auto;
+        }
+        h3 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1rem;
+        }
+        .fk-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+        .fk-table th {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            background: var(--surface);
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+        .fk-table td {
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 0.8rem;
+        }
+        .fk-table tr:hover td { background: var(--surface); }
+        .scope-badge {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        .scope-mvp { background: #1a3a2a; color: #4ade80; border: 1px solid #2d5a3e; }
+        .scope-mvp-expanded { background: #1a2a3a; color: #60a5fa; border: 1px solid #2d4a6e; }
+        .scope-conditional { background: #3a3a1a; color: #facc15; border: 1px solid #5a5a2d; }
+        .scope-future { background: #2a1a2a; color: #c084fc; border: 1px solid #4a2d5a; }
+        .scope-mixed { background: #2a2a2a; color: #f59e0b; border: 1px solid #4a4a2d; }
+        .table-card .scope-badge { margin-left: 0; margin-bottom: 0.3rem; display: inline-block; }
+        .scope-note {
+            font-size: 0.82rem;
+            color: #c084fc;
+            font-style: italic;
+            margin-top: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: #1a1525;
+            border-left: 2px solid #6b21a8;
+            border-radius: 0 4px 4px 0;
+        }
+        .erd-container svg { width: 100% !important; height: auto !important; min-height: 500px; max-height: 80vh; cursor: grab; }
+        .erd-container svg:active { cursor: grabbing; }
+        .zoom-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>MPP MES — Entity Relationship Diagrams</h1>
+    <p>Madison Precision Products — MES Database Schema (7 schemas, ~45 tables)</p>
+    <div class="conventions">
+        <span>snake_case</span>
+        <span>singular nouns</span>
+        <span>surrogate PKs</span>
+        <span>deprecated_at soft deletes</span>
+        <span>DATETIME2(3)</span>
+        <span>UOM first-class</span>
+        <span>status via code tables</span>
+        <span>adjacency list genealogy</span>
+        <span>AD + Ignition roles</span>
+    </div>
+</header>
+
+<div class="tab-bar" id="tabBar">
+    <button class="active" data-tab="location">Location <span class="scope-badge scope-mvp">MVP</span></button>
+    <button data-tab="parts">Parts <span class="scope-badge scope-mvp">MVP</span></button>
+    <button data-tab="lots">Lots <span class="scope-badge scope-mvp">MVP</span></button>
+    <button data-tab="workorder">Workorder <span class="scope-badge scope-mixed">Mixed</span></button>
+    <button data-tab="quality">Quality <span class="scope-badge scope-mixed">Mixed</span></button>
+    <button data-tab="oee">OEE <span class="scope-badge scope-mixed">Mixed</span></button>
+    <button data-tab="audit">Audit <span class="scope-badge scope-mvp">MVP</span></button>
+    <button data-tab="master">Master ERD</button>
+</div>
+
+<!-- ═══════════════════ LOCATION ═══════════════════ -->
+<div id="tab-location" class="tab-content active">
+    <div class="schema-desc">
+        <h2>location <span class="scope-badge scope-mvp">MVP</span></h2>
+        <p>
+            Plant model following ISA-95, implemented as a polymorphic three-tier classification:
+            <strong>LocationType</strong> (ISA-95 tier: Enterprise, Site, Area, Work Center, Cell) →
+            <strong>LocationTypeDefinition</strong> (the kind of location within a tier: Terminal,
+            DieCastMachine, CNCMachine, InventoryLocation, Scale, etc.) →
+            <strong>LocationAttributeDefinition</strong> (attribute schema per kind). Every <code>Location</code>
+            instance references exactly one <code>LocationTypeDefinition</code>, which determines both its
+            tier and its attribute set. Different definitions within the same tier carry entirely different
+            attribute schemas &mdash; a Terminal has <code>IpAddress</code>, a DieCastMachine has
+            <code>Tonnage</code>. Hierarchy is self-referential via <code>ParentLocationId</code>, queried
+            with recursive CTEs. Users authenticate via Active Directory; roles managed in Ignition.
+        </p>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="table-list">
+        <div class="table-card">
+            <h4>LocationType</h4>
+            <p>The five ISA-95 tiers: Enterprise (0), Site (1), Area (2), WorkCenter (3), Cell (4). Seeded at deployment, not operator-editable. Answers "what tier of the hierarchy?"</p>
+        </div>
+        <div class="table-card">
+            <h4>LocationTypeDefinition</h4>
+            <p>The polymorphic <em>kinds</em> within a type. For the Cell tier: Terminal, DieCastMachine, CNCMachine, TrimPress, AssemblyStation, InspectionStation, InventoryLocation, Scale, SortCage. Every <code>Location</code> FKs to exactly one definition. Answers "what kind of thing is this?" Extensible without schema changes.</p>
+        </div>
+        <div class="table-card">
+            <h4>LocationAttributeDefinition</h4>
+            <p>Attribute schema per kind. <code>Terminal</code> gets <code>IpAddress</code>, <code>DefaultPrinter</code>, <code>HasBarcodeScanner</code>. <code>DieCastMachine</code> gets <code>Tonnage</code>, <code>NumberOfCavities</code>, <code>RefCycleTimeSec</code>. Different kinds, completely disjoint attribute sets. Each attribute specifies name, data type, required flag, default, UOM, and sort order.</p>
+        </div>
+        <div class="table-card">
+            <h4>Location</h4>
+            <p>Self-referential hierarchy table. Every node in the plant model is a row &mdash; from the Enterprise root down to individual cells. <code>LocationTypeDefinitionId</code> determines both tier and attribute schema via join to <code>LocationType</code>. <code>ParentLocationId</code> forms the adjacency list. Type-specific attributes live in <code>LocationAttribute</code>. Queried with recursive CTEs for ancestor/descendant traversal.</p>
+        </div>
+        <div class="table-card">
+            <h4>LocationAttribute</h4>
+            <p>Actual attribute values per location, keyed to <code>LocationAttributeDefinition</code>. A Terminal cell might have <code>IpAddress = "10.1.5.42"</code> and <code>DefaultPrinter = "ZEB-DC-05"</code>. A DieCastMachine cell might have <code>Tonnage = 350</code>. Integrity rule (enforced in app logic): the attribute definition must belong to the location's own definition.</p>
+        </div>
+        <div class="table-card">
+            <h4>Terminals in the new model</h4>
+            <p>Terminals are no longer their own <code>LocationType</code>. <code>Terminal</code> is a <code>LocationTypeDefinition</code> under the <code>Cell</code> tier &mdash; one kind of Cell among many. A <code>DieCastMachine</code> is another kind of Cell. Both are Cell-tier locations but carry completely different attribute schemas. Event tables carry <code>TerminalLocationId</code> (where operator stands) and <code>LocationId</code> (which machine they scanned).</p>
+        </div>
+        <div class="table-card">
+            <h4>AppUser</h4>
+            <p>MES users backed by Active Directory. The <code>AdAccount</code> is the authentication identity. Clock number and PIN hash support shop-floor identification at terminals. The <code>IgnitionRole</code> field references the role name configured in Ignition's internal identity provider.</p>
+        </div>
+    </div>
+
+    <h3>ERD</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    LocationType {
+        int Id PK
+        varchar Code
+        varchar Name
+        int HierarchyLevel
+        varchar Description
+    }
+
+    LocationTypeDefinition {
+        int Id PK
+        int LocationTypeId FK
+        varchar Code
+        varchar Name
+        varchar Description
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    LocationAttributeDefinition {
+        int Id PK
+        int LocationTypeDefinitionId FK
+        varchar AttributeName
+        varchar DataType
+        bit IsRequired
+        varchar DefaultValue
+        varchar Uom
+        int SortOrder
+        varchar Description
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    Location {
+        int Id PK
+        int LocationTypeDefinitionId FK
+        int ParentLocationId FK
+        varchar Name
+        varchar Code
+        varchar Description
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    LocationAttribute {
+        int Id PK
+        int LocationId FK
+        int LocationAttributeDefinitionId FK
+        varchar AttributeValue
+        datetime2 CreatedAt
+        datetime2 UpdatedAt
+        varchar UpdatedBy
+    }
+
+    AppUser {
+        int Id PK
+        varchar AdAccount
+        varchar DisplayName
+        varchar ClockNumber
+        varchar PinHash
+        varchar IgnitionRole
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    LocationType ||--o{ LocationTypeDefinition : categorizes
+    LocationTypeDefinition ||--o{ LocationAttributeDefinition : "defines attrs"
+    LocationTypeDefinition ||--o{ Location : classifies
+    Location ||--o{ Location : "parent of"
+    Location ||--o{ LocationAttribute : "has values"
+    LocationAttributeDefinition ||--o{ LocationAttribute : "typed by"
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════ PARTS ═══════════════════ -->
+<div id="tab-parts" class="tab-content">
+    <div class="schema-desc">
+        <h2>parts <span class="scope-badge scope-mvp">MVP</span></h2>
+        <p>Item master data, bills of material, manufacturing routes, and operation templates. Defines <em>what</em> MPP makes, <em>what goes into it</em>, and <em>how it moves through the plant</em>. BOMs and routes are versioned with effective dates and soft deletes so production records always point to the spec active at time of manufacture. Container configurations define Honda-required packing rules per product.</p>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="table-list">
+        <div class="table-card">
+            <h4>item</h4>
+            <p>The part/product master. Every raw material, component, sub-assembly, and finished good. Carries MPP part number, optional Macola ERP number, default sub-lot quantity, max lot size, and unit weight.</p>
+        </div>
+        <div class="table-card">
+            <h4>item_type</h4>
+            <p>Classifies items: Raw Material, Component, Sub-Assembly, Finished Good, Pass-Through. Drives UI behavior and routing logic.</p>
+        </div>
+        <div class="table-card">
+            <h4>uom</h4>
+            <p>Unit of measure reference (EA, LB, KG, etc.). First-class column on every quantitative field per best practices.</p>
+        </div>
+        <div class="table-card">
+            <h4>bom / bom_line</h4>
+            <p>Versioned bill of materials. Header links parent item to component structure with <code>EffectiveFrom</code> / <code>DeprecatedAt</code>. Lines specify child items and quantities per parent.</p>
+        </div>
+        <div class="table-card">
+            <h4>route_template / route_step</h4>
+            <p>Versioned manufacturing routes. Each template defines the ordered sequence of operations for a product. Steps reference operation templates and carry sequence numbers.</p>
+        </div>
+        <div class="table-card">
+            <h4>operation_template</h4>
+            <p>Defines what data to collect at a given operation type: die info, cavity, weight, counts, material verification, serial numbers. Linked to an area.</p>
+        </div>
+        <div class="table-card">
+            <h4>item_location</h4>
+            <p>Part-to-machine eligibility mapping. Certain parts can only run on certain machines. MES uses this to prevent operators from entering LOTs on incompatible equipment. References the <code>location</code> table.</p>
+        </div>
+        <div class="table-card">
+            <h4>container_config</h4>
+            <p>Honda-specified packing rules per product: trays per container, parts per tray, serialized flag, returnable dunnage code, customer code.</p>
+        </div>
+    </div>
+
+    <h3>ERD</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    ItemType {
+        int Id PK
+        varchar Name
+        varchar Description
+    }
+
+    Uom {
+        int Id PK
+        varchar Code
+        varchar Name
+    }
+
+    Item {
+        int Id PK
+        int ItemTypeId FK
+        varchar PartNumber
+        varchar Description
+        varchar MacolaPartNumber
+        int DefaultSubLotQty
+        int MaxLotSize
+        int UomId FK
+        decimal UnitWeight
+        int WeightUomId FK
+        datetime2 CreatedAt
+        datetime2 UpdatedAt
+        varchar CreatedBy
+        varchar UpdatedBy
+        datetime2 DeprecatedAt
+    }
+
+    Bom {
+        int Id PK
+        int ParentItemId FK
+        int VersionNumber
+        datetime2 EffectiveFrom
+        datetime2 DeprecatedAt
+        varchar CreatedBy
+        datetime2 CreatedAt
+    }
+
+    BomLine {
+        int Id PK
+        int BomId FK
+        int ChildItemId FK
+        decimal QtyPer
+        int UomId FK
+        int SortOrder
+    }
+
+    RouteTemplate {
+        int Id PK
+        int ItemId FK
+        int VersionNumber
+        varchar Name
+        datetime2 EffectiveFrom
+        datetime2 DeprecatedAt
+        varchar CreatedBy
+        datetime2 CreatedAt
+    }
+
+    RouteStep {
+        int Id PK
+        int RouteTemplateId FK
+        int OperationTemplateId FK
+        int SequenceNumber
+        bit IsRequired
+        varchar Description
+    }
+
+    OperationTemplate {
+        int Id PK
+        varchar Name
+        varchar Code
+        int AreaLocationId FK
+        bit RequiresMaterialVerification
+        bit RequiresSerialNumber
+        bit CollectsDieInfo
+        bit CollectsCavityInfo
+        bit CollectsWeight
+        bit CollectsGoodCount
+        bit CollectsBadCount
+        varchar Description
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    ItemLocation {
+        int Id PK
+        int ItemId FK
+        int LocationId FK
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    ContainerConfig {
+        int Id PK
+        int ItemId FK
+        int TraysPerContainer
+        int PartsPerTray
+        bit IsSerialized
+        varchar DunnageCode
+        varchar CustomerCode
+        datetime2 CreatedAt
+        datetime2 UpdatedAt
+        datetime2 DeprecatedAt
+    }
+
+    ItemType ||--o{ Item : classifies
+    Uom ||--o{ Item : measures
+    Item ||--o{ Bom : "parent in"
+    Bom ||--o{ BomLine : contains
+    Item ||--o{ BomLine : "child in"
+    Item ||--o{ RouteTemplate : "routed by"
+    RouteTemplate ||--o{ RouteStep : "consists of"
+    OperationTemplate ||--o{ RouteStep : "performed at"
+    Item ||--o{ ItemLocation : "runs on"
+    Item ||--o{ ContainerConfig : "packed per"
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════ LOTS ═══════════════════ -->
+<div id="tab-lots" class="tab-content">
+    <div class="schema-desc">
+        <h2>lots <span class="scope-badge scope-mvp">MVP</span></h2>
+        <p>The core of the MES. Tracks every LOT from creation through its entire lifecycle: movements between locations, splits into sub-LOTs, merges, consumption into finished goods, and final shipping. Includes the genealogy graph (adjacency list with recursive CTE support), containers, serialized parts, and shipping labels. All state changes are recorded as immutable history records for 20-year traceability.</p>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="table-list">
+        <div class="table-card">
+            <h4>lot_origin_type</h4>
+            <p>How a LOT entered the system: <code>MANUFACTURED</code> (created at die cast), <code>RECEIVED</code> (pass-through parts received on-site), <code>RECEIVED_OFFSITE</code> (pass-through parts received at a remote warehouse). Enables filtering and reporting by origin path.</p>
+        </div>
+        <div class="table-card">
+            <h4>lot</h4>
+            <p>The central entity. Unique lot name (LTT barcode), links to item and origin type, carries piece count, weight, die/cavity info, vendor LOT reference, quality status, and current location. <code>ParentLotId</code> provides the adjacency-list link for sub-LOTs.</p>
+        </div>
+        <div class="table-card">
+            <h4>lot_status_code</h4>
+            <p>LOT quality states: GOOD, HOLD, SCRAP, CLOSED. <code>BlocksProduction</code> drives interlock logic.</p>
+        </div>
+        <div class="table-card">
+            <h4>lot_genealogy</h4>
+            <p>Edge table for the genealogy graph. Records every split, merge, and consumption relationship. Supports recursive CTE traversal in both directions.</p>
+        </div>
+        <div class="table-card">
+            <h4>lot_status_history / lot_movement / lot_attribute_change</h4>
+            <p>Immutable append-only logs for status transitions, location changes, and attribute modifications. Every record captures who, when, and which terminal location.</p>
+        </div>
+        <div class="table-card">
+            <h4>lot_label</h4>
+            <p>Tracks every LTT barcode label printed or reprinted for a LOT. Covers initial label at die cast, reprints for damaged labels, new labels for split/merge operations, re-identification at Sort Cage, and labels printed at off-site receiving. Each record captures the print reason, ZPL content, printer, and operator.</p>
+        </div>
+        <div class="table-card">
+            <h4>container / container_tray</h4>
+            <p>Shipping containers with trays. Tracks status, AIM shipper ID, hold state, and current location. Container config comes from the parts schema.</p>
+        </div>
+        <div class="table-card">
+            <h4>serialized_part / container_serial</h4>
+            <p>Individual laser-etched serial numbers linked to source LOTs. Junction table maps serials to container tray positions. Critical for Sort Cage re-inspection.</p>
+        </div>
+        <div class="table-card">
+            <h4>shipping_label</h4>
+            <p>Every label printed for a container: AIM shipper ID, ZPL content, print time, void status. Labels can be voided and reprinted during Sort Cage workflow.</p>
+        </div>
+    </div>
+
+    <h3>ERD</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    LotOriginType {
+        int Id PK
+        varchar Code
+        varchar Name
+    }
+
+    LotStatusCode {
+        int Id PK
+        varchar Code
+        varchar Name
+        bit BlocksProduction
+    }
+
+    GenealogyRelationshipType {
+        int Id PK
+        varchar Code
+        varchar Name
+    }
+
+    Lot {
+        int Id PK
+        varchar LotName
+        int ItemId FK
+        int LotOriginTypeId FK
+        int LotStatusId FK
+        int PieceCount
+        int MaxPieceCount
+        decimal Weight
+        int WeightUomId FK
+        varchar DieNumber
+        varchar CavityNumber
+        varchar VendorLotNumber
+        int MinSerialNumber
+        int MaxSerialNumber
+        int ParentLotId FK
+        int CurrentLocationId FK
+        int CreatedByUserId FK
+        int CreatedAtTerminalId FK
+        datetime2 CreatedAt
+        datetime2 UpdatedAt
+        varchar UpdatedBy
+    }
+
+    LotGenealogy {
+        int Id PK
+        int ParentLotId FK
+        int ChildLotId FK
+        int RelationshipTypeId FK
+        int PieceCount
+        int EventUserId FK
+        int EventTerminalId FK
+        datetime2 EventAt
+    }
+
+    LotStatusHistory {
+        int Id PK
+        int LotId FK
+        int OldStatusId FK
+        int NewStatusId FK
+        varchar Reason
+        int ChangedByUserId FK
+        int ChangedAtTerminalId FK
+        datetime2 ChangedAt
+    }
+
+    LotMovement {
+        int Id PK
+        int LotId FK
+        int FromLocationId FK
+        int ToLocationId FK
+        int MovedByUserId FK
+        int MovedAtTerminalId FK
+        datetime2 MovedAt
+    }
+
+    LotAttributeChange {
+        int Id PK
+        int LotId FK
+        varchar AttributeName
+        varchar OldValue
+        varchar NewValue
+        int ChangedByUserId FK
+        int ChangedAtTerminalId FK
+        datetime2 ChangedAt
+    }
+
+    ContainerStatusCode {
+        int Id PK
+        varchar Code
+        varchar Name
+    }
+
+    Container {
+        int Id PK
+        varchar ContainerName
+        int ItemId FK
+        int ContainerConfigId FK
+        int ContainerStatusId FK
+        int LotId FK
+        int CurrentLocationId FK
+        varchar AimShipperId
+        varchar HoldNumber
+        datetime2 CreatedAt
+        datetime2 UpdatedAt
+    }
+
+    ContainerTray {
+        int Id PK
+        int ContainerId FK
+        int TrayNumber
+        int PieceCount
+    }
+
+    SerializedPart {
+        int Id PK
+        varchar SerialNumber
+        int ItemId FK
+        int LotId FK
+        int ContainerId FK
+        datetime2 CreatedAt
+    }
+
+    ContainerSerial {
+        int Id PK
+        int ContainerId FK
+        int ContainerTrayId FK
+        int SerializedPartId FK
+        int TrayPosition
+    }
+
+    LotLabel {
+        int Id PK
+        int LotId FK
+        varchar PrintReason
+        varchar ZplContent
+        varchar PrinterName
+        int PrintedByUserId FK
+        int TerminalLocationId FK
+        datetime2 PrintedAt
+    }
+
+    ShippingLabel {
+        int Id PK
+        int ContainerId FK
+        varchar AimShipperId
+        varchar LabelType
+        varchar ZplContent
+        bit IsVoid
+        datetime2 PrintedAt
+        datetime2 VoidedAt
+        varchar PrintedBy
+    }
+
+    LotOriginType ||--o{ Lot : "originated as"
+    LotStatusCode ||--o{ Lot : "status of"
+    Lot ||--o{ Lot : "parent of"
+    Lot ||--o{ LotGenealogy : genealogy
+    GenealogyRelationshipType ||--o{ LotGenealogy : "typed as"
+    Lot ||--o{ LotStatusHistory : "tracked by"
+    Lot ||--o{ LotMovement : moved
+    Lot ||--o{ LotAttributeChange : changed
+    Lot ||--o{ LotLabel : "labeled with"
+    Lot ||--o{ SerializedPart : "serialized from"
+    ContainerStatusCode ||--o{ Container : "status of"
+    Container ||--o{ ContainerTray : contains
+    Container ||--o{ ContainerSerial : holds
+    SerializedPart ||--o{ ContainerSerial : "packed in"
+    Container ||--o{ ShippingLabel : "labeled with"
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════ WORKORDER ═══════════════════ -->
+<div id="tab-workorder" class="tab-content">
+    <div class="schema-desc">
+        <h2>workorder <span class="scope-badge scope-mixed">Mixed Scope</span></h2>
+        <p>Internal work order context that operators never see. Auto-generated when production activity begins, providing bookkeeping for production events, material consumption, and reject tracking. Links LOTs to machines, routes, and operators. Every good count, bad count, and material consumption is recorded as an immutable event.</p>
+        <p class="scope-note">Work order tables (work_order, work_order_operation) are CONDITIONAL &mdash; included subject to design decision. Production/consumption/reject event tables are MVP. Events have nullable FKs to work_order_operation, so they function independently.</p>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="table-list">
+        <div class="table-card">
+            <h4>work_order <span class="scope-badge scope-conditional">Conditional</span></h4>
+            <p>Auto-generated internal work order. Links an item to a route template. Operators never interact with this &mdash; it provides context for aggregating production data.</p>
+        </div>
+        <div class="table-card">
+            <h4>work_order_operation <span class="scope-badge scope-conditional">Conditional</span></h4>
+            <p>Individual operation execution within a work order. Links a route step to a specific machine, tracks start/completion times and operator.</p>
+        </div>
+        <div class="table-card">
+            <h4>production_event <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Immutable record of production activity: good count, no-good count, die/cavity info, operator, terminal, timestamp against a LOT and machine.</p>
+        </div>
+        <div class="table-card">
+            <h4>consumption_event <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Records which source LOT supplied parts and which output LOT or container was produced. The backbone of genealogy across the assembly boundary.</p>
+        </div>
+        <div class="table-card">
+            <h4>reject_event <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Detailed reject/scrap records linked to production events. Defect code, quantity, charge-to area, operator remarks. Feeds quality analysis and OEE quality-rate.</p>
+        </div>
+    </div>
+
+    <h3>ERD</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    WorkOrderStatus {
+        int Id PK
+        varchar Code
+        varchar Name
+    }
+
+    OperationStatus {
+        int Id PK
+        varchar Code
+        varchar Name
+    }
+
+    WorkOrder {
+        int Id PK
+        varchar WoNumber
+        int ItemId FK
+        int RouteTemplateId FK
+        int WorkOrderStatusId FK
+        datetime2 CreatedAt
+        datetime2 CompletedAt
+    }
+
+    WorkOrderOperation {
+        int Id PK
+        int WorkOrderId FK
+        int RouteStepId FK
+        int LocationId FK
+        int OperationStatusId FK
+        int SequenceNumber
+        datetime2 StartedAt
+        datetime2 CompletedAt
+        int OperatorId FK
+    }
+
+    ProductionEvent {
+        int Id PK
+        int WorkOrderOperationId FK
+        int LotId FK
+        int LocationId FK
+        int ItemId FK
+        int GoodCount
+        int NoGoodCount
+        int OperatorId FK
+        int TerminalLocationId FK
+        datetime2 RecordedAt
+        varchar Remarks
+    }
+
+    ConsumptionEvent {
+        int Id PK
+        int WorkOrderOperationId FK
+        int SourceLotId FK
+        int ProducedLotId FK
+        int ProducedContainerId FK
+        int ConsumedItemId FK
+        int ProducedItemId FK
+        int PieceCount
+        int LocationId FK
+        int OperatorId FK
+        int TerminalLocationId FK
+        int TrayId FK
+        varchar ProducedSerialNumber
+        datetime2 ConsumedAt
+    }
+
+    RejectEvent {
+        int Id PK
+        int ProductionEventId FK
+        int LotId FK
+        int DefectCodeId FK
+        int Quantity
+        varchar ChargeToArea
+        varchar Remarks
+        int OperatorId FK
+        datetime2 RecordedAt
+    }
+
+    WorkOrderStatus ||--o{ WorkOrder : "status of"
+    WorkOrder ||--o{ WorkOrderOperation : contains
+    OperationStatus ||--o{ WorkOrderOperation : "status of"
+    WorkOrderOperation ||--o{ ProductionEvent : produces
+    WorkOrderOperation ||--o{ ConsumptionEvent : consumes
+    ProductionEvent ||--o{ RejectEvent : "rejected in"
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════ QUALITY ═══════════════════ -->
+<div id="tab-quality" class="tab-content">
+    <div class="schema-desc">
+        <h2>quality <span class="scope-badge scope-mixed">Mixed Scope</span></h2>
+        <p>Specification-driven inspection, sample tracking, non-conformance records, and hold management. Quality specs are versioned so production records reference the spec active at time of inspection. Hold events integrate with LOT status transitions to enforce manufacturing interlocks. Supports file attachments for test result documentation.</p>
+        <p class="scope-note">Holds and inspections are MVP. Sampling workflows are CONDITIONAL. NCM/Failure Analysis is FUTURE &mdash; the non_conformance table is retained to preserve the hold&harr;NCM design separation and will activate without schema changes.</p>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="table-list">
+        <div class="table-card">
+            <h4>defect_code <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>~170 reject/defect reason codes by area. <code>IsExcused</code> flag affects OEE quality calculations. Supports both reject tracking (MVP) and future NCM.</p>
+        </div>
+        <div class="table-card">
+            <h4>quality_spec / quality_spec_version / quality_spec_attribute <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Specification-driven quality schema. Specs define what to inspect per item/operation. Versions ensure historical accuracy. Attributes define measurable values with targets and limits.</p>
+        </div>
+        <div class="table-card">
+            <h4>quality_sample / quality_result <span class="scope-badge scope-conditional">Conditional</span></h4>
+            <p>Inspection events against LOTs. Each sample records overall result; individual results capture measured values against spec attributes. MVP for basic inspections; expanded sampling workflows are conditional.</p>
+        </div>
+        <div class="table-card">
+            <h4>non_conformance <span class="scope-badge scope-future">Future</span></h4>
+            <p>Formal NC record against a LOT: defect code, quantity, disposition, resolution tracking. <em>Not in current scope &mdash; retained for future NCM/Failure Analysis activation. Completes the hold&harr;NCM design separation.</em></p>
+        </div>
+        <div class="table-card">
+            <h4>hold_event <span class="scope-badge scope-mvp-expanded">MVP-Expanded</span></h4>
+            <p>Records when a LOT is placed on or released from quality hold. Drives LOT status transitions to/from HOLD. Expanded beyond legacy capabilities.</p>
+        </div>
+        <div class="table-card">
+            <h4>quality_attachment <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>File uploads (CSV, XLSX, PDF, images) linked to samples or non-conformances.</p>
+        </div>
+    </div>
+
+    <h3>ERD</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    DefectCode {
+        int Id PK
+        varchar Code
+        varchar Description
+        int AreaLocationId FK
+        bit IsExcused
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    QualitySpec {
+        int Id PK
+        varchar Name
+        int ItemId FK
+        int OperationTemplateId FK
+        varchar Description
+        datetime2 CreatedAt
+    }
+
+    QualitySpecVersion {
+        int Id PK
+        int QualitySpecId FK
+        int VersionNumber
+        datetime2 EffectiveFrom
+        datetime2 DeprecatedAt
+        varchar CreatedBy
+        datetime2 CreatedAt
+    }
+
+    QualitySpecAttribute {
+        int Id PK
+        int QualitySpecVersionId FK
+        varchar AttributeName
+        varchar DataType
+        varchar Uom
+        decimal TargetValue
+        decimal LowerLimit
+        decimal UpperLimit
+        bit IsRequired
+        int SortOrder
+    }
+
+    QualitySample {
+        int Id PK
+        int LotId FK
+        int QualitySpecVersionId FK
+        int LocationId FK
+        varchar SampleTrigger
+        int SampledByUserId FK
+        datetime2 SampledAt
+        varchar OverallResult
+        varchar Remarks
+    }
+
+    QualityResult {
+        int Id PK
+        int QualitySampleId FK
+        int QualitySpecAttributeId FK
+        varchar MeasuredValue
+        varchar Uom
+        bit IsPass
+    }
+
+    QualityAttachment {
+        int Id PK
+        int QualitySampleId FK
+        int NonConformanceId FK
+        varchar FileName
+        varchar FileType
+        varchar FilePath
+        datetime2 UploadedAt
+        varchar UploadedBy
+    }
+
+    NonConformance {
+        int Id PK
+        int LotId FK
+        int DefectCodeId FK
+        int Quantity
+        varchar Disposition
+        varchar Remarks
+        int ReportedByUserId FK
+        int TerminalLocationId FK
+        datetime2 ReportedAt
+        datetime2 ResolvedAt
+        varchar ResolvedBy
+    }
+
+    HoldEvent {
+        int Id PK
+        int LotId FK
+        int NonConformanceId FK
+        varchar HoldType
+        varchar Reason
+        int PlacedByUserId FK
+        datetime2 PlacedAt
+        int ReleasedByUserId FK
+        datetime2 ReleasedAt
+        varchar ReleaseRemarks
+    }
+
+    QualitySpec ||--o{ QualitySpecVersion : versioned
+    QualitySpecVersion ||--o{ QualitySpecAttribute : defines
+    QualitySpecVersion ||--o{ QualitySample : governs
+    QualitySample ||--o{ QualityResult : records
+    QualitySample ||--o{ QualityAttachment : attached
+    NonConformance ||--o{ QualityAttachment : attached
+    DefectCode ||--o{ NonConformance : classified
+    NonConformance ||--o{ HoldEvent : triggers
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════ OEE ═══════════════════ -->
+<div id="tab-oee" class="tab-content">
+    <div class="schema-desc">
+        <h2>oee <span class="scope-badge scope-mixed">Mixed Scope</span></h2>
+        <p>Downtime tracking, shift management, and materialized OEE metrics. ~660 reason codes across areas. OEE snapshots are calculated per machine per shift as a materialized reporting layer &mdash; not computed live. The normalized core is the system of record; the snapshot is a derivative following OLTP/OLAP separation.</p>
+        <p class="scope-note">Downtime tracking and shifts are MVP. OEE snapshots and KPI dashboards are FUTURE &mdash; the oee_snapshot table is retained because it is purely derivative of MVP data. Activation requires only a scheduled calculation job, no new data capture.</p>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="table-list">
+        <div class="table-card">
+            <h4>downtime_reason_type <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Top-level categorization: Equipment, Miscellaneous, Mold, Quality, Setup, Unscheduled.</p>
+        </div>
+        <div class="table-card">
+            <h4>downtime_reason_code <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>~660 specific reasons by area and type. <code>IsExcused</code> determines OEE availability impact.</p>
+        </div>
+        <div class="table-card">
+            <h4>shift_schedule / shift <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Named shift patterns and actual shift instances. Time boundaries for downtime context and production reporting.</p>
+        </div>
+        <div class="table-card">
+            <h4>downtime_event <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Append-only. Machine, reason code, start/end, source (manual/PLC), operator. Open events have null <code>EndedAt</code>. <code>ShotCount</code> captures warm-up/setup shots when reason_type = Setup (per UJ-14).</p>
+        </div>
+        <div class="table-card">
+            <h4>oee_snapshot <span class="scope-badge scope-future">Future</span></h4>
+            <p>Materialized Availability &times; Performance &times; Quality per machine per shift. Recalculated by scheduled job, never the system of record. <em>Not in current scope &mdash; retained as a natural derivative of MVP downtime and production data.</em></p>
+        </div>
+    </div>
+
+    <h3>ERD</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    DowntimeReasonType {
+        int Id PK
+        varchar Name
+    }
+
+    DowntimeReasonCode {
+        int Id PK
+        varchar Code
+        varchar Description
+        int AreaLocationId FK
+        int DowntimeReasonTypeId FK
+        bit IsExcused
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    ShiftSchedule {
+        int Id PK
+        varchar Name
+        time StartTime
+        time EndTime
+        varchar DaysOfWeek
+        datetime2 EffectiveFrom
+        datetime2 DeprecatedAt
+    }
+
+    Shift {
+        int Id PK
+        int ShiftScheduleId FK
+        date ShiftDate
+        datetime2 ActualStart
+        datetime2 ActualEnd
+    }
+
+    DowntimeEvent {
+        int Id PK
+        int LocationId FK
+        int DowntimeReasonCodeId FK
+        int ShiftId FK
+        datetime2 StartedAt
+        datetime2 EndedAt
+        varchar Source
+        int OperatorId FK
+        int ShotCount
+        varchar Remarks
+        datetime2 CreatedAt
+    }
+
+    OeeSnapshot {
+        int Id PK
+        int LocationId FK
+        int ShiftId FK
+        date SnapshotDate
+        decimal Availability
+        decimal Performance
+        decimal QualityRate
+        decimal Oee
+        int PlannedProductionTimeMin
+        int ActualRunTimeMin
+        int TotalDowntimeMin
+        int GoodCount
+        int TotalCount
+        int RejectCount
+        datetime2 CalculatedAt
+    }
+
+    DowntimeReasonType ||--o{ DowntimeReasonCode : typed
+    DowntimeReasonCode ||--o{ DowntimeEvent : reason
+    ShiftSchedule ||--o{ Shift : defines
+    Shift ||--o{ DowntimeEvent : during
+    Shift ||--o{ OeeSnapshot : summarized
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════ AUDIT ═══════════════════ -->
+<div id="tab-audit" class="tab-content">
+    <div class="schema-desc">
+        <h2>audit <span class="scope-badge scope-mvp">MVP</span></h2>
+        <p>Immutable, append-only logging. Three log types: operations (shop-floor actions), configuration (admin changes), and interface (AIM, PLC, ERP communications). 20-year retention. <code>BIGINT</code> PKs for high-volume append. High-fidelity interface logging is configurable for full request/response payload capture.</p>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="table-list">
+        <div class="table-card">
+            <h4>log_severity</h4>
+            <p>Error, Warning, Informational.</p>
+        </div>
+        <div class="table-card">
+            <h4>log_event_type</h4>
+            <p>Normalized vocabulary for what happened: LOT_CREATED, LOT_MOVED, LOT_SPLIT, LOT_STATUS_CHANGED, PRODUCTION_RECORDED, CONSUMPTION_RECORDED, HOLD_PLACED, HOLD_RELEASED, LABEL_PRINTED, CONTAINER_COMPLETED, USER_LOGIN, etc. Shared across operation_log and config_log. Prevents free-text drift across Ignition scripts.</p>
+        </div>
+        <div class="table-card">
+            <h4>log_entity_type</h4>
+            <p>Normalized vocabulary for what was affected: LOT, CONTAINER, SERIALIZED_PART, WORK_ORDER, ITEM, LOCATION, ROUTE_TEMPLATE, QUALITY_SAMPLE, NON_CONFORMANCE, DEFECT_CODE, etc. Shared across operation_log and config_log.</p>
+        </div>
+        <div class="table-card">
+            <h4>operation_log</h4>
+            <p>Every shop-floor action: user, terminal, location, affected entity (by type and ID), old/new values. Primary regulatory audit trail.</p>
+        </div>
+        <div class="table-card">
+            <h4>config_log</h4>
+            <p>Engineering and admin configuration changes: plant model edits, item master updates, route modifications.</p>
+        </div>
+        <div class="table-card">
+            <h4>interface_log</h4>
+            <p>External system communications: AIM EDI, PLC/OPC, future Macola/Intelex. Direction, payloads, errors. No user FK &mdash; system-initiated.</p>
+        </div>
+    </div>
+
+    <h3>ERD</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    LogSeverity {
+        int Id PK
+        varchar Code
+        varchar Name
+    }
+
+    LogEventType {
+        int Id PK
+        varchar Code
+        varchar Name
+        varchar Description
+    }
+
+    LogEntityType {
+        int Id PK
+        varchar Code
+        varchar Name
+        varchar Description
+    }
+
+    OperationLog {
+        bigint Id PK
+        datetime2 LoggedAt
+        int UserId FK
+        int TerminalLocationId FK
+        int LocationId FK
+        int LogSeverityId FK
+        int LogEventTypeId FK
+        int LogEntityTypeId FK
+        int EntityId
+        varchar Description
+        varchar OldValue
+        varchar NewValue
+    }
+
+    ConfigLog {
+        bigint Id PK
+        datetime2 LoggedAt
+        int UserId FK
+        int LogSeverityId FK
+        int LogEventTypeId FK
+        int LogEntityTypeId FK
+        int EntityId
+        varchar Description
+        varchar Changes
+    }
+
+    InterfaceLog {
+        bigint Id PK
+        datetime2 LoggedAt
+        varchar SystemName
+        varchar Direction
+        int LogEventTypeId FK
+        varchar Description
+        varchar RequestPayload
+        varchar ResponsePayload
+        varchar ErrorCondition
+        varchar ErrorDescription
+        bit IsHighFidelity
+    }
+
+    LogSeverity ||--o{ OperationLog : severity
+    LogSeverity ||--o{ ConfigLog : severity
+    LogEventType ||--o{ OperationLog : "event type"
+    LogEventType ||--o{ ConfigLog : "event type"
+    LogEventType ||--o{ InterfaceLog : "event type"
+    LogEntityType ||--o{ OperationLog : "entity type"
+    LogEntityType ||--o{ ConfigLog : "entity type"
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════ MASTER ═══════════════════ -->
+<div id="tab-master" class="tab-content">
+    <div class="schema-desc">
+        <h2>Master ERD — All Schemas</h2>
+        <p>All tables and cross-schema relationships. Table names prefixed with schema abbreviations. Scroll horizontally to explore.</p>
+    </div>
+
+    <h3>Cross-Schema Foreign Key Summary</h3>
+    <table class="fk-table">
+        <thead>
+            <tr><th>From Schema</th><th>Table.Column</th><th>To Schema</th><th>Table.Column</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>parts</td><td>operation_template.AreaLocationId</td><td>location</td><td>location.id</td></tr>
+            <tr><td>parts</td><td>item_Location.Location_id</td><td>location</td><td>location.id</td></tr>
+            <tr><td>lots</td><td>lot.item_id</td><td>parts</td><td>item.id</td></tr>
+            <tr><td>lots</td><td>lot.current_location_id</td><td>location</td><td>location.id</td></tr>
+            <tr><td>lots</td><td>lot_movement.from/to_location_id</td><td>location</td><td>location.id</td></tr>
+            <tr><td>lots</td><td>lot_status_history.changed_by_user_id</td><td>location</td><td>app_user.id</td></tr>
+            <tr><td>lots</td><td>container.container_config_id</td><td>parts</td><td>container_config.id</td></tr>
+            <tr><td>lots</td><td>container.item_id</td><td>parts</td><td>item.id</td></tr>
+            <tr><td>workorder</td><td>work_order.item_id</td><td>parts</td><td>item.id</td></tr>
+            <tr><td>workorder</td><td>work_order.route_template_id</td><td>parts</td><td>route_template.id</td></tr>
+            <tr><td>workorder</td><td>work_order_operation.location_id</td><td>location</td><td>location.id</td></tr>
+            <tr><td>workorder</td><td>production_event.lot_id</td><td>lots</td><td>lot.id</td></tr>
+            <tr><td>workorder</td><td>consumption_event.source_lot_id</td><td>lots</td><td>lot.id</td></tr>
+            <tr><td>workorder</td><td>reject_event.defect_code_id</td><td>quality</td><td>defect_code.id</td></tr>
+            <tr><td>quality</td><td>quality_spec.item_id</td><td>parts</td><td>item.id</td></tr>
+            <tr><td>quality</td><td>quality_sample.lot_id</td><td>lots</td><td>lot.id</td></tr>
+            <tr><td>quality</td><td>hold_event.lot_id</td><td>lots</td><td>lot.id</td></tr>
+            <tr><td>quality</td><td>defect_code.AreaLocationId</td><td>location</td><td>location.id</td></tr>
+            <tr><td>oee</td><td>downtime_event.location_id</td><td>location</td><td>location.id</td></tr>
+            <tr><td>oee</td><td>downtime_reason_code.AreaLocationId</td><td>location</td><td>location.id</td></tr>
+            <tr><td>oee</td><td>downtime_event.operator_id</td><td>location</td><td>app_user.id</td></tr>
+            <tr><td>audit</td><td>operation_log.user_id</td><td>location</td><td>app_user.id</td></tr>
+            <tr><td>audit</td><td>operation_log.terminal_location_id</td><td>location</td><td>location.id (Terminal)</td></tr>
+            <tr><td>audit</td><td>operation_log.location_id</td><td>location</td><td>location.id</td></tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 2.5rem;">Full Diagram</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    loc__LocationType { int id PK }
+    loc__LocationTypeDefinition { int id PK }
+    loc__LocationAttributeDefinition { int id PK }
+    loc__Location { int id PK }
+    loc__LocationAttribute { int id PK }
+    %% terminal table removed — terminals are location records with location_type=Terminal
+    loc__AppUser { int id PK }
+
+    parts__ItemType { int id PK }
+    parts__Uom { int id PK }
+    parts__Item { int id PK }
+    parts__Bom { int id PK }
+    parts__BomLine { int id PK }
+    parts__RouteTemplate { int id PK }
+    parts__RouteStep { int id PK }
+    parts__OperationTemplate { int id PK }
+    parts__ItemLocation { int id PK }
+    parts__ContainerConfig { int id PK }
+
+    lots__LotOriginType { int id PK }
+    lots__LotStatusCode { int id PK }
+    lots__GenealogyRelType { int id PK }
+    lots__Lot { int id PK }
+    lots__LotGenealogy { int id PK }
+    lots__LotStatusHistory { int id PK }
+    lots__LotMovement { int id PK }
+    lots__LotAttributeChange { int id PK }
+    lots__ContainerStatusCode { int id PK }
+    lots__Container { int id PK }
+    lots__ContainerTray { int id PK }
+    lots__SerializedPart { int id PK }
+    lots__ContainerSerial { int id PK }
+    lots__LotLabel { int id PK }
+    lots__ShippingLabel { int id PK }
+
+    wo__WorkOrderStatus { int id PK }
+    wo__OperationStatus { int id PK }
+    wo__WorkOrder { int id PK }
+    wo__WorkOrderOperation { int id PK }
+    wo__ProductionEvent { int id PK }
+    wo__ConsumptionEvent { int id PK }
+    wo__RejectEvent { int id PK }
+
+    qual__DefectCode { int id PK }
+    qual__QualitySpec { int id PK }
+    qual__QualitySpecVersion { int id PK }
+    qual__QualitySpecAttribute { int id PK }
+    qual__QualitySample { int id PK }
+    qual__QualityResult { int id PK }
+    qual__QualityAttachment { int id PK }
+    qual__NonConformance { int id PK }
+    qual__HoldEvent { int id PK }
+
+    oee__DowntimeReasonType { int id PK }
+    oee__DowntimeReasonCode { int id PK }
+    oee__ShiftSchedule { int id PK }
+    oee__Shift { int id PK }
+    oee__DowntimeEvent { int id PK }
+    oee__OeeSnapshot { int id PK }
+
+    audit__LogSeverity { int id PK }
+    audit__LogEventType { int id PK }
+    audit__LogEntityType { int id PK }
+    audit__OperationLog { bigint id PK }
+    audit__ConfigLog { bigint id PK }
+    audit__InterfaceLog { bigint id PK }
+
+    loc__LocationType ||--o{ loc__LocationTypeDefinition : categorizes
+    loc__LocationTypeDefinition ||--o{ loc__LocationAttributeDefinition : "defines attrs"
+    loc__LocationTypeDefinition ||--o{ loc__Location : classifies
+    loc__Location ||--o{ loc__Location : "parent of"
+    loc__Location ||--o{ loc__LocationAttribute : values
+    loc__LocationAttributeDefinition ||--o{ loc__LocationAttribute : "typed by"
+
+    parts__ItemType ||--o{ parts__Item : classifies
+    parts__Uom ||--o{ parts__Item : measures
+    parts__Item ||--o{ parts__Bom : parent
+    parts__Bom ||--o{ parts__BomLine : contains
+    parts__Item ||--o{ parts__BomLine : child
+    parts__Item ||--o{ parts__RouteTemplate : routed
+    parts__RouteTemplate ||--o{ parts__RouteStep : steps
+    parts__OperationTemplate ||--o{ parts__RouteStep : performs
+    parts__Item ||--o{ parts__ItemLocation : eligible
+    parts__Item ||--o{ parts__ContainerConfig : packed
+
+    loc__Location ||--o{ parts__OperationTemplate : dept
+    loc__Location ||--o{ parts__ItemLocation : location
+
+    lots__LotOriginType ||--o{ lots__Lot : origin
+    lots__LotStatusCode ||--o{ lots__Lot : status
+    lots__Lot ||--o{ lots__Lot : parent
+    lots__Lot ||--o{ lots__LotGenealogy : genealogy
+    lots__GenealogyRelType ||--o{ lots__LotGenealogy : typed
+    lots__Lot ||--o{ lots__LotStatusHistory : tracked
+    lots__Lot ||--o{ lots__LotMovement : moved
+    lots__Lot ||--o{ lots__LotAttributeChange : changed
+    lots__ContainerStatusCode ||--o{ lots__Container : status
+    lots__Container ||--o{ lots__ContainerTray : trays
+    lots__Container ||--o{ lots__ContainerSerial : serials
+    lots__Lot ||--o{ lots__LotLabel : labeled
+    lots__Lot ||--o{ lots__SerializedPart : serialized
+    lots__SerializedPart ||--o{ lots__ContainerSerial : packed
+    lots__Container ||--o{ lots__ShippingLabel : labeled
+
+    parts__Item ||--o{ lots__Lot : item
+    parts__Item ||--o{ lots__Container : item
+    parts__Item ||--o{ lots__SerializedPart : item
+    parts__ContainerConfig ||--o{ lots__Container : config
+    loc__Location ||--o{ lots__Lot : location
+    loc__Location ||--o{ lots__Container : location
+    loc__Location ||--o{ lots__LotMovement : "from/to"
+    loc__AppUser ||--o{ lots__LotStatusHistory : user
+    loc__AppUser ||--o{ lots__LotMovement : user
+
+    wo__WorkOrderStatus ||--o{ wo__WorkOrder : status
+    wo__WorkOrder ||--o{ wo__WorkOrderOperation : ops
+    wo__OperationStatus ||--o{ wo__WorkOrderOperation : status
+    wo__WorkOrderOperation ||--o{ wo__ProductionEvent : produces
+    wo__WorkOrderOperation ||--o{ wo__ConsumptionEvent : consumes
+    wo__ProductionEvent ||--o{ wo__RejectEvent : rejected
+
+    parts__Item ||--o{ wo__WorkOrder : item
+    parts__RouteTemplate ||--o{ wo__WorkOrder : route
+    parts__RouteStep ||--o{ wo__WorkOrderOperation : step
+    loc__Location ||--o{ wo__WorkOrderOperation : machine
+    loc__Location ||--o{ wo__ProductionEvent : machine
+    lots__Lot ||--o{ wo__ProductionEvent : lot
+    lots__Lot ||--o{ wo__ConsumptionEvent : source
+    lots__Lot ||--o{ wo__RejectEvent : lot
+    loc__AppUser ||--o{ wo__ProductionEvent : operator
+    loc__Location ||--o{ wo__ProductionEvent : "terminal_location"
+
+    qual__QualitySpec ||--o{ qual__QualitySpecVersion : versioned
+    qual__QualitySpecVersion ||--o{ qual__QualitySpecAttribute : defines
+    qual__QualitySpecVersion ||--o{ qual__QualitySample : governs
+    qual__QualitySample ||--o{ qual__QualityResult : records
+    qual__QualitySample ||--o{ qual__QualityAttachment : attached
+    qual__NonConformance ||--o{ qual__QualityAttachment : attached
+    qual__DefectCode ||--o{ qual__NonConformance : classified
+    qual__NonConformance ||--o{ qual__HoldEvent : triggers
+
+    lots__Lot ||--o{ qual__QualitySample : sampled
+    lots__Lot ||--o{ qual__NonConformance : against
+    lots__Lot ||--o{ qual__HoldEvent : held
+    loc__AppUser ||--o{ qual__QualitySample : sampler
+    loc__Location ||--o{ qual__DefectCode : dept
+    parts__Item ||--o{ qual__QualitySpec : item
+    parts__OperationTemplate ||--o{ qual__QualitySpec : operation
+    qual__DefectCode ||--o{ wo__RejectEvent : defect
+
+    oee__DowntimeReasonType ||--o{ oee__DowntimeReasonCode : typed
+    oee__DowntimeReasonCode ||--o{ oee__DowntimeEvent : reason
+    oee__ShiftSchedule ||--o{ oee__Shift : defines
+    oee__Shift ||--o{ oee__DowntimeEvent : during
+    oee__Shift ||--o{ oee__OeeSnapshot : summarized
+
+    loc__Location ||--o{ oee__DowntimeEvent : machine
+    loc__Location ||--o{ oee__OeeSnapshot : machine
+    loc__Location ||--o{ oee__DowntimeReasonCode : dept
+    loc__AppUser ||--o{ oee__DowntimeEvent : operator
+
+    audit__LogSeverity ||--o{ audit__OperationLog : severity
+    audit__LogSeverity ||--o{ audit__ConfigLog : severity
+    audit__LogEventType ||--o{ audit__OperationLog : event
+    audit__LogEventType ||--o{ audit__ConfigLog : event
+    audit__LogEventType ||--o{ audit__InterfaceLog : event
+    audit__LogEntityType ||--o{ audit__OperationLog : entity
+    audit__LogEntityType ||--o{ audit__ConfigLog : entity
+    loc__AppUser ||--o{ audit__OperationLog : user
+    loc__AppUser ||--o{ audit__ConfigLog : user
+    loc__Location ||--o{ audit__OperationLog : "terminal_location"
+    loc__Location ||--o{ audit__OperationLog : machine
+        </div>
+    </div>
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: 'dark',
+        er: {
+            diagramPadding: 20,
+            layoutDirection: 'TB',
+            minEntityWidth: 100,
+            minEntityHeight: 75,
+            entityPadding: 15,
+            useMaxWidth: false
+        },
+        themeVariables: {
+            primaryColor: '#2a2f3f',
+            primaryTextColor: '#e1e4ed',
+            primaryBorderColor: '#6c8aff',
+            lineColor: '#4a5068',
+            secondaryColor: '#1a1d27',
+            tertiaryColor: '#222633'
+        }
+    });
+
+    function enablePanZoom(container) {
+        var svgs = container.querySelectorAll('.erd-container svg');
+        svgs.forEach(function(svg) {
+            if (svg.getAttribute('data-panzoom')) return;
+            svg.setAttribute('data-panzoom', 'true');
+            try {
+                svgPanZoom(svg, {
+                    zoomEnabled: true,
+                    controlIconsEnabled: false,
+                    fit: true,
+                    center: true,
+                    minZoom: 0.3,
+                    maxZoom: 5,
+                    zoomScaleSensitivity: 0.3,
+                    dblClickZoomEnabled: true
+                });
+            } catch(e) { /* svg not ready yet */ }
+        });
+    }
+
+    function renderTab(tabEl) {
+        var diagrams = tabEl.querySelectorAll('.mermaid:not([data-processed="true"])');
+        if (diagrams.length > 0) {
+            mermaid.run({ nodes: diagrams }).then(function() {
+                setTimeout(function() { enablePanZoom(tabEl); }, 100);
+            });
+        } else {
+            enablePanZoom(tabEl);
+        }
+    }
+
+    // Render the initially active tab
+    renderTab(document.getElementById('tab-location'));
+
+    // Tab switching
+    var tabNames = ['location','parts','lots','workorder','quality','oee','audit','master'];
+    document.getElementById('tabBar').addEventListener('click', function(e) {
+        var btn = e.target.closest('button');
+        if (!btn) return;
+        var tab = btn.getAttribute('data-tab');
+        if (!tab) return;
+
+        document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+        document.querySelectorAll('.tab-bar button').forEach(function(el) { el.classList.remove('active'); });
+
+        var tabEl = document.getElementById('tab-' + tab);
+        tabEl.classList.add('active');
+        btn.classList.add('active');
+
+        // Render mermaid diagrams after the tab is visible
+        setTimeout(function() { renderTab(tabEl); }, 50);
+    });
+</script>
+
+</body>
+</html>

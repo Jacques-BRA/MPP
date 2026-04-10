@@ -1,0 +1,53 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Windows
+desktop.ini
+Thumbs.db
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Temporary / backup files
+*.tmp
+*.bak
+*.orig
+*~
+~$*.docx
+~$*.xlsx
+~$*.pptx
+
+# Pandoc / docx build artifacts (keep the reference, ignore temp outputs)
+*_v[0-9][0-9].docx
+test_*.docx
+*_draft.docx
+
+# Claude Code local state (keep CLAUDE.md; ignore local settings)
+.claude/settings.local.json
+
+# Python (just in case)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.local
+*.key
+*.pem
