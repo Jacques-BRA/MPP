@@ -37,12 +37,15 @@ Start here and work down. Each document builds on the previous.
 
 | Location | Contents |
 |---|---|
-| `mpp_frs_md/` | 22 annotated FRS source documents (Flexware v1.0). The requirements we're implementing against. |
+| `reference/MPP_FRS_Draft.pdf` | **Source FRS PDF** (Flexware v1.0, 6.7 MB). Use `pdftotext -table` for extracting tabular appendices. Page indexes: A=73-80, B=81-86, C=87-91, D=92-105, E=106-110, F=111-114, G=115-143. |
+| `mpp_frs_md/` | 22 annotated FRS markdown files (older extract). Lower fidelity than `pdftotext -table` directly from PDF — prefer the PDF source for tabular content. |
 | `mpp_frs_md/SPARK_DEPENDENCY_REGISTER.md` | Analysis of SparkMES dependencies and Blue Ridge design decisions for each |
 | `reference/MPP_Scope_Matrix.xlsx` | **Scope authority** — the definitive in/out boundary. 37 rows: MVP, CONDITIONAL, FUTURE. |
 | `reference/Excel Prod Sheets.xlsx` | Paper production sheet templates (what MES replaces) |
 | `reference/MS1FM-*.xlsx` (11 files) | Line-specific production sheets with defect codes and shipping label tracking |
 | `reference/5GO_AP4_Automation_Touchpoint_Agreement.pdf` | PLC integration spec — MIP touch points, handshake flows |
+| `reference/seed_data/` | **Seed data CSVs** extracted from FRS Appendices B/C/D/E. 876 rows total — machines (209), opc_tags (161), downtime_reason_codes (353), defect_codes (153). README + parse_warnings inside. |
+| `reference/seed_data.xlsx` | Auto-generated Excel workbook with all 4 seed CSVs as sheets (filter/sort UI). Regenerate via `node reference/seed_data/build_seed_workbook.js`. |
 
 ## Architecture at a Glance
 
@@ -71,7 +74,8 @@ When in doubt about scope, check `reference/MPP_Scope_Matrix.xlsx` — it is the
 - **Open Issues Register:** Word doc v2.3 with 29 items total. Full FRS/FDS reference crosswalk added.
 - **ERD:** Interactive HTML with 8 tabs, updated for new location model.
 - **Word output:** All 4 markdown docs have bordered + alternating-row styled Word versions. Regenerate via `pandoc ... --reference-doc=reference.docx` + `node style_docx_tables.js <file.docx>`.
-- **NOT started:** Ignition project, Perspective screens, SQL DDL scripts, seed data loading, PLC integration, testing.
+- **Seed data:** 876 rows extracted from FRS Appendices B/C/D/E into CSVs in `reference/seed_data/`, plus auto-generated `reference/seed_data.xlsx`. Per-appendix Node.js parsers in `reference/seed_data/parsers/` handle multi-line wrapped descriptions. Source PDF is `reference/MPP_FRS_Draft.pdf`.
+- **NOT started:** Ignition project, Perspective screens, SQL DDL scripts, **seed data loading** (CSVs ready), PLC integration, testing.
 
 ## Remaining Tasks
 
