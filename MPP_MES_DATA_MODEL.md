@@ -15,6 +15,7 @@
 | 0.3 | 2026-04-09 | Blue Ridge Automation | Naming convention changed from snake_case to UpperCamelCase for all DB identifiers. Merged Department into Area per ISA-95 — `DepartmentLocationId` FKs renamed to `AreaLocationId`, `ChargeToDepartment` renamed to `ChargeToArea`. Added Enterprise (level 0) to `LocationType`. Updated `LocationType` seed rows. |
 | 0.4 | 2026-04-10 | Blue Ridge Automation | Major restructure of location schema: `LocationType` reduced to 5 ISA-95 tiers (Enterprise, Site, Area, WorkCenter, Cell). `LocationTypeDefinition` repurposed from "attribute definitions" to "polymorphic kinds" (Terminal, DieCastMachine, CNCMachine, etc. — all under Cell). New `LocationAttributeDefinition` table holds attribute schemas per kind. `Location.LocationTypeId` replaced by `Location.LocationTypeDefinitionId`. `LocationAttribute.LocationTypeDefinitionId` renamed to `LocationAttributeDefinitionId`. Added seed data tables for LocationType, LocationTypeDefinition, and sample LocationAttributeDefinition sets. |
 | 0.4.1 | 2026-04-10 | Blue Ridge Automation | Consistency pass: normalized terminal FK columns on append-only Lot event tables (LotGenealogy, LotStatusHistory, LotMovement, LotAttributeChange) to `TerminalLocationId` — were previously `EventTerminalId` / `ChangedAtTerminalId` / `MovedAtTerminalId`. Fixed stale UPPER_CASE code values in column descriptions (Split/Merge/Consumption, Good/Hold/Scrap/Closed, Open/Complete/Shipped/Hold/Void, Manufactured/Received/ReceivedOffsite, Initial/ReprintDamaged/Split/Merge/SortCageReIdentify, UseAsIs/Rework/etc.). Fixed snake_case in UJ-14 warm-up note and UJ-16 interlock bypass note. |
+| 0.5 | 2026-04-10 | Blue Ridge Automation | Added `Audit.FailureLog` table to track attempted-but-rejected stored procedure calls (parameter validation failures, business-rule violations, caught exceptions). Complements ConfigLog/OperationLog which track successful mutations. 4 indexes defined (AttemptedAt, AppUser, EntityEvent, ProcedureName). Written by the new `Audit_LogFailure` shared proc from every validation-failure path and every CATCH handler in mutating procs. |
 
 ---
 
@@ -1027,3 +1028,30 @@ External system communications.
 | ErrorCondition | VARCHAR(200) | NULL | |
 | ErrorDescription | VARCHAR(1000) | NULL | |
 | IsHighFidelity | BIT | NOT NULL, DEFAULT 0 | |
+
+### FailureLog
+
+Records attempted but **rejected** stored procedure calls — parameter validation failures, business rule violations, FK mismatches, and unexpected exceptions caught by a CATCH handler. Complements `ConfigLog` and `OperationLog`: those tables record what *succeeded*, `FailureLog` records what was *attempted and blocked*. Used for UX improvement (surface common rejection reasons), abuse detection, and root-cause analysis.
+
+Every shared audit proc writes here on failure. Mutating stored procs call `Audit_LogFailure` from any validation-failure path **and** from their CATCH handler (outside the rolled-back transaction, so the failure record survives).
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK, IDENTITY | |
+| AttemptedAt | DATETIME2(3) | NOT NULL, DEFAULT SYSUTCDATETIME() | When the call was attempted |
+| AppUserId | INT | FK → AppUser.Id, NOT NULL | Who attempted the action |
+| LogEntityTypeId | INT | FK → LogEntityType.Id, NOT NULL | What kind of entity (e.g., Location, Item, Bom) |
+| EntityId | INT | NULL | Target entity Id; NULL for Create attempts where no Id exists yet |
+| LogEventTypeId | INT | FK → LogEventType.Id, NOT NULL | What action was attempted (Created, Updated, Deprecated, etc.) |
+| FailureReason | VARCHAR(500) | NOT NULL | The `@Message` value returned to the caller |
+| ProcedureName | VARCHAR(200) | NOT NULL | Fully-qualified proc name (e.g., `Location.Location_Create`) |
+| AttemptedParameters | VARCHAR(MAX) | NULL | JSON snapshot of the input parameters for debugging |
+
+**Indexes:**
+
+| Index | Columns | Purpose |
+|---|---|---|
+| IX_FailureLog_AttemptedAt | `AttemptedAt DESC` | Recent failures dashboard |
+| IX_FailureLog_AppUser | `AppUserId, AttemptedAt DESC` | Per-user failure history |
+| IX_FailureLog_EntityEvent | `LogEntityTypeId, LogEventTypeId, AttemptedAt DESC` | "Top rejection reasons by entity type" |
+| IX_FailureLog_ProcedureName | `ProcedureName, AttemptedAt DESC` | "Which procs are failing most" |

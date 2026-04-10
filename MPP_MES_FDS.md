@@ -17,6 +17,7 @@
 | 0.2 | 2026-04-09 | Blue Ridge Automation | Propagated OI/UJ design decisions. Resolved OI-01 (no outbox), OI-08 (shared terminals as location type), OI-09 (one part at a time). Updated §1.4/1.6 (direct calls + logging), §2.5 (terminal as location type, machine barcode scan), §3.6 (closed OI-09), §4.2 (5-min timeout session model), §5.4 (auto-split into 2 sublots), §5.5 (configurable merge rules), §6.3 (warm-up as downtime), §6.5 (interlock bypass flag), §6.6 (scale feedback), §6.10 (WO MVP-lite), §10.3 (vision auto-hold + override). Added FRS references to OI register. |
 | 0.3 | 2026-04-09 | Blue Ridge Automation | Naming convention changed from snake_case to UpperCamelCase for all DB identifiers (tables, columns, code values). Merged Department into Area per ISA-95 — Department location type removed, 5 departments become Area-type locations. Added Enterprise (level 0) to hierarchy. Updated §2.2 (FDS-02-001) hierarchy table, §2.3 (FDS-02-003), all defect/downtime filtering references. |
 | 0.4 | 2026-04-10 | Blue Ridge Automation | Major restructure of location model: split `LocationType` (5 ISA-95 tiers) from `LocationTypeDefinition` (polymorphic kinds) and introduced `LocationAttributeDefinition` for attribute schemas per kind. Terminal, DieCastMachine, CNCMachine, InventoryLocation, etc. are now `LocationTypeDefinition` rows under the `Cell` type. Rewrote §2.1–2.5. Added §5.3 FDS-05-008 explicit login→scan-location→scan-lot movement workflow. Updated FDS-05-004 and FDS-05-020 to clarify Die Cast uses pre-printed LTTs (no Initial print event). Expanded FDS-06-019 with Pattern A (inline reject) vs Pattern B (split-to-scrap) scrap handling. Added FDS-07-019 clarifying Sort Cage is NOT a LOT merge event. Added bordered + alternating row Word table styling via pandoc reference doc. |
+| 0.5 | 2026-04-10 | Blue Ridge Automation | §11 Audit & Logging expanded: added fourth log stream `Audit.FailureLog` for attempted-but-rejected operations (new FDS-11-004). High-Fidelity Interface Logging renumbered from FDS-11-004 to FDS-11-005 to make room. Added FDS-11-008 documenting the code-string signatures for the four shared audit procs. Renumbered FDS-11-007 → FDS-11-009 (Retention Policy) and FDS-11-008 → FDS-11-010 (BIGINT Primary Keys) to accommodate. Normalized vocabulary examples in FDS-11-006/007 updated to UpperCamelCase (`Created`/`Updated`/`Deprecated`/`LotCreated` etc. instead of UPPER_SNAKE). |
 
 ---
 
@@ -1297,37 +1298,47 @@ ZPL label generation and printing SHALL be handled via Ignition's built-in TCP s
 
 ### 11.1 Design Overview
 
-Every state-changing action in the MES is logged. Three log types serve different audiences: operation logs for shop-floor actions, configuration logs for engineering/admin changes, and interface logs for external system communications. All logs are immutable, append-only, with BIGINT PKs for high-volume append. (FRS 3.5.14)
+Every state-changing action in the MES is logged. **Four** log types serve different audiences: operation logs for shop-floor actions, configuration logs for engineering/admin changes, interface logs for external system communications, and **failure logs for attempted-but-rejected operations**. All logs are immutable, append-only, with BIGINT PKs for high-volume append. (FRS 3.5.14)
+
+All audit writes flow through four shared stored procedures (`Audit_LogConfigChange`, `Audit_LogOperation`, `Audit_LogInterfaceCall`, `Audit_LogFailure`). Entity-specific procs never write to log tables directly — they call the shared procs. This gives a single source of truth for how audit entries are written and makes the audit schema refactor-friendly.
 
 ### 11.2 Log Types
 
 #### FDS-11-001 — Operation Log
-Every shop-floor action SHALL be logged to `Audit.OperationLog`: LOT creation, movement, split, merge, production recording, consumption, hold placement/release, container operations, label prints, downtime entry. Each record SHALL include: timestamp, user, terminal, location, severity, event type, entity type, entity ID, description, and old/new values where applicable.
+Every shop-floor action SHALL be logged to `Audit.OperationLog`: LOT creation, movement, split, merge, production recording, consumption, hold placement/release, container operations, label prints, downtime entry. Each record SHALL include: timestamp, user, terminal, location, severity, event type, entity type, entity ID, description, and old/new values where applicable. Writes occur via `Audit_LogOperation` inside the mutating proc's transaction — atomic with the data.
 
 #### FDS-11-002 — Configuration Log
-Every engineering and admin change SHALL be logged to `Audit.ConfigLog`: item creation/modification, BOM changes, route changes, quality spec changes, defect code changes, downtime code changes, location changes, terminal changes, user changes. Each record SHALL include: timestamp, user, severity, event type, entity type, entity ID, description, and a structured changes field (JSON or diff format).
+Every engineering and admin change SHALL be logged to `Audit.ConfigLog`: item creation/modification, BOM changes, route changes, quality spec changes, defect code changes, downtime code changes, location changes, terminal changes, user changes. Each record SHALL include: timestamp, user, severity, event type, entity type, entity ID, description, and a structured changes field (JSON or diff format). Writes occur via `Audit_LogConfigChange` inside the mutating proc's transaction — atomic with the data.
 
 #### FDS-11-003 — Interface Log
-Every external system communication SHALL be logged to `Audit.InterfaceLog`: AIM calls (GetNextNumber, UpdateAim, PlaceOnHold, ReleaseFromHold), Zebra print jobs, and any future integration calls. Each record SHALL include: timestamp, system name (AIM, ZEBRA, PLC, MACOLA, INTELEX), direction (INBOUND/OUTBOUND), event type, description, and optionally request/response payloads when high-fidelity logging is enabled.
+Every external system communication SHALL be logged to `Audit.InterfaceLog`: AIM calls (GetNextNumber, UpdateAim, PlaceOnHold, ReleaseFromHold), Zebra print jobs, and any future integration calls. Each record SHALL include: timestamp, system name (AIM, ZEBRA, PLC, MACOLA, INTELEX), direction (INBOUND/OUTBOUND), event type, description, and optionally request/response payloads when high-fidelity logging is enabled. Writes occur via `Audit_LogInterfaceCall`.
 
-#### FDS-11-004 — High-Fidelity Interface Logging
+#### FDS-11-004 — Failure Log
+Every attempted but **rejected** mutating stored procedure call SHALL be logged to `Audit.FailureLog`. This includes parameter-validation failures, business-rule violations (e.g., "cannot deprecate due to active dependents"), FK mismatches, and unexpected exceptions caught by a CATCH handler. Each record SHALL include: attempted timestamp, user, entity type, entity ID (nullable for Create attempts), event type, failure reason (the user-facing message), procedure name, and a JSON snapshot of the input parameters. Writes occur via `Audit_LogFailure` — called from validation-failure paths before `RETURN`, and from CATCH handlers after `ROLLBACK` (wrapped in nested TRY/CATCH so a failure-log write failure does not mask the original error).
+
+The failure log complements `ConfigLog` and `OperationLog`: those tables record what succeeded; `FailureLog` records what was attempted and blocked. The Configuration Tool provides a dedicated Failure Log Browser with filters (entity, user, procedure, date range) and dashboard tiles for "Top Rejection Reasons" and "Top Failing Procedures" to support root-cause analysis and UX improvement. Not having this visibility is a known pain point in the legacy MES.
+
+#### FDS-11-005 — High-Fidelity Interface Logging
 The system SHALL support a configurable high-fidelity mode for interface logging. When enabled, full request and response payloads SHALL be stored in the `RequestPayload` and `ResponsePayload` columns. When disabled, only the summary description is logged. High-fidelity mode SHALL be toggleable per target system without restart.
 
 ### 11.3 Normalized Vocabularies
 
-#### FDS-11-005 — Event Type Vocabulary
-All log tables SHALL use the normalized `LogEventType` table for the event type field. This prevents free-text drift across Ignition scripts. Event types SHALL be seeded at deployment and include: LOT_CREATED, LOT_MOVED, LOT_SPLIT, LOT_MERGED, LOT_STATUS_CHANGED, PRODUCTION_RECORDED, CONSUMPTION_RECORDED, REJECT_RECORDED, HOLD_PLACED, HOLD_RELEASED, CONTAINER_CREATED, CONTAINER_CLOSED, CONTAINER_SHIPPED, LABEL_PRINTED, LABEL_VOIDED, DOWNTIME_STARTED, DOWNTIME_ENDED, AIM_CALL, CONFIG_CHANGED, and others as needed.
+#### FDS-11-006 — Event Type Vocabulary
+All log tables SHALL use the normalized `LogEventType` table for the event type field. This prevents free-text drift across Ignition scripts. Event types SHALL be seeded at deployment and include: `Created`, `Updated`, `Deprecated`, `LotCreated`, `LotMoved`, `LotSplit`, `LotMerged`, `LotStatusChanged`, `ProductionRecorded`, `ConsumptionRecorded`, `RejectRecorded`, `HoldPlaced`, `HoldReleased`, `ContainerCreated`, `ContainerClosed`, `ContainerShipped`, `LabelPrinted`, `LabelVoided`, `DowntimeStarted`, `DowntimeEnded`, `AimCall`, `ConfigChanged`, and others as needed.
 
-#### FDS-11-006 — Entity Type Vocabulary
-All log tables SHALL use the normalized `LogEntityType` table. Entity types SHALL include: LOT, CONTAINER, SERIALIZED_PART, WORK_ORDER, ITEM, LOCATION, TERMINAL, APP_USER, QUALITY_SAMPLE, HOLD_EVENT, DOWNTIME_EVENT, SHIPPING_LABEL, and others as needed.
+#### FDS-11-007 — Entity Type Vocabulary
+All log tables SHALL use the normalized `LogEntityType` table. Entity types SHALL include: `Lot`, `Container`, `SerializedPart`, `WorkOrder`, `Item`, `Location`, `LocationTypeDefinition`, `AppUser`, `Bom`, `RouteTemplate`, `OperationTemplate`, `QualitySpec`, `DefectCode`, `DowntimeReasonCode`, `QualitySample`, `HoldEvent`, `DowntimeEvent`, `ShippingLabel`, and others as needed.
+
+#### FDS-11-008 — Code-String Signatures for Shared Audit Procs
+The four shared audit procedures SHALL accept the event type, entity type, and severity as code strings (e.g., `'Location'`, `'Created'`, `'Info'`) rather than integer IDs. Each shared proc SHALL resolve the code strings to internal IDs via the seeded lookup tables. This keeps entity-specific procs self-documenting and removes hard-coded integer constants from the CRUD layer. A code-string that does not resolve SHALL cause the shared proc to raise an error (indicating a seeding gap or a typo).
 
 ### 11.4 Data Retention
 
-#### FDS-11-007 — Retention Policy
+#### FDS-11-009 — Retention Policy
 All MES data SHALL be retained for a minimum of 20 years (Honda traceability requirement). Online data (hot storage in SQL Server) SHALL be retained for a minimum of 6 months. Data older than 6 months MAY be archived to a secondary store, but SHALL remain queryable for genealogy and audit purposes.
 
-#### FDS-11-008 — BIGINT Primary Keys
-The three log tables (`OperationLog`, `ConfigLog`, `InterfaceLog`) SHALL use BIGINT IDENTITY primary keys to support high-volume append patterns over the 20-year retention period.
+#### FDS-11-010 — BIGINT Primary Keys
+The four log tables (`OperationLog`, `ConfigLog`, `InterfaceLog`, `FailureLog`) SHALL use BIGINT IDENTITY primary keys to support high-volume append patterns over the 20-year retention period.
 
 ---
 

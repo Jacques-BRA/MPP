@@ -16,6 +16,7 @@
 | 0.2 | 2026-04-10 | Blue Ridge Automation | Reformatted API Layer sections from bulleted lists to tables (Procedure / Parameters / Notes) for Word readability. Added explicit Seed Data tables to Phases 1, 7, and 8 with row counts and source CSVs. No content changes — purely a presentation pass. |
 | 0.3 | 2026-04-10 | Blue Ridge Automation | Restructured the phase ordering: new Phase 1 is **Identity & Audit Foundation** (formerly Phase 2), and the old Phase 1 (Plant Model) is now Phase 2. Added 3 shared **audit infrastructure procedures** (`Audit_LogConfigChange`, `Audit_LogOperation`, `Audit_LogInterfaceCall`) that every CRUD proc in every later phase must call instead of writing audit entries inline. Documented the bootstrap admin user (`Id = 1`, inserted via migration script) to break the chicken-and-egg dependency. Added a **Dependencies** column to every API table across all 8 phases — shows which other procs and tables each procedure relies on, plus which mutating procs call `Audit_LogConfigChange`. Updated cross-cutting concerns to reflect the shared-audit-proc pattern. |
 | 0.4 | 2026-04-10 | Blue Ridge Automation | Added **Executed When** and **Output** columns to every API table across all 8 phases. *Executed When* describes the user/system trigger that causes each proc to run (e.g., "Plant Hierarchy Browser expands a tree node", "Admin submits Add User modal", "Plant Floor production code looks up the active route for this LOT"). *Output* documents what each proc returns — rowset shape, scalar type, or rowcount — making the API contract explicit for the engineer building Named Queries. API tables now have 6 columns: Procedure / Parameters / Notes / Dependencies / Executed When / Output. |
+| 0.5 | 2026-04-10 | Blue Ridge Automation | Major conventions update. Added a **Stored Procedure Template and Conventions** section with the standard output contract (`@Status BIT`, `@Message NVARCHAR(500)`, plus proc-specific outputs), the three-tier error hierarchy (parameter validation / business rule / unexpected exception), transaction boilerplate, audit call placement rules, a full template example with failure logging, a read-proc variation, and a code-review checklist. Introduced **`Audit.FailureLog`** as a fourth audit stream for rejected operations — every validation failure, business-rule rejection, and caught exception in any mutating proc writes here via the new shared **`Audit_LogFailure`** proc. Updated all four shared audit procs (`Audit_LogConfigChange`, `Audit_LogFailure`, `Audit_LogOperation`, `Audit_LogInterfaceCall`) to accept **code strings** (`'Location'`, `'Created'`, `'Info'`) instead of integer IDs, removing hard-coded constants from entity procs. Added FailureLog read procs (`FailureLog_List`, `FailureLog_GetByEntity`, `FailureLog_GetTopReasons`, `FailureLog_GetTopProcs`) and a **Failure Log Browser** frontend view to Phase 1. Updated Cross-Cutting Concern #1 to reflect the shared-proc pattern for both success and failure paths. |
 
 ---
 
@@ -69,7 +70,12 @@ In the Ignition Perspective architecture, **the "API layer" is Ignition Named Qu
 
 These rules apply to every entity in every phase. The plan does not repeat them per phase.
 
-1. **Audit attribution via shared procs.** Every Create/Update/Deprecate stored procedure takes `@AppUserId INT` and **calls the shared `Audit_LogConfigChange` proc** (defined in Phase 1) to write a row to `Audit.ConfigLog`. The shared proc is the single source of truth for how audit entries are written — entity-specific procs do not write to `ConfigLog` directly. This means a future change to the audit schema only touches `Audit_LogConfigChange`, not 100+ entity procs.
+1. **Audit attribution via shared procs.** Every Create/Update/Deprecate stored procedure takes `@AppUserId INT` and calls one of the shared audit procs defined in Phase 1:
+   - **On success:** call `Audit_LogConfigChange` to write a row to `Audit.ConfigLog` (inside the transaction — rolls back with the data if anything fails).
+   - **On business-rule rejection:** call `Audit_LogFailure` to write a row to `Audit.FailureLog` with the reason, the procedure name, and a JSON snapshot of the input parameters. This creates an ongoing record of what operators and engineers are trying to do that isn't working — invaluable for UX improvement and root-cause analysis.
+   - **On unexpected exception** (CATCH block): also call `Audit_LogFailure` — but *outside* the rolled-back transaction, then `THROW` to bubble the exception to Ignition.
+
+   The shared procs are the single source of truth for how audit entries are written — entity-specific procs never touch `ConfigLog` or `FailureLog` directly. A future change to the audit schema touches only the shared procs, not 100+ entity procs.
 2. **Soft delete only.** Hard `DELETE` is forbidden for any table with downstream references. Use `DeprecatedAt` (set non-null to deactivate). Procedures should validate that an entity has no active dependents before deprecating.
 3. **Versioning where applicable.** BOMs, route templates, quality specs, and operation templates all carry `VersionNumber` + `EffectiveFrom` + `DeprecatedAt`. Production records reference the version that was active at the time, not the latest.
 4. **No reference loops.** Validate parent-child relationships server-side (e.g., a `Location.ParentLocationId` cannot equal its own `Id`, and the chain cannot cycle).
@@ -79,6 +85,309 @@ These rules apply to every entity in every phase. The plan does not repeat them 
 8. **Server-side validation.** Validation lives in the stored procedure, not just the Perspective form. The frontend may pre-validate for UX, but the proc is the authority.
 9. **`AppUser` and audit infrastructure exist before any other phase.** Phase 1 establishes the bootstrap admin user (`Id = 1`, inserted via the migration script) and the shared audit procs. No CRUD work in Phases 2–8 can be written until Phase 1 is complete.
 10. **Perspective permissions.** Each Configuration Tool screen is gated by an Ignition role (Engineering, Admin). Operators cannot reach Configuration screens — enforced at the Perspective view security level, not just hidden.
+
+---
+
+## Stored Procedure Template and Conventions
+
+Every stored procedure written in this project — in the Configuration Tool, the Plant Floor build, and anywhere else — follows the same structural template. This section is the authoritative reference. When the new collaborator writes their first proc, they copy this template and fill in the blanks.
+
+### The Contract
+
+Every proc, read or write, has the same output contract:
+
+| Output Parameter | Type | Purpose |
+|---|---|---|
+| `@Status` | `BIT OUTPUT` | `1` on success, `0` on failure. **Always set before returning.** |
+| `@Message` | `NVARCHAR(500) OUTPUT` | Human-readable status message. On success: a short confirmation. On failure: a user-friendly reason. |
+| *(proc-specific)* | various `OUTPUT` | E.g., `@NewId INT OUTPUT` for Create procs. |
+
+Read procs additionally return a data rowset. Write procs typically do not return a rowset (the data output is via `@NewId` or similar). Status is read by the caller to branch success/failure; `@Message` is surfaced directly in the Perspective UI on error.
+
+### The Error Hierarchy
+
+Errors fall into three tiers. Each is handled differently:
+
+| Tier | Example | Handling |
+|---|---|---|
+| **Parameter validation** | NULL where required, missing FK target, bad range | Set `@Status = 0`, set friendly `@Message`, call `Audit_LogFailure`, `RETURN`. **No transaction started.** No exception thrown. |
+| **Business rule violation** | Duplicate code, deprecate-with-dependents, stale data, optimistic-lock mismatch | Same as above: `@Status = 0`, friendly `@Message`, call `Audit_LogFailure`, `RETURN`. No exception thrown. |
+| **Unexpected exception** | Deadlock, trigger failure, constraint violation from corrupt data, NULL in unexpected place | Caught by CATCH: rollback if transaction open, set `@Status = 0`, capture `ERROR_MESSAGE()` in `@Message`, call `Audit_LogFailure` *outside the rolled-back transaction*, then **`THROW`** to bubble the exception to Ignition. |
+
+**Why the distinction?** Business-rule rejections are expected behavior — the UI needs to show them gracefully (e.g., "Cannot deprecate: active dependents exist"). Unexpected exceptions are bugs or infrastructure problems — the UI should show a generic error and Ignition's logs should capture the stack for debugging.
+
+### Transaction Boilerplate
+
+Every mutating proc starts with:
+
+```sql
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+```
+
+- `NOCOUNT ON` — suppresses the "x rows affected" messages (Ignition doesn't need them and they add overhead).
+- `XACT_ABORT ON` — automatic rollback on runtime errors. Safety net for any error that escapes our TRY/CATCH (extremely rare, but cheap insurance).
+
+Every mutation is wrapped in an explicit `BEGIN TRANSACTION` / `COMMIT TRANSACTION`, with the success audit call (`Audit_LogConfigChange`) **inside** the transaction so it rolls back atomically with the data on any failure.
+
+The CATCH handler's `Audit_LogFailure` call is wrapped in its own nested `TRY/CATCH` so a failure in the failure-logger itself doesn't mask the original error.
+
+### Audit Call Placement Rules
+
+| Call | When | Placement |
+|---|---|---|
+| `Audit_LogConfigChange` | Mutation succeeded | **Inside** the transaction, just before `COMMIT`. Atomic with the data. |
+| `Audit_LogFailure` (from validation path) | Parameter or business-rule failure | Before the `RETURN`. No transaction active, so it commits standalone. |
+| `Audit_LogFailure` (from CATCH) | Caught exception | **After** `ROLLBACK`, wrapped in nested TRY/CATCH to prevent masking. |
+
+### Full Template
+
+```sql
+-- =============================================
+-- Procedure:   Location.Location_Create
+-- Author:      <name>
+-- Created:     2026-04-XX
+-- Version:     1.0
+--
+-- Description:
+--   Creates a new Location row under the specified parent. Validates
+--   LocationTypeDefinition and parent existence. Enforces Code uniqueness.
+--   Logs success to Audit.ConfigLog or failure to Audit.FailureLog.
+--
+-- Parameters (input):
+--   @LocationTypeDefinitionId INT      - FK to LocationTypeDefinition. Required.
+--   @ParentLocationId INT NULL         - FK to Location. NULL only for the Enterprise root.
+--   @Name NVARCHAR(200)                - Display name. Required.
+--   @Code NVARCHAR(50)                 - Short identifier. Required. Must be unique among active rows.
+--   @Description NVARCHAR(500) NULL    - Optional description.
+--   @AppUserId INT                     - User performing the action. Required for audit attribution.
+--
+-- Parameters (output):
+--   @Status BIT                        - 1 on success, 0 on failure.
+--   @Message NVARCHAR(500)             - Human-readable status message.
+--   @NewId INT                         - New Location.Id on success, NULL on failure.
+--
+-- Result set:
+--   None. Data output is via @NewId.
+--
+-- Dependencies:
+--   Tables: Location.Location, Location.LocationTypeDefinition
+--   Procs:  Audit.Audit_LogConfigChange, Audit.Audit_LogFailure
+--
+-- Error Handling:
+--   - Validation/business-rule failures: @Status=0, @Message set, Audit_LogFailure, RETURN.
+--   - CATCH handler: rollback, @Status=0, @Message captured, Audit_LogFailure, THROW.
+--
+-- Change Log:
+--   2026-04-XX - 1.0 - Initial version
+-- =============================================
+CREATE OR ALTER PROCEDURE Location.Location_Create
+    @LocationTypeDefinitionId INT,
+    @ParentLocationId          INT            = NULL,
+    @Name                      NVARCHAR(200),
+    @Code                      NVARCHAR(50),
+    @Description               NVARCHAR(500)  = NULL,
+    @AppUserId                 INT,
+    @Status                    BIT            OUTPUT,
+    @Message                   NVARCHAR(500)  OUTPUT,
+    @NewId                     INT            = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Initialize output
+    SET @Status  = 0;
+    SET @Message = N'Unknown error';
+    SET @NewId   = NULL;
+
+    -- Capture input for failure-log snapshots
+    DECLARE @ProcName NVARCHAR(200) = N'Location.Location_Create';
+    DECLARE @Params   NVARCHAR(MAX) =
+        (SELECT @LocationTypeDefinitionId AS LocationTypeDefinitionId,
+                @ParentLocationId         AS ParentLocationId,
+                @Name                     AS Name,
+                @Code                     AS Code,
+                @Description              AS Description
+         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
+
+    BEGIN TRY
+        -- ====================
+        -- Parameter validation
+        -- ====================
+        IF @LocationTypeDefinitionId IS NULL OR @Name IS NULL OR @Code IS NULL OR @AppUserId IS NULL
+        BEGIN
+            SET @Message = N'Required parameter missing.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'Location',
+                @EntityId            = NULL,
+                @LogEventTypeCode    = N'Created',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+            RETURN;
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM Location.LocationTypeDefinition
+                       WHERE Id = @LocationTypeDefinitionId AND DeprecatedAt IS NULL)
+        BEGIN
+            SET @Message = N'Invalid or deprecated LocationTypeDefinitionId.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'Location', @EntityId = NULL,
+                @LogEventTypeCode = N'Created', @FailureReason = @Message,
+                @ProcedureName = @ProcName, @AttemptedParameters = @Params;
+            RETURN;
+        END
+
+        IF @ParentLocationId IS NOT NULL AND NOT EXISTS
+            (SELECT 1 FROM Location.Location WHERE Id = @ParentLocationId AND DeprecatedAt IS NULL)
+        BEGIN
+            SET @Message = N'Invalid or deprecated ParentLocationId.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'Location', @EntityId = NULL,
+                @LogEventTypeCode = N'Created', @FailureReason = @Message,
+                @ProcedureName = @ProcName, @AttemptedParameters = @Params;
+            RETURN;
+        END
+
+        -- ====================
+        -- Business rule checks
+        -- ====================
+        IF EXISTS (SELECT 1 FROM Location.Location WHERE Code = @Code AND DeprecatedAt IS NULL)
+        BEGIN
+            SET @Message = N'A location with this Code already exists.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'Location', @EntityId = NULL,
+                @LogEventTypeCode = N'Created', @FailureReason = @Message,
+                @ProcedureName = @ProcName, @AttemptedParameters = @Params;
+            RETURN;
+        END
+
+        -- ====================
+        -- Mutation (atomic)
+        -- ====================
+        BEGIN TRANSACTION;
+
+        INSERT INTO Location.Location
+            (LocationTypeDefinitionId, ParentLocationId, Name, Code, Description, CreatedAt)
+        VALUES
+            (@LocationTypeDefinitionId, @ParentLocationId, @Name, @Code, @Description, GETUTCDATE());
+
+        SET @NewId = CAST(SCOPE_IDENTITY() AS INT);
+
+        -- Success audit INSIDE the transaction — rolls back atomically with the data
+        EXEC Audit.Audit_LogConfigChange
+            @AppUserId         = @AppUserId,
+            @LogEntityTypeCode = N'Location',
+            @EntityId          = @NewId,
+            @LogEventTypeCode  = N'Created',
+            @LogSeverityCode   = N'Info',
+            @Description       = N'Location created: ' + @Name + N' (' + @Code + N')',
+            @OldValue          = NULL,
+            @NewValue          = @Params;
+
+        COMMIT TRANSACTION;
+
+        SET @Status  = 1;
+        SET @Message = N'Location created successfully.';
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SET @Status  = 0;
+        SET @Message = N'Unexpected error: ' + LEFT(ERROR_MESSAGE(), 400);
+        SET @NewId   = NULL;
+
+        -- Failure log OUTSIDE the rolled-back transaction
+        -- Wrap in nested TRY/CATCH so a log-write failure doesn't mask the real error
+        BEGIN TRY
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'Location',
+                @EntityId            = NULL,
+                @LogEventTypeCode    = N'Created',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+        END TRY
+        BEGIN CATCH
+            -- Swallow; we're already in a bad state and shouldn't mask the original exception
+        END CATCH
+
+        -- Re-throw so Ignition logs it as a critical exception
+        THROW;
+    END CATCH
+END
+GO
+```
+
+### Variations
+
+**Read procs** — no transaction, no success audit, but still get `@Status` / `@Message` output params and still log validation failures:
+
+```sql
+CREATE OR ALTER PROCEDURE Location.Location_Get
+    @Id      INT,
+    @Status  BIT            OUTPUT,
+    @Message NVARCHAR(500)  OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @Status = 0;
+    SET @Message = N'Unknown error';
+
+    IF @Id IS NULL
+    BEGIN
+        SET @Message = N'Id is required.';
+        -- Read procs typically don't log parameter failures (noise), but may at author's discretion
+        RETURN;
+    END
+
+    BEGIN TRY
+        SELECT l.Id, l.LocationTypeDefinitionId, l.ParentLocationId, l.Name, l.Code, l.Description
+        FROM Location.Location l
+        WHERE l.Id = @Id;
+
+        SET @Status  = 1;
+        SET @Message = N'Query executed successfully.';
+    END TRY
+    BEGIN CATCH
+        SET @Status  = 0;
+        SET @Message = N'Unexpected error: ' + LEFT(ERROR_MESSAGE(), 400);
+        THROW;
+    END CATCH
+END
+GO
+```
+
+**Note on read failure logging:** Parameter-validation failures on reads generally should *not* be written to `FailureLog` — it creates too much noise from minor UI bugs and typo queries. Only business-rule failures and unexpected exceptions on reads warrant a log entry. (This is a style rule, not a hard constraint — override at the author's discretion if a specific read proc has valuable failure signal.)
+
+**Update/Deprecate procs** follow the same structure as Create, with these differences:
+- Additional pre-transaction check: the target row must exist and not be deprecated
+- Capture `@OldValue` from the current row state before mutating (for the audit entry)
+- For Deprecate: check for active dependents in referencing tables before proceeding
+- Use optimistic locking (`@RowVersion` or `@UpdatedAt` parameter) on Updates to prevent lost updates
+
+### Checklist for Code Review
+
+When reviewing a new stored procedure, the reviewer should confirm:
+
+- [ ] Header comment block is filled in (author, created, version, description, all parameters documented)
+- [ ] `SET NOCOUNT ON` and `SET XACT_ABORT ON` at the top
+- [ ] Every output parameter is initialized at the top (`@Status = 0`, `@Message = 'Unknown error'`, etc.)
+- [ ] `@ProcName` and `@Params` locals captured once, reused in every audit call
+- [ ] Parameter validation runs BEFORE `BEGIN TRANSACTION`
+- [ ] Business rule checks run BEFORE `BEGIN TRANSACTION`
+- [ ] Every validation failure path: sets `@Message`, calls `Audit_LogFailure`, `RETURN`s
+- [ ] The mutation is wrapped in `BEGIN TRANSACTION` / `COMMIT TRANSACTION`
+- [ ] `Audit_LogConfigChange` is called INSIDE the transaction, before `COMMIT`
+- [ ] CATCH handler: `ROLLBACK` if `@@TRANCOUNT > 0`, set error output, nested-TRY `Audit_LogFailure`, `THROW`
+- [ ] `@Status = 1` and friendly `@Message` set only on the success path
+- [ ] Every `EXEC Audit_LogFailure` uses named parameters (not positional) — clarity over brevity
+- [ ] `@FailureReason` passed to `Audit_LogFailure` matches the `@Message` returned to the caller (consistency)
 
 ---
 
@@ -121,21 +430,25 @@ The audit lookup tables (`LogSeverity`, `LogEventType`, `LogEntityType`) are als
 |---|---|
 | `AppUser` | One row per MES user. Backed by AD identity. Captures clock number + PIN hash for shop-floor convenience login. Referenced for audit attribution everywhere. |
 | `Audit.LogSeverity` | Code table: Info, Warning, Error, Critical. Seeded. |
-| `Audit.LogEventType` | Code table: ConfigChanged, LotCreated, LotMoved, ProductionRecorded, etc. Seeded with the initial set, extensible. |
+| `Audit.LogEventType` | Code table: Created, Updated, Deprecated, LotCreated, LotMoved, ProductionRecorded, etc. Seeded with the initial set, extensible. |
 | `Audit.LogEntityType` | Code table: Location, Item, Lot, BOM, AppUser, etc. Seeded from the entity table list. |
-| `Audit.ConfigLog` | Destination for all Configuration Tool audit entries. Every config mutation writes here via `Audit_LogConfigChange`. |
+| `Audit.ConfigLog` | Destination for **successful** Configuration Tool mutations. Every config mutation writes here via `Audit_LogConfigChange` (inside the transaction, atomic with the data). |
 | `Audit.OperationLog` | Destination for plant-floor mutations (used by Arc 2, but the proc lives here). Every shop-floor action writes via `Audit_LogOperation`. |
 | `Audit.InterfaceLog` | Destination for external system calls (AIM, Zebra, Macola, etc.). Every external call writes via `Audit_LogInterfaceCall`. |
+| `Audit.FailureLog` | Destination for **attempted but rejected** operations — parameter failures, business-rule violations, caught exceptions. Every mutating proc writes here via `Audit_LogFailure` on any failure path. Tracked separately from `ConfigLog` because the query pattern is different ("top rejection reasons this week," "which procs fail most") and the writes happen outside the rolled-back transaction. |
 
 ### Audit Infrastructure Procedures
 
 These are the **shared audit procs** that every other CRUD proc in the system calls. They are the single source of truth for how audit entries are written. If the audit schema changes, these are the only procs that change — everything else just keeps calling them.
 
+All four procs accept **code strings** (`@LogEntityTypeCode`, `@LogEventTypeCode`, `@LogSeverityCode`) rather than IDs. Each proc resolves the codes to IDs internally via the seeded lookup tables. This keeps caller code self-documenting — entity procs write `N'Location', N'Created', N'Info'` instead of hard-coded integers or inline subqueries.
+
 | Procedure | Parameters | Notes | Dependencies | Executed When | Output |
 |---|---|---|---|---|---|
-| `Audit_LogConfigChange` | `@AppUserId, @LogEntityTypeId, @EntityId, @LogEventTypeId, @LogSeverityId, @Description, @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.ConfigLog`. **Called by every Create/Update/Deprecate proc in every Configuration Tool phase.** | `Audit.ConfigLog`, `Audit.LogEntityType`, `Audit.LogEventType`, `Audit.LogSeverity`, `AppUser` | Inside any Configuration Tool mutation proc, just before returning | Scalar: new `ConfigLog.Id` (BIGINT). Typically ignored by callers. |
-| `Audit_LogOperation` | `@AppUserId, @TerminalLocationId, @LocationId, @LogEntityTypeId, @EntityId, @LogEventTypeId, @LogSeverityId, @Description, @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.OperationLog`. Called by every plant-floor mutation in the Arc 2 build (LOT creation, movement, production recording, holds, etc.). **Defined here, used in the Plant Floor phased plan.** | `Audit.OperationLog`, `Location`, `AppUser`, audit lookups | Inside any Plant Floor mutation proc (Arc 2), just before returning | Scalar: new `OperationLog.Id` (BIGINT). Typically ignored by callers. |
-| `Audit_LogInterfaceCall` | `@SystemName VARCHAR(50), @Direction VARCHAR(10), @LogEventTypeId, @Description, @RequestPayload NVARCHAR(MAX) NULL, @ResponsePayload NVARCHAR(MAX) NULL, @ErrorCondition NVARCHAR(200) NULL, @IsHighFidelity BIT = 0` | Writes one row to `Audit.InterfaceLog`. Called by every AIM, Zebra, Macola, or Intelex call. Per FRS 3.17.4, `@IsHighFidelity` controls whether the full request/response payloads are stored or just the metadata. | `Audit.InterfaceLog`, audit lookups | Inside any external-system call wrapper (before and/or after the HTTP/API request) | Scalar: new `InterfaceLog.Id` (BIGINT). Typically ignored by callers. |
+| `Audit_LogConfigChange` | `@AppUserId, @LogEntityTypeCode NVARCHAR(50), @EntityId INT, @LogEventTypeCode NVARCHAR(50), @LogSeverityCode NVARCHAR(20) = 'Info', @Description NVARCHAR(500), @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.ConfigLog` for a **successful** mutation. **Called by every Create/Update/Deprecate proc in every Configuration Tool phase — inside the transaction, atomic with the data.** | `Audit.ConfigLog`, `Audit.LogEntityType`, `Audit.LogEventType`, `Audit.LogSeverity`, `AppUser` | Inside a Configuration Tool mutation proc, right before `COMMIT TRANSACTION` | Scalar: new `ConfigLog.Id` (BIGINT). Typically ignored by callers. |
+| `Audit_LogFailure` | `@AppUserId, @LogEntityTypeCode NVARCHAR(50), @EntityId INT NULL, @LogEventTypeCode NVARCHAR(50), @FailureReason NVARCHAR(500), @ProcedureName NVARCHAR(200), @AttemptedParameters NVARCHAR(MAX) NULL` | Writes one row to `Audit.FailureLog` for an **attempted but rejected** operation. **Called by every validation-failure path and every CATCH handler in every mutating proc.** | `Audit.FailureLog`, `Audit.LogEntityType`, `Audit.LogEventType`, `AppUser` | From validation failure paths (before `RETURN`) and from CATCH handlers (after `ROLLBACK`, wrapped in nested TRY/CATCH) | Scalar: new `FailureLog.Id` (BIGINT). Typically ignored by callers. |
+| `Audit_LogOperation` | `@AppUserId, @TerminalLocationId, @LocationId, @LogEntityTypeCode NVARCHAR(50), @EntityId INT, @LogEventTypeCode NVARCHAR(50), @LogSeverityCode NVARCHAR(20) = 'Info', @Description NVARCHAR(500), @OldValue NVARCHAR(MAX) NULL, @NewValue NVARCHAR(MAX) NULL` | Writes one row to `Audit.OperationLog` for a **successful** plant-floor mutation. Called by every Arc 2 build mutation (LOT creation, movement, production recording, holds, etc.). **Defined here, used in the Plant Floor phased plan.** | `Audit.OperationLog`, `Location`, `AppUser`, audit lookups | Inside any Plant Floor mutation proc (Arc 2), right before `COMMIT TRANSACTION` | Scalar: new `OperationLog.Id` (BIGINT). Typically ignored by callers. |
+| `Audit_LogInterfaceCall` | `@SystemName VARCHAR(50), @Direction VARCHAR(10), @LogEventTypeCode NVARCHAR(50), @Description NVARCHAR(500), @RequestPayload NVARCHAR(MAX) NULL, @ResponsePayload NVARCHAR(MAX) NULL, @ErrorCondition NVARCHAR(200) NULL, @IsHighFidelity BIT = 0` | Writes one row to `Audit.InterfaceLog`. Called by every AIM, Zebra, Macola, or Intelex call. Per FRS 3.17.4, `@IsHighFidelity` controls whether the full request/response payloads are stored or just the metadata. | `Audit.InterfaceLog`, audit lookups | Inside any external-system call wrapper (before and/or after the HTTP/API request) | Scalar: new `InterfaceLog.Id` (BIGINT). Typically ignored by callers. |
 
 ### API Layer (Named Queries → Stored Procedures)
 
@@ -164,8 +477,17 @@ These are the **shared audit procs** that every other CRUD proc in the system ca
 
 | Procedure | Parameters | Notes | Dependencies | Executed When | Output |
 |---|---|---|---|---|---|
-| `ConfigLog_List` | `@StartDate, @EndDate, @LogEntityTypeId NULL, @AppUserId NULL` | Paged, filterable | `Audit.ConfigLog`, `AppUser`, `Audit.LogEntityType` | Audit Log Browser loads or user changes filters | Rowset: `ConfigLog` rows joined to `AppUser.DisplayName` and `LogEntityType.Name` |
-| `ConfigLog_GetByEntity` | `@LogEntityTypeId, @EntityId` | "Show me everything ever changed about this Item / Location / BOM" | `Audit.ConfigLog` | User clicks "View Audit History" on any Configuration Tool screen | Rowset: `ConfigLog` rows for one entity, ordered newest first |
+| `ConfigLog_List` | `@StartDate, @EndDate, @LogEntityTypeCode NVARCHAR(50) NULL, @AppUserId NULL` | Paged, filterable | `Audit.ConfigLog`, `AppUser`, `Audit.LogEntityType` | Audit Log Browser loads or user changes filters | Rowset: `ConfigLog` rows joined to `AppUser.DisplayName` and `LogEntityType.Name` |
+| `ConfigLog_GetByEntity` | `@LogEntityTypeCode NVARCHAR(50), @EntityId INT` | "Show me everything ever changed about this Item / Location / BOM" | `Audit.ConfigLog` | User clicks "View Audit History" on any Configuration Tool screen | Rowset: `ConfigLog` rows for one entity, ordered newest first |
+
+**`Audit.FailureLog`** (read-only from the Configuration Tool — written only by `Audit_LogFailure`):
+
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `FailureLog_List` | `@StartDate, @EndDate, @LogEntityTypeCode NVARCHAR(50) NULL, @AppUserId NULL, @ProcedureName NVARCHAR(200) NULL` | Paged, filterable by entity/user/proc | `Audit.FailureLog`, `AppUser`, `Audit.LogEntityType` | Failure Log Browser loads or user changes filters | Rowset: `FailureLog` rows joined to `AppUser.DisplayName` and `LogEntityType.Name` |
+| `FailureLog_GetByEntity` | `@LogEntityTypeCode NVARCHAR(50), @EntityId INT` | "Show me every rejected attempt to modify this specific entity" | `Audit.FailureLog` | User clicks "View Rejection History" on any Configuration Tool screen | Rowset: `FailureLog` rows for one entity, ordered newest first |
+| `FailureLog_GetTopReasons` | `@StartDate, @EndDate, @LogEntityTypeCode NVARCHAR(50) NULL` | Aggregation: group by `FailureReason` and count. Answers "what are the top rejection reasons this week?" | `Audit.FailureLog` | Failure Log Browser's "Top Reasons" dashboard tile loads | Rowset: `FailureReason`, `Count`, ordered by count DESC |
+| `FailureLog_GetTopProcs` | `@StartDate, @EndDate` | Aggregation: group by `ProcedureName` and count. Answers "which procs are failing the most?" | `Audit.FailureLog` | Failure Log Browser's "Top Procs" dashboard tile loads | Rowset: `ProcedureName`, `Count`, ordered by count DESC |
 
 ### Frontend (Perspective Views)
 
@@ -173,17 +495,20 @@ These are the **shared audit procs** that every other CRUD proc in the system ca
 |---|---|
 | **User Management** | Admin-only. List of `AppUser` rows with filter (active/deprecated). Add User modal: enter AD account, display name, clock number, optional initial PIN, Ignition role. Edit User modal: same fields plus "Deprecate" action. |
 | **PIN Reset** | Self-service or admin flow: set a new PIN with confirmation field. Hashes the PIN client-side before calling `AppUser_SetPin`. PIN storage uses `PinHash`, never plaintext. |
-| **Audit Log Browser** | Admin-only. Filterable view of `Audit.ConfigLog` with filters for entity type, user, date range. Click a row to expand and see the old/new values diff. Deep-linkable from every other Config Tool screen ("View audit history for this Item"). |
+| **Audit Log Browser** | Admin-only. Filterable view of `Audit.ConfigLog` (successful changes) with filters for entity type, user, date range. Click a row to expand and see the old/new values diff. Deep-linkable from every other Config Tool screen ("View audit history for this Item"). |
+| **Failure Log Browser** | Admin-only. Filterable view of `Audit.FailureLog` (rejected attempts) with filters for entity type, user, procedure name, date range. Includes dashboard tiles for "Top Rejection Reasons" and "Top Failing Procedures" over a configurable time window. Click a row to see the JSON snapshot of the attempted parameters. Deep-linkable from every other Config Tool screen ("View rejection history for this Item"). Primary audience: Blue Ridge and MPP engineering doing root-cause analysis on repeated failures. |
 
 ### Phase 1 complete when
 
 - The bootstrap `AppUser` row exists (`Id = 1`, system account)
 - The audit lookup tables are seeded (severity, event types, entity types)
-- The 3 audit infrastructure procs (`Audit_LogConfigChange`, `Audit_LogOperation`, `Audit_LogInterfaceCall`) are deployed and tested
-- The full `AppUser` CRUD is wired through Named Queries — and every mutating proc calls `Audit_LogConfigChange`
+- The 4 audit infrastructure procs (`Audit_LogConfigChange`, `Audit_LogFailure`, `Audit_LogOperation`, `Audit_LogInterfaceCall`) are deployed and tested, using the code-string signatures
+- `Audit.FailureLog` table exists with its indexes
+- The full `AppUser` CRUD is wired through Named Queries — and every mutating proc calls `Audit_LogConfigChange` on success and `Audit_LogFailure` on every validation/business-rule/exception path
 - Admin can create a real engineering admin user via the User Management screen
-- Admin can browse the audit log via the Audit Log Browser
-- Every later phase's CRUD proc template **must** include a `CALL Audit_LogConfigChange(...)` step before returning
+- Admin can browse the success audit log via the Audit Log Browser
+- Admin can browse the failure log via the Failure Log Browser, including the Top Reasons and Top Procs dashboard tiles
+- Every later phase's CRUD proc template **must** follow the Stored Procedure Template above — success via `Audit_LogConfigChange`, every failure path via `Audit_LogFailure`
 
 ---
 
