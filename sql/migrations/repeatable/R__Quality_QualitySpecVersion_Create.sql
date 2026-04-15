@@ -1,0 +1,156 @@
+-- =============================================
+-- Procedure:   Quality.QualitySpecVersion_Create
+-- Author:      Blue Ridge Automation
+-- Created:     2026-04-14
+-- Version:     2.0
+--
+-- Description:
+--   Creates the first version (VersionNumber = 1) for a given
+--   QualitySpec. Starts as Draft (PublishedAt = NULL) so engineering
+--   can add/edit attributes before publishing. The version starts
+--   empty — attributes are added via QualitySpecAttribute_Add.
+--   For subsequent versions, use _CreateNewVersion.
+--
+-- Parameters (input):
+--   @QualitySpecId BIGINT - Required. Parent spec must exist.
+--   @EffectiveFrom DATETIME2(3) NULL - When this version becomes active.
+--                                       NULL → uses SYSUTCDATETIME().
+--   @AppUserId BIGINT - Required for audit and CreatedByUserId.
+--
+-- Result set:
+--   Single row with Status (BIT), Message (NVARCHAR), NewId (BIGINT).
+--   Status=1 on success, 0 on failure. NewId is NULL on failure.
+--
+-- Dependencies:
+--   Tables: Quality.QualitySpec, Quality.QualitySpecVersion
+--   Procs:  Audit.Audit_LogConfigChange, Audit.Audit_LogFailure
+--
+-- Change Log:
+--   2026-04-14 - 1.0 - Initial version
+--   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
+-- =============================================
+CREATE OR ALTER PROCEDURE Quality.QualitySpecVersion_Create
+    @QualitySpecId BIGINT,
+    @EffectiveFrom DATETIME2(3)  = NULL,
+    @AppUserId     BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @Status  BIT           = 0;
+    DECLARE @Message NVARCHAR(500) = N'Unknown error';
+    DECLARE @NewId   BIGINT        = NULL;
+
+    DECLARE @ProcName NVARCHAR(200) = N'Quality.QualitySpecVersion_Create';
+    DECLARE @Params   NVARCHAR(MAX) =
+        (SELECT @QualitySpecId AS QualitySpecId, @EffectiveFrom AS EffectiveFrom
+         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
+
+    BEGIN TRY
+        -- ====================
+        -- Parameter validation
+        -- ====================
+        IF @QualitySpecId IS NULL OR @AppUserId IS NULL
+        BEGIN
+            SET @Message = N'Required parameter missing.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'QualitySpecVersion',
+                @EntityId = NULL, @LogEventTypeCode = N'Created',
+                @FailureReason = @Message, @ProcedureName = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+            RETURN;
+        END
+
+        -- ====================
+        -- FK existence checks
+        -- ====================
+        IF NOT EXISTS (SELECT 1 FROM Quality.QualitySpec WHERE Id = @QualitySpecId)
+        BEGIN
+            SET @Message = N'Quality specification not found.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'QualitySpecVersion',
+                @EntityId = NULL, @LogEventTypeCode = N'Created',
+                @FailureReason = @Message, @ProcedureName = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+            RETURN;
+        END
+
+        -- ====================
+        -- Business rule checks
+        -- ====================
+        IF EXISTS (SELECT 1 FROM Quality.QualitySpecVersion WHERE QualitySpecId = @QualitySpecId)
+        BEGIN
+            SET @Message = N'A version already exists for this spec. Use _CreateNewVersion to add a new version.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'QualitySpecVersion',
+                @EntityId = NULL, @LogEventTypeCode = N'Created',
+                @FailureReason = @Message, @ProcedureName = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+            RETURN;
+        END
+
+        DECLARE @EffFrom DATETIME2(3) = ISNULL(@EffectiveFrom, SYSUTCDATETIME());
+
+        -- ====================
+        -- Mutation (atomic)
+        -- ====================
+        BEGIN TRANSACTION;
+
+        INSERT INTO Quality.QualitySpecVersion
+            (QualitySpecId, VersionNumber, EffectiveFrom, CreatedByUserId, CreatedAt)
+        VALUES
+            (@QualitySpecId, 1, @EffFrom, @AppUserId, SYSUTCDATETIME());
+
+        SET @NewId = CAST(SCOPE_IDENTITY() AS BIGINT);
+
+        EXEC Audit.Audit_LogConfigChange
+            @AppUserId         = @AppUserId,
+            @LogEntityTypeCode = N'QualitySpecVersion',
+            @EntityId          = @NewId,
+            @LogEventTypeCode  = N'Created',
+            @LogSeverityCode   = N'Info',
+            @Description       = N'Quality spec version created (v1, Draft).',
+            @OldValue          = NULL,
+            @NewValue          = @Params;
+
+        COMMIT TRANSACTION;
+
+        SET @Status  = 1;
+        SET @Message = N'Quality spec version created successfully (Draft — add attributes and call _Publish when ready).';
+    SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrMsg   NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrSev   INT            = ERROR_SEVERITY();
+        DECLARE @ErrState INT            = ERROR_STATE();
+
+        SET @Status  = 0;
+        SET @Message = N'Unexpected error: ' + LEFT(@ErrMsg, 400);
+        SET @NewId   = NULL;
+
+        BEGIN TRY
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'QualitySpecVersion',
+                @EntityId            = NULL,
+                @LogEventTypeCode    = N'Created',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+        END TRY
+        BEGIN CATCH
+        END CATCH
+
+        SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
