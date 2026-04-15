@@ -54,32 +54,35 @@ EXEC Parts.Item_Create
 SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc21;
 DROP TABLE #Rc21;
 
+CREATE TABLE #Rc27 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc27
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-RT-OT-1',
     @Name           = N'RT OT 1',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @NewId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc27;
+DROP TABLE #Rc27;
 
+CREATE TABLE #Rc28 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc28
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-RT-OT-2',
     @Name           = N'RT OT 2',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @NewId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc28;
+DROP TABLE #Rc28;
 
+CREATE TABLE #Rc29 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc29
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-RT-OT-3',
     @Name           = N'RT OT 3',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @NewId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc29;
+DROP TABLE #Rc29;
 GO
 
 -- =============================================

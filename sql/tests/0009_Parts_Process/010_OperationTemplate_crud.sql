@@ -47,15 +47,16 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc1 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc1
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-OP-001',
     @Name           = N'Test OP 001',
     @AreaLocationId = 3,              -- DIECAST
     @Description    = N'First test operation',
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @NewId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc1;
+DROP TABLE #Rc1;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -106,14 +107,15 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc2 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc2
 EXEC Parts.OperationTemplate_Create
     @Code           = NULL,
     @Name           = N'Missing Code',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @NewId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc2;
+DROP TABLE #Rc2;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -139,14 +141,15 @@ DECLARE @S     BIT,
         @Id1   BIGINT,
         @Id2   BIGINT;
 
+CREATE TABLE #Rc3 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc3
 EXEC Parts.OperationTemplate_Create
     @Code           = N'DUP-OP',
     @Name           = N'Dup Target',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @Id1 OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @Id1 = NewId FROM #Rc3;
+DROP TABLE #Rc3;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -154,14 +157,15 @@ EXEC test.Assert_IsEqual
     @Expected = N'1',
     @Actual   = @SStr;
 
+CREATE TABLE #Rc4 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc4
 EXEC Parts.OperationTemplate_Create
     @Code           = N'DUP-OP',
     @Name           = N'Dup Attempt',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @Id2 OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @Id2 = NewId FROM #Rc4;
+DROP TABLE #Rc4;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -189,14 +193,15 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc5 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc5
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-OP-BADAREA',
     @Name           = N'Bad Area',
     @AreaLocationId = 999999,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @NewId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc5;
+DROP TABLE #Rc5;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -273,14 +278,15 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc6 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc6
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-OP-MS-1',
     @Name           = N'MachShop OP 1',
     @AreaLocationId = 4,              -- MACHSHOP
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @NewId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc6;
+DROP TABLE #Rc6;
 
 -- Validate by direct query (List returns a single result set we don't
 -- INSERT..EXEC to avoid coupling to its column shape).
@@ -326,14 +332,15 @@ DECLARE @S         BIT,
         @OtfId1    BIGINT,
         @OtfId2    BIGINT;
 
+CREATE TABLE #Rc7 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc7
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-OP-VER',
     @Name           = N'Versioned Base',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @ParentId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @ParentId = NewId FROM #Rc7;
+DROP TABLE #Rc7;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -342,31 +349,34 @@ EXEC test.Assert_IsEqual
     @Actual   = @SStr;
 
 -- Add 2 OTFs to parent
+CREATE TABLE #Rc8 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc8
 EXEC Parts.OperationTemplateField_Add
     @OperationTemplateId   = @ParentId,
     @DataCollectionFieldId = 1,   -- MaterialVerification
     @IsRequired            = 1,
-    @AppUserId             = 1,
-    @Status                = @S OUTPUT,
-    @Message               = @M OUTPUT,
-    @NewId                 = @OtfId1 OUTPUT;
+    @AppUserId             = 1;
+SELECT @S = Status, @M = Message, @OtfId1 = NewId FROM #Rc8;
+DROP TABLE #Rc8;
 
+CREATE TABLE #Rc9 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc9
 EXEC Parts.OperationTemplateField_Add
     @OperationTemplateId   = @ParentId,
     @DataCollectionFieldId = 5,   -- Weight
     @IsRequired            = 1,
-    @AppUserId             = 1,
-    @Status                = @S OUTPUT,
-    @Message               = @M OUTPUT,
-    @NewId                 = @OtfId2 OUTPUT;
+    @AppUserId             = 1;
+SELECT @S = Status, @M = Message, @OtfId2 = NewId FROM #Rc9;
+DROP TABLE #Rc9;
 
 -- Create a new version
+CREATE TABLE #Rc10 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc10
 EXEC Parts.OperationTemplate_CreateNewVersion
     @ParentOperationTemplateId = @ParentId,
-    @AppUserId                 = 1,
-    @Status                    = @S OUTPUT,
-    @Message                   = @M OUTPUT,
-    @NewId                     = @NewVerId OUTPUT;
+    @AppUserId                 = 1;
+SELECT @S = Status, @M = Message, @NewVerId = NewId FROM #Rc10;
+DROP TABLE #Rc10;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -428,12 +438,13 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc11 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc11
 EXEC Parts.OperationTemplate_CreateNewVersion
     @ParentOperationTemplateId = NULL,
-    @AppUserId                 = 1,
-    @Status                    = @S OUTPUT,
-    @Message                   = @M OUTPUT,
-    @NewId                     = @NewId OUTPUT;
+    @AppUserId                 = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc11;
+DROP TABLE #Rc11;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -455,12 +466,13 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc12 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc12
 EXEC Parts.OperationTemplate_CreateNewVersion
     @ParentOperationTemplateId = 999999,
-    @AppUserId                 = 1,
-    @Status                    = @S OUTPUT,
-    @Message                   = @M OUTPUT,
-    @NewId                     = @NewId OUTPUT;
+    @AppUserId                 = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc12;
+DROP TABLE #Rc12;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -482,14 +494,16 @@ DECLARE @S    BIT,
 SELECT @OtId = Id FROM Parts.OperationTemplate
 WHERE Code = N'TEST-OP-001' AND VersionNumber = 1;
 
+CREATE TABLE #Ru19 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru19
 EXEC Parts.OperationTemplate_Update
     @Id             = @OtId,
     @Name           = N'Test OP 001 Updated',
     @AreaLocationId = 3,
     @Description    = N'Updated description',
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message FROM #Ru19;
+DROP TABLE #Ru19;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -533,28 +547,33 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @OtId  BIGINT;
 
+CREATE TABLE #Rc13 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc13
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-OP-UPDDEP',
     @Name           = N'Will Deprecate',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @OtId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @OtId = NewId FROM #Rc13;
+DROP TABLE #Rc13;
 
+CREATE TABLE #Ru20 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru20
 EXEC Parts.OperationTemplate_Deprecate
     @Id        = @OtId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru20;
+DROP TABLE #Ru20;
 
+CREATE TABLE #Ru21 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru21
 EXEC Parts.OperationTemplate_Update
     @Id             = @OtId,
     @Name           = N'Should Not Apply',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message FROM #Ru21;
+DROP TABLE #Ru21;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -580,20 +599,23 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @OtId  BIGINT;
 
+CREATE TABLE #Rc14 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc14
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-OP-DEP1',
     @Name           = N'Deprecate Target',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @OtId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @OtId = NewId FROM #Rc14;
+DROP TABLE #Rc14;
 
+CREATE TABLE #Ru22 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru22
 EXEC Parts.OperationTemplate_Deprecate
     @Id        = @OtId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru22;
+DROP TABLE #Ru22;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -621,11 +643,13 @@ DECLARE @S     BIT,
 
 SELECT @OtId = Id FROM Parts.OperationTemplate WHERE Code = N'TEST-OP-DEP1';
 
+CREATE TABLE #Ru23 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru23
 EXEC Parts.OperationTemplate_Deprecate
     @Id        = @OtId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru23;
+DROP TABLE #Ru23;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -649,14 +673,15 @@ DECLARE @S       BIT,
         @StepId  BIGINT;
 
 -- OT to protect from deprecation
+CREATE TABLE #Rc15 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc15
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-OP-REFD',
     @Name           = N'Referenced OP',
     @AreaLocationId = 3,
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @OtId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @OtId = NewId FROM #Rc15;
+DROP TABLE #Rc15;
 
 -- Item to own the route
 CREATE TABLE #Rc20 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
@@ -690,11 +715,13 @@ EXEC Parts.RouteStep_Add
     @NewId               = @StepId OUTPUT;
 
 -- Attempt to deprecate the OT — must fail
+CREATE TABLE #Ru24 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru24
 EXEC Parts.OperationTemplate_Deprecate
     @Id        = @OtId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru24;
+DROP TABLE #Ru24;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -731,14 +758,15 @@ DECLARE @S      BIT,
 SELECT @OtId = Id FROM Parts.OperationTemplate
 WHERE Code = N'TEST-OP-001' AND VersionNumber = 1;
 
+CREATE TABLE #Rc16 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc16
 EXEC Parts.OperationTemplateField_Add
     @OperationTemplateId   = @OtId,
     @DataCollectionFieldId = 2,   -- SerialNumber
     @IsRequired            = 1,
-    @AppUserId             = 1,
-    @Status                = @S OUTPUT,
-    @Message               = @M OUTPUT,
-    @NewId                 = @OtfId OUTPUT;
+    @AppUserId             = 1;
+SELECT @S = Status, @M = Message, @OtfId = NewId FROM #Rc16;
+DROP TABLE #Rc16;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -774,14 +802,15 @@ DECLARE @S      BIT,
 SELECT @OtId = Id FROM Parts.OperationTemplate
 WHERE Code = N'TEST-OP-001' AND VersionNumber = 1;
 
+CREATE TABLE #Rc17 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc17
 EXEC Parts.OperationTemplateField_Add
     @OperationTemplateId   = @OtId,
     @DataCollectionFieldId = 2,   -- SerialNumber - already added above
     @IsRequired            = 1,
-    @AppUserId             = 1,
-    @Status                = @S OUTPUT,
-    @Message               = @M OUTPUT,
-    @NewId                 = @OtfId OUTPUT;
+    @AppUserId             = 1;
+SELECT @S = Status, @M = Message, @OtfId = NewId FROM #Rc17;
+DROP TABLE #Rc17;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -810,14 +839,15 @@ DECLARE @S      BIT,
 SELECT @OtId = Id FROM Parts.OperationTemplate
 WHERE Code = N'TEST-OP-001' AND VersionNumber = 1;
 
+CREATE TABLE #Rc18 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc18
 EXEC Parts.OperationTemplateField_Add
     @OperationTemplateId   = @OtId,
     @DataCollectionFieldId = 999999,
     @IsRequired            = 1,
-    @AppUserId             = 1,
-    @Status                = @S OUTPUT,
-    @Message               = @M OUTPUT,
-    @NewId                 = @OtfId OUTPUT;
+    @AppUserId             = 1;
+SELECT @S = Status, @M = Message, @OtfId = NewId FROM #Rc18;
+DROP TABLE #Rc18;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -891,11 +921,13 @@ WHERE OperationTemplateId = @OtId
   AND DataCollectionFieldId = 2
   AND DeprecatedAt IS NULL;
 
+CREATE TABLE #Ru25 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru25
 EXEC Parts.OperationTemplateField_Remove
     @Id        = @OtfId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru25;
+DROP TABLE #Ru25;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -929,11 +961,13 @@ SELECT @OtfId = Id FROM Parts.OperationTemplateField
 WHERE OperationTemplateId = @OtId
   AND DataCollectionFieldId = 2;   -- deprecated by prior test
 
+CREATE TABLE #Ru26 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru26
 EXEC Parts.OperationTemplateField_Remove
     @Id        = @OtfId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru26;
+DROP TABLE #Ru26;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual

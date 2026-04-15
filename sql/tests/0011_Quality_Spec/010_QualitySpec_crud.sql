@@ -43,15 +43,16 @@ SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc40;
 DROP TABLE #Rc40;
 
 -- Create test OperationTemplate (v1)
+CREATE TABLE #Rc30 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc30
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-QSPEC-OP',
     @Name           = N'Test Operation for QualitySpec',
     @AreaLocationId = 3,  -- DIECAST area from seed_locations.sql
     @Description    = N'Test operation',
-    @AppUserId      = 1,
-    @Status         = @S OUTPUT,
-    @Message        = @M OUTPUT,
-    @NewId          = @NewId OUTPUT;
+    @AppUserId      = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc30;
+DROP TABLE #Rc30;
 GO
 
 -- =============================================
