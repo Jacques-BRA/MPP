@@ -9,30 +9,8 @@
 --     - Parts.ItemType            (5 seeded rows)
 --     - Parts.DataCollectionField (7 seeded rows)
 --
---   For each table:
---     - _List returns status=1 and expected seeded row count
---     - _Get(<valid Id>) returns status=1
---     - _Get(NULL) returns status=0 with message '@Id is required.'
---     - _Create happy path returns status=1 + NewId not null
---     - _Create with NULL required param returns status=0
---     - _Create with duplicate Code returns status=0 with 'already exists' in message
---     - _Update happy path returns status=1 and Name changes
---     - _Update with missing Id returns status=0
---     - _Deprecate happy path returns status=1 and DeprecatedAt is set
---   Audit check: Audit.ConfigLog has entries for each entity type (via LogEntityType.Code).
---   Cleanup: DELETE test rows at end of file.
---
---   Pre-conditions:
---     - Migration 0001 applied (audit infrastructure + bootstrap user Id=1)
---     - Migration 0004 applied (Parts.Uom, Parts.ItemType, Parts.DataCollectionField
---       tables seeded; Audit.LogEntityType rows for Uom, ItemType, DataCollectionField)
---     - Full CRUD procs deployed for all three tables
---     - Bootstrap user Id=1 exists (used as @AppUserId)
---
---   Test rows are created with distinct Codes:
---       TEST_UOM, TEST_ITEMTYPE, TEST_DCF
---     plus DUP_UOM / DUP_ITEMTYPE / DUP_DCF (first insert for duplicate tests,
---     cleaned up at the end).
+--   Mutation procs use INSERT-EXEC into temp tables for result capture
+--   (converted to SELECT-based result for Ignition JDBC compatibility).
 -- =============================================
 
 EXEC test.BeginTestFile @FileName = N'0007_Parts_codes/010_Parts_codes_crud.sql';
@@ -72,14 +50,14 @@ DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
-EXEC Parts.Uom_Create
+CREATE TABLE #R1 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R1 EXEC Parts.Uom_Create
     @Code        = N'TEST_UOM',
     @Name        = N'Test Uom',
     @Description = N'Unit created by test',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R1;
+DROP TABLE #R1;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -99,13 +77,13 @@ DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
-EXEC Parts.Uom_Create
+CREATE TABLE #R2 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R2 EXEC Parts.Uom_Create
     @Code        = NULL,
     @Name        = N'No Code Uom',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R2;
+DROP TABLE #R2;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -121,22 +99,21 @@ DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
 -- First insert (clean up at end)
-EXEC Parts.Uom_Create
+CREATE TABLE #R3a (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R3a EXEC Parts.Uom_Create
     @Code        = N'DUP_UOM',
     @Name        = N'Dup Uom',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+DROP TABLE #R3a;
 
 -- Second insert with same Code should be rejected
-EXEC Parts.Uom_Create
+CREATE TABLE #R3b (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R3b EXEC Parts.Uom_Create
     @Code        = N'DUP_UOM',
     @Name        = N'Dup Uom 2',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R3b;
+DROP TABLE #R3b;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -160,13 +137,14 @@ DECLARE @TargetId BIGINT;
 
 SELECT @TargetId = Id FROM Parts.Uom WHERE Code = N'TEST_UOM';
 
-EXEC Parts.Uom_Update
+CREATE TABLE #R4 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R4 EXEC Parts.Uom_Update
     @Id          = @TargetId,
     @Name        = N'Test Uom Renamed',
     @Description = N'Updated by test',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #R4;
+DROP TABLE #R4;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -188,12 +166,13 @@ GO
 DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 
-EXEC Parts.Uom_Update
+CREATE TABLE #R5 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R5 EXEC Parts.Uom_Update
     @Id          = NULL,
     @Name        = N'Nope',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #R5;
+DROP TABLE #R5;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -210,11 +189,12 @@ DECLARE @TargetId BIGINT;
 
 SELECT @TargetId = Id FROM Parts.Uom WHERE Code = N'TEST_UOM';
 
-EXEC Parts.Uom_Deprecate
+CREATE TABLE #R6 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R6 EXEC Parts.Uom_Deprecate
     @Id        = @TargetId,
-    @AppUserId = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #R6;
+DROP TABLE #R6;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -267,14 +247,14 @@ DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
-EXEC Parts.ItemType_Create
+CREATE TABLE #R7 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R7 EXEC Parts.ItemType_Create
     @Code        = N'TEST_ITEMTYPE',
     @Name        = N'Test Item Type',
     @Description = N'Item type created by test',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R7;
+DROP TABLE #R7;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -294,13 +274,13 @@ DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
-EXEC Parts.ItemType_Create
+CREATE TABLE #R8 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R8 EXEC Parts.ItemType_Create
     @Code        = NULL,
     @Name        = N'No Code ItemType',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R8;
+DROP TABLE #R8;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -315,21 +295,20 @@ DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
-EXEC Parts.ItemType_Create
+CREATE TABLE #R9a (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R9a EXEC Parts.ItemType_Create
     @Code        = N'DUP_ITEMTYPE',
     @Name        = N'Dup ItemType',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+DROP TABLE #R9a;
 
-EXEC Parts.ItemType_Create
+CREATE TABLE #R9b (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R9b EXEC Parts.ItemType_Create
     @Code        = N'DUP_ITEMTYPE',
     @Name        = N'Dup ItemType 2',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R9b;
+DROP TABLE #R9b;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -353,13 +332,14 @@ DECLARE @TargetId BIGINT;
 
 SELECT @TargetId = Id FROM Parts.ItemType WHERE Code = N'TEST_ITEMTYPE';
 
-EXEC Parts.ItemType_Update
+CREATE TABLE #R10 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R10 EXEC Parts.ItemType_Update
     @Id          = @TargetId,
     @Name        = N'Test ItemType Renamed',
     @Description = N'Updated by test',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #R10;
+DROP TABLE #R10;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -381,12 +361,13 @@ GO
 DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 
-EXEC Parts.ItemType_Update
+CREATE TABLE #R11 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R11 EXEC Parts.ItemType_Update
     @Id          = NULL,
     @Name        = N'Nope',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #R11;
+DROP TABLE #R11;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -403,11 +384,12 @@ DECLARE @TargetId BIGINT;
 
 SELECT @TargetId = Id FROM Parts.ItemType WHERE Code = N'TEST_ITEMTYPE';
 
-EXEC Parts.ItemType_Deprecate
+CREATE TABLE #R12 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R12 EXEC Parts.ItemType_Deprecate
     @Id        = @TargetId,
-    @AppUserId = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #R12;
+DROP TABLE #R12;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -460,14 +442,14 @@ DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
-EXEC Parts.DataCollectionField_Create
+CREATE TABLE #R13 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R13 EXEC Parts.DataCollectionField_Create
     @Code        = N'TEST_DCF',
     @Name        = N'Test DCF',
     @Description = N'DCF created by test',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R13;
+DROP TABLE #R13;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -487,13 +469,13 @@ DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
-EXEC Parts.DataCollectionField_Create
+CREATE TABLE #R14 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R14 EXEC Parts.DataCollectionField_Create
     @Code        = NULL,
     @Name        = N'No Code DCF',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R14;
+DROP TABLE #R14;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -508,21 +490,20 @@ DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 DECLARE @NewId BIGINT;
 
-EXEC Parts.DataCollectionField_Create
+CREATE TABLE #R15a (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R15a EXEC Parts.DataCollectionField_Create
     @Code        = N'DUP_DCF',
     @Name        = N'Dup DCF',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+DROP TABLE #R15a;
 
-EXEC Parts.DataCollectionField_Create
+CREATE TABLE #R15b (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #R15b EXEC Parts.DataCollectionField_Create
     @Code        = N'DUP_DCF',
     @Name        = N'Dup DCF 2',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT,
-    @NewId   = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #R15b;
+DROP TABLE #R15b;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -546,13 +527,14 @@ DECLARE @TargetId BIGINT;
 
 SELECT @TargetId = Id FROM Parts.DataCollectionField WHERE Code = N'TEST_DCF';
 
-EXEC Parts.DataCollectionField_Update
+CREATE TABLE #R16 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R16 EXEC Parts.DataCollectionField_Update
     @Id          = @TargetId,
     @Name        = N'Test DCF Renamed',
     @Description = N'Updated by test',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #R16;
+DROP TABLE #R16;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -574,12 +556,13 @@ GO
 DECLARE @S BIT, @M NVARCHAR(500);
 DECLARE @SStr NVARCHAR(1);
 
-EXEC Parts.DataCollectionField_Update
+CREATE TABLE #R17 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R17 EXEC Parts.DataCollectionField_Update
     @Id          = NULL,
     @Name        = N'Nope',
-    @AppUserId   = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #R17;
+DROP TABLE #R17;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -596,11 +579,12 @@ DECLARE @TargetId BIGINT;
 
 SELECT @TargetId = Id FROM Parts.DataCollectionField WHERE Code = N'TEST_DCF';
 
-EXEC Parts.DataCollectionField_Deprecate
+CREATE TABLE #R18 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #R18 EXEC Parts.DataCollectionField_Deprecate
     @Id        = @TargetId,
-    @AppUserId = 1,
-    @Status  = @S OUTPUT,
-    @Message = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #R18;
+DROP TABLE #R18;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -622,8 +606,6 @@ GO
 
 -- =============================================
 -- == Audit trail checks ======================================
---   Verify ConfigLog entries exist for each entity type,
---   joined to LogEntityType by Code.
 -- =============================================
 
 -- Uom audit trail: at least Create + Update + Deprecate for TEST_UOM = 3

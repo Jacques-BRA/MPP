@@ -2,7 +2,7 @@
 -- Procedure:   Parts.Uom_Update
 -- Author:      Blue Ridge Automation
 -- Created:     2026-04-13
--- Version:     1.0
+-- Version:     2.0
 --
 -- Description:
 --   Updates Name and Description of an existing Uom. Code is immutable
@@ -14,9 +14,9 @@
 --   @Description NVARCHAR(500) - Optional.
 --   @AppUserId BIGINT          - User performing the action. Required for audit.
 --
--- Parameters (output):
---   @Status BIT                - 1 on success, 0 on failure.
---   @Message NVARCHAR(500)     - Human-readable status message.
+-- Result set:
+--   Single row with Status (BIT), Message (NVARCHAR).
+--   Status=1 on success, 0 on failure.
 --
 -- Dependencies:
 --   Tables: Parts.Uom
@@ -26,22 +26,21 @@
 --   Standard three-tier: validation, business rule, CATCH with RAISERROR.
 --
 -- Change Log:
---   2026-04-13 - 1.0 - Initial version
+--   2026-04-13 - 1.0 - Initial version (OUTPUT params)
+--   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.Uom_Update
     @Id          BIGINT,
     @Name        NVARCHAR(100),
     @Description NVARCHAR(500) = NULL,
-    @AppUserId   BIGINT,
-    @Status      BIT           OUTPUT,
-    @Message     NVARCHAR(500) OUTPUT
+    @AppUserId   BIGINT
 AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    SET @Status  = 0;
-    SET @Message = N'Unknown error';
+    DECLARE @Status  BIT           = 0;
+    DECLARE @Message NVARCHAR(500) = N'Unknown error';
 
     DECLARE @ProcName NVARCHAR(200) = N'Parts.Uom_Update';
     DECLARE @Params   NVARCHAR(MAX) =
@@ -58,6 +57,7 @@ BEGIN
                 @EntityId = @Id, @LogEventTypeCode = N'Updated',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
             RETURN;
         END
 
@@ -70,6 +70,7 @@ BEGIN
                 @EntityId = @Id, @LogEventTypeCode = N'Updated',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
             RETURN;
         END
 
@@ -98,6 +99,7 @@ BEGIN
 
         SET @Status  = 1;
         SET @Message = N'Uom updated successfully.';
+        SELECT @Status AS Status, @Message AS Message;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
@@ -120,6 +122,7 @@ BEGIN
         BEGIN CATCH
         END CATCH
 
+        SELECT @Status AS Status, @Message AS Message;
         RAISERROR(@ErrMsg, @ErrSev, @ErrState);
     END CATCH
 END;

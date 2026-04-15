@@ -93,7 +93,8 @@ DECLARE @S    BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-CC-001';
 
-EXEC Parts.ContainerConfig_Create
+CREATE TABLE #Rcc2 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rcc2 EXEC Parts.ContainerConfig_Create
     @ItemId            = @ItemId,
     @TraysPerContainer = 4,
     @PartsPerTray      = 25,
@@ -102,10 +103,9 @@ EXEC Parts.ContainerConfig_Create
     @CustomerCode      = N'CUST-HON',
     @ClosureMethod     = N'Strap',
     @TargetWeight      = 125.5000,
-    @AppUserId         = 1,
-    @Status            = @S OUTPUT,
-    @Message           = @M OUTPUT,
-    @NewId             = @NewId OUTPUT;
+    @AppUserId         = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rcc2;
+DROP TABLE #Rcc2;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -136,17 +136,17 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @NewId BIGINT;
 
-EXEC Parts.ContainerConfig_Create
+CREATE TABLE #Rcc3 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rcc3 EXEC Parts.ContainerConfig_Create
     @ItemId            = NULL,
     @TraysPerContainer = 1,
     @PartsPerTray      = 1,
     @IsSerialized      = 0,
     @DunnageCode       = N'DUN-X',
     @CustomerCode      = N'CUST-X',
-    @AppUserId         = 1,
-    @Status            = @S OUTPUT,
-    @Message           = @M OUTPUT,
-    @NewId             = @NewId OUTPUT;
+    @AppUserId         = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rcc3;
+DROP TABLE #Rcc3;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -170,17 +170,17 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @NewId BIGINT;
 
-EXEC Parts.ContainerConfig_Create
+CREATE TABLE #Rcc4 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rcc4 EXEC Parts.ContainerConfig_Create
     @ItemId            = 999999,
     @TraysPerContainer = 1,
     @PartsPerTray      = 1,
     @IsSerialized      = 0,
     @DunnageCode       = N'DUN-X',
     @CustomerCode      = N'CUST-X',
-    @AppUserId         = 1,
-    @Status            = @S OUTPUT,
-    @Message           = @M OUTPUT,
-    @NewId             = @NewId OUTPUT;
+    @AppUserId         = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rcc4;
+DROP TABLE #Rcc4;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -204,17 +204,17 @@ DECLARE @S    BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-CC-001';
 
-EXEC Parts.ContainerConfig_Create
+CREATE TABLE #Rcc5 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rcc5 EXEC Parts.ContainerConfig_Create
     @ItemId            = @ItemId,
     @TraysPerContainer = 2,
     @PartsPerTray      = 10,
     @IsSerialized      = 0,
     @DunnageCode       = N'DUN-DUP',
     @CustomerCode      = N'CUST-DUP',
-    @AppUserId         = 1,
-    @Status            = @S OUTPUT,
-    @Message           = @M OUTPUT,
-    @NewId             = @NewId OUTPUT;
+    @AppUserId         = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rcc5;
+DROP TABLE #Rcc5;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -280,7 +280,8 @@ SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-CC-001';
 SELECT @CcId = Id FROM Parts.ContainerConfig
     WHERE ItemId = @ItemId AND DeprecatedAt IS NULL;
 
-EXEC Parts.ContainerConfig_Update
+CREATE TABLE #Rcc7 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Rcc7 EXEC Parts.ContainerConfig_Update
     @Id                = @CcId,
     @TraysPerContainer = 8,
     @PartsPerTray      = 25,
@@ -289,9 +290,9 @@ EXEC Parts.ContainerConfig_Update
     @CustomerCode      = N'CUST-HON',
     @ClosureMethod     = N'Strap',
     @TargetWeight      = 150.0000,
-    @AppUserId         = 1,
-    @Status            = @S OUTPUT,
-    @Message           = @M OUTPUT;
+    @AppUserId         = 1;
+SELECT @S = Status, @M = Message FROM #Rcc7;
+DROP TABLE #Rcc7;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -330,16 +331,17 @@ DECLARE @S    BIT,
         @M    NVARCHAR(500),
         @SStr NVARCHAR(1);
 
-EXEC Parts.ContainerConfig_Update
+CREATE TABLE #Rcc8 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Rcc8 EXEC Parts.ContainerConfig_Update
     @Id                = NULL,
     @TraysPerContainer = 1,
     @PartsPerTray      = 1,
     @IsSerialized      = 0,
     @DunnageCode       = N'DUN',
     @CustomerCode      = N'CUST',
-    @AppUserId         = 1,
-    @Status            = @S OUTPUT,
-    @Message           = @M OUTPUT;
+    @AppUserId         = 1;
+SELECT @S = Status, @M = Message FROM #Rcc8;
+DROP TABLE #Rcc8;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -363,11 +365,12 @@ SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-CC-001';
 SELECT @CcId = Id FROM Parts.ContainerConfig
     WHERE ItemId = @ItemId AND DeprecatedAt IS NULL;
 
-EXEC Parts.ContainerConfig_Deprecate
+CREATE TABLE #Rcc9 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Rcc9 EXEC Parts.ContainerConfig_Deprecate
     @Id        = @CcId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Rcc9;
+DROP TABLE #Rcc9;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -398,7 +401,8 @@ DECLARE @S    BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-CC-001';
 
-EXEC Parts.ContainerConfig_Create
+CREATE TABLE #Rcc10 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rcc10 EXEC Parts.ContainerConfig_Create
     @ItemId            = @ItemId,
     @TraysPerContainer = 6,
     @PartsPerTray      = 30,
@@ -407,10 +411,9 @@ EXEC Parts.ContainerConfig_Create
     @CustomerCode      = N'CUST-HON',
     @ClosureMethod     = N'Lid',
     @TargetWeight      = 200.0000,
-    @AppUserId         = 1,
-    @Status            = @S OUTPUT,
-    @Message           = @M OUTPUT,
-    @NewId             = @NewId OUTPUT;
+    @AppUserId         = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rcc10;
+DROP TABLE #Rcc10;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
