@@ -233,7 +233,7 @@
         </div>
         <div class="table-card">
             <h4>LocationTypeDefinition</h4>
-            <p>The polymorphic <em>kinds</em> within a type. For the Cell tier: Terminal, DieCastMachine, CNCMachine, TrimPress, AssemblyStation, InspectionStation, InventoryLocation, Scale, SortCage. Every <code>Location</code> FKs to exactly one definition. Answers "what kind of thing is this?" Extensible without schema changes.</p>
+            <p>The polymorphic <em>kinds</em> within a type. For the Cell tier: Terminal, DieCastMachine, CNCMachine, TrimPress, AssemblyStation, InspectionStation, InventoryLocation, Scale, SortCage. Every <code>Location</code> FKs to exactly one definition. Answers "what kind of thing is this?" Extensible without schema changes. Carries an <code>Icon</code> column for Perspective Tree component display (e.g., <code>material/precision_manufacturing</code>).</p>
         </div>
         <div class="table-card">
             <h4>LocationAttributeDefinition</h4>
@@ -263,65 +263,67 @@
         <div class="mermaid">
 erDiagram
     LocationType {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
         int HierarchyLevel
-        varchar Description
+        nvarchar Description
     }
 
     LocationTypeDefinition {
-        int Id PK
-        int LocationTypeId FK
-        varchar Code
-        varchar Name
-        varchar Description
+        bigint Id PK
+        bigint LocationTypeId FK
+        nvarchar Code
+        nvarchar Name
+        nvarchar Description
+        nvarchar Icon
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
 
     LocationAttributeDefinition {
-        int Id PK
-        int LocationTypeDefinitionId FK
-        varchar AttributeName
-        varchar DataType
+        bigint Id PK
+        bigint LocationTypeDefinitionId FK
+        nvarchar AttributeName
+        nvarchar DataType
         bit IsRequired
-        varchar DefaultValue
-        varchar Uom
+        nvarchar DefaultValue
+        nvarchar Uom
         int SortOrder
-        varchar Description
+        nvarchar Description
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
 
     Location {
-        int Id PK
-        int LocationTypeDefinitionId FK
-        int ParentLocationId FK
-        varchar Name
-        varchar Code
-        varchar Description
+        bigint Id PK
+        bigint LocationTypeDefinitionId FK
+        bigint ParentLocationId FK
+        nvarchar Name
+        nvarchar Code
+        nvarchar Description
+        int SortOrder
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
 
     LocationAttribute {
-        int Id PK
-        int LocationId FK
-        int LocationAttributeDefinitionId FK
-        varchar AttributeValue
+        bigint Id PK
+        bigint LocationId FK
+        bigint LocationAttributeDefinitionId FK
+        nvarchar AttributeValue
         datetime2 CreatedAt
         datetime2 UpdatedAt
-        varchar UpdatedBy
+        bigint UpdatedByUserId FK
     }
 
     AppUser {
-        int Id PK
-        varchar AdAccount
-        varchar DisplayName
-        varchar ClockNumber
-        varchar PinHash
-        varchar IgnitionRole
+        bigint Id PK
+        nvarchar AdAccount
+        nvarchar DisplayName
+        nvarchar ClockNumber
+        nvarchar PinHash
+        nvarchar IgnitionRole
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
@@ -385,107 +387,119 @@ erDiagram
         <div class="mermaid">
 erDiagram
     ItemType {
-        int Id PK
-        varchar Name
-        varchar Description
+        bigint Id PK
+        nvarchar Name
+        nvarchar Description
     }
 
     Uom {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
     }
 
     Item {
-        int Id PK
-        int ItemTypeId FK
-        varchar PartNumber
-        varchar Description
-        varchar MacolaPartNumber
+        bigint Id PK
+        bigint ItemTypeId FK
+        nvarchar PartNumber
+        nvarchar Description
+        nvarchar MacolaPartNumber
         int DefaultSubLotQty
         int MaxLotSize
-        int UomId FK
+        bigint UomId FK
         decimal UnitWeight
-        int WeightUomId FK
+        bigint WeightUomId FK
         datetime2 CreatedAt
         datetime2 UpdatedAt
-        varchar CreatedBy
-        varchar UpdatedBy
+        bigint CreatedByUserId FK
+        bigint UpdatedByUserId FK
         datetime2 DeprecatedAt
     }
 
     Bom {
-        int Id PK
-        int ParentItemId FK
+        bigint Id PK
+        bigint ParentItemId FK
         int VersionNumber
         datetime2 EffectiveFrom
+        datetime2 PublishedAt
         datetime2 DeprecatedAt
-        varchar CreatedBy
+        bigint CreatedByUserId FK
         datetime2 CreatedAt
     }
 
     BomLine {
-        int Id PK
-        int BomId FK
-        int ChildItemId FK
+        bigint Id PK
+        bigint BomId FK
+        bigint ChildItemId FK
         decimal QtyPer
-        int UomId FK
+        bigint UomId FK
         int SortOrder
     }
 
     RouteTemplate {
-        int Id PK
-        int ItemId FK
+        bigint Id PK
+        bigint ItemId FK
         int VersionNumber
-        varchar Name
+        nvarchar Name
         datetime2 EffectiveFrom
+        datetime2 PublishedAt
         datetime2 DeprecatedAt
-        varchar CreatedBy
+        bigint CreatedByUserId FK
         datetime2 CreatedAt
     }
 
     RouteStep {
-        int Id PK
-        int RouteTemplateId FK
-        int OperationTemplateId FK
+        bigint Id PK
+        bigint RouteTemplateId FK
+        bigint OperationTemplateId FK
         int SequenceNumber
         bit IsRequired
-        varchar Description
+        nvarchar Description
     }
 
     OperationTemplate {
-        int Id PK
-        varchar Name
-        varchar Code
-        int AreaLocationId FK
-        bit RequiresMaterialVerification
-        bit RequiresSerialNumber
-        bit CollectsDieInfo
-        bit CollectsCavityInfo
-        bit CollectsWeight
-        bit CollectsGoodCount
-        bit CollectsBadCount
-        varchar Description
+        bigint Id PK
+        nvarchar Code
+        int VersionNumber
+        nvarchar Name
+        bigint AreaLocationId FK
+        nvarchar Description
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    DataCollectionField {
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+        nvarchar Description
+    }
+
+    OperationTemplateField {
+        bigint Id PK
+        bigint OperationTemplateId FK
+        bigint DataCollectionFieldId FK
+        bit IsRequired
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
 
     ItemLocation {
-        int Id PK
-        int ItemId FK
-        int LocationId FK
+        bigint Id PK
+        bigint ItemId FK
+        bigint LocationId FK
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
 
     ContainerConfig {
-        int Id PK
-        int ItemId FK
+        bigint Id PK
+        bigint ItemId FK
         int TraysPerContainer
         int PartsPerTray
         bit IsSerialized
-        varchar DunnageCode
-        varchar CustomerCode
+        nvarchar DunnageCode
+        nvarchar CustomerCode
         datetime2 CreatedAt
         datetime2 UpdatedAt
         datetime2 DeprecatedAt
@@ -501,6 +515,8 @@ erDiagram
     OperationTemplate ||--o{ RouteStep : "performed at"
     Item ||--o{ ItemLocation : "runs on"
     Item ||--o{ ContainerConfig : "packed per"
+    OperationTemplate ||--o{ OperationTemplateField : "fields"
+    DataCollectionField ||--o{ OperationTemplateField : "used_in"
         </div>
     </div>
 </div>
@@ -558,156 +574,168 @@ erDiagram
         <div class="mermaid">
 erDiagram
     LotOriginType {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
     }
 
     LotStatusCode {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
         bit BlocksProduction
     }
 
     GenealogyRelationshipType {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
     }
 
     Lot {
-        int Id PK
-        varchar LotName
-        int ItemId FK
-        int LotOriginTypeId FK
-        int LotStatusId FK
+        bigint Id PK
+        nvarchar LotName
+        bigint ItemId FK
+        bigint LotOriginTypeId FK
+        bigint LotStatusId FK
         int PieceCount
         int MaxPieceCount
         decimal Weight
-        int WeightUomId FK
-        varchar DieNumber
-        varchar CavityNumber
-        varchar VendorLotNumber
+        bigint WeightUomId FK
+        nvarchar DieNumber
+        nvarchar CavityNumber
+        nvarchar VendorLotNumber
         int MinSerialNumber
         int MaxSerialNumber
-        int ParentLotId FK
-        int CurrentLocationId FK
-        int CreatedByUserId FK
-        int CreatedAtTerminalId FK
+        bigint ParentLotId FK
+        bigint CurrentLocationId FK
+        bigint CreatedByUserId FK
+        bigint CreatedAtTerminalId FK
         datetime2 CreatedAt
         datetime2 UpdatedAt
-        varchar UpdatedBy
+        bigint UpdatedByUserId FK
     }
 
     LotGenealogy {
-        int Id PK
-        int ParentLotId FK
-        int ChildLotId FK
-        int RelationshipTypeId FK
+        bigint Id PK
+        bigint ParentLotId FK
+        bigint ChildLotId FK
+        bigint RelationshipTypeId FK
         int PieceCount
-        int EventUserId FK
-        int TerminalLocationId FK
+        bigint EventUserId FK
+        bigint TerminalLocationId FK
         datetime2 EventAt
     }
 
     LotStatusHistory {
-        int Id PK
-        int LotId FK
-        int OldStatusId FK
-        int NewStatusId FK
-        varchar Reason
-        int ChangedByUserId FK
-        int TerminalLocationId FK
+        bigint Id PK
+        bigint LotId FK
+        bigint OldStatusId FK
+        bigint NewStatusId FK
+        nvarchar Reason
+        bigint ChangedByUserId FK
+        bigint TerminalLocationId FK
         datetime2 ChangedAt
     }
 
     LotMovement {
-        int Id PK
-        int LotId FK
-        int FromLocationId FK
-        int ToLocationId FK
-        int MovedByUserId FK
-        int TerminalLocationId FK
+        bigint Id PK
+        bigint LotId FK
+        bigint FromLocationId FK
+        bigint ToLocationId FK
+        bigint MovedByUserId FK
+        bigint TerminalLocationId FK
         datetime2 MovedAt
     }
 
     LotAttributeChange {
-        int Id PK
-        int LotId FK
-        varchar AttributeName
-        varchar OldValue
-        varchar NewValue
-        int ChangedByUserId FK
-        int TerminalLocationId FK
+        bigint Id PK
+        bigint LotId FK
+        nvarchar AttributeName
+        nvarchar OldValue
+        nvarchar NewValue
+        bigint ChangedByUserId FK
+        bigint TerminalLocationId FK
         datetime2 ChangedAt
     }
 
     ContainerStatusCode {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
     }
 
     Container {
-        int Id PK
-        varchar ContainerName
-        int ItemId FK
-        int ContainerConfigId FK
-        int ContainerStatusId FK
-        int LotId FK
-        int CurrentLocationId FK
-        varchar AimShipperId
-        varchar HoldNumber
+        bigint Id PK
+        nvarchar ContainerName
+        bigint ItemId FK
+        bigint ContainerConfigId FK
+        bigint ContainerStatusId FK
+        bigint LotId FK
+        bigint CurrentLocationId FK
+        nvarchar AimShipperId
+        nvarchar HoldNumber
         datetime2 CreatedAt
         datetime2 UpdatedAt
     }
 
     ContainerTray {
-        int Id PK
-        int ContainerId FK
+        bigint Id PK
+        bigint ContainerId FK
         int TrayNumber
         int PieceCount
     }
 
     SerializedPart {
-        int Id PK
-        varchar SerialNumber
-        int ItemId FK
-        int LotId FK
-        int ContainerId FK
+        bigint Id PK
+        nvarchar SerialNumber
+        bigint ItemId FK
+        bigint LotId FK
+        bigint ContainerId FK
         datetime2 CreatedAt
     }
 
     ContainerSerial {
-        int Id PK
-        int ContainerId FK
-        int ContainerTrayId FK
-        int SerializedPartId FK
+        bigint Id PK
+        bigint ContainerId FK
+        bigint ContainerTrayId FK
+        bigint SerializedPartId FK
         int TrayPosition
     }
 
+    PrintReasonCode {
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+    }
+
+    LabelTypeCode {
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+    }
+
     LotLabel {
-        int Id PK
-        int LotId FK
-        varchar PrintReason
-        varchar ZplContent
-        varchar PrinterName
-        int PrintedByUserId FK
-        int TerminalLocationId FK
+        bigint Id PK
+        bigint LotId FK
+        bigint PrintReasonCodeId FK
+        nvarchar ZplContent
+        nvarchar PrinterName
+        bigint PrintedByUserId FK
+        bigint TerminalLocationId FK
         datetime2 PrintedAt
     }
 
     ShippingLabel {
-        int Id PK
-        int ContainerId FK
-        varchar AimShipperId
-        varchar LabelType
-        varchar ZplContent
+        bigint Id PK
+        bigint ContainerId FK
+        nvarchar AimShipperId
+        bigint LabelTypeCodeId FK
+        nvarchar ZplContent
         bit IsVoid
         datetime2 PrintedAt
         datetime2 VoidedAt
-        varchar PrintedBy
+        bigint PrintedByUserId FK
     }
 
     LotOriginType ||--o{ Lot : "originated as"
@@ -725,6 +753,8 @@ erDiagram
     Container ||--o{ ContainerSerial : holds
     SerializedPart ||--o{ ContainerSerial : "packed in"
     Container ||--o{ ShippingLabel : "labeled with"
+    PrintReasonCode ||--o{ LotLabel : "reason"
+    LabelTypeCode ||--o{ ShippingLabel : "type"
         </div>
     </div>
 </div>
@@ -767,79 +797,79 @@ erDiagram
         <div class="mermaid">
 erDiagram
     WorkOrderStatus {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
     }
 
     OperationStatus {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
     }
 
     WorkOrder {
-        int Id PK
-        varchar WoNumber
-        int ItemId FK
-        int RouteTemplateId FK
-        int WorkOrderStatusId FK
+        bigint Id PK
+        nvarchar WoNumber
+        bigint ItemId FK
+        bigint RouteTemplateId FK
+        bigint WorkOrderStatusId FK
         datetime2 CreatedAt
         datetime2 CompletedAt
     }
 
     WorkOrderOperation {
-        int Id PK
-        int WorkOrderId FK
-        int RouteStepId FK
-        int LocationId FK
-        int OperationStatusId FK
+        bigint Id PK
+        bigint WorkOrderId FK
+        bigint RouteStepId FK
+        bigint LocationId FK
+        bigint OperationStatusId FK
         int SequenceNumber
         datetime2 StartedAt
         datetime2 CompletedAt
-        int OperatorId FK
+        bigint OperatorId FK
     }
 
     ProductionEvent {
-        int Id PK
-        int WorkOrderOperationId FK
-        int LotId FK
-        int LocationId FK
-        int ItemId FK
+        bigint Id PK
+        bigint WorkOrderOperationId FK
+        bigint LotId FK
+        bigint LocationId FK
+        bigint ItemId FK
         int GoodCount
         int NoGoodCount
-        int OperatorId FK
-        int TerminalLocationId FK
+        bigint OperatorId FK
+        bigint TerminalLocationId FK
         datetime2 RecordedAt
-        varchar Remarks
+        nvarchar Remarks
     }
 
     ConsumptionEvent {
-        int Id PK
-        int WorkOrderOperationId FK
-        int SourceLotId FK
-        int ProducedLotId FK
-        int ProducedContainerId FK
-        int ConsumedItemId FK
-        int ProducedItemId FK
+        bigint Id PK
+        bigint WorkOrderOperationId FK
+        bigint SourceLotId FK
+        bigint ProducedLotId FK
+        bigint ProducedContainerId FK
+        bigint ConsumedItemId FK
+        bigint ProducedItemId FK
         int PieceCount
-        int LocationId FK
-        int OperatorId FK
-        int TerminalLocationId FK
-        int TrayId FK
-        varchar ProducedSerialNumber
+        bigint LocationId FK
+        bigint OperatorId FK
+        bigint TerminalLocationId FK
+        bigint TrayId FK
+        nvarchar ProducedSerialNumber
         datetime2 ConsumedAt
     }
 
     RejectEvent {
-        int Id PK
-        int ProductionEventId FK
-        int LotId FK
-        int DefectCodeId FK
+        bigint Id PK
+        bigint ProductionEventId FK
+        bigint LotId FK
+        bigint DefectCodeId FK
         int Quantity
-        varchar ChargeToArea
-        varchar Remarks
-        int OperatorId FK
+        nvarchar ChargeToArea
+        nvarchar Remarks
+        bigint OperatorId FK
         datetime2 RecordedAt
     }
 
@@ -881,7 +911,7 @@ erDiagram
         </div>
         <div class="table-card">
             <h4>HoldEvent <span class="scope-badge scope-mvp-expanded">MVP-Expanded</span></h4>
-            <p>Records when a LOT is placed on or released from quality hold. Drives LOT status transitions to/from HOLD. Expanded beyond legacy capabilities.</p>
+            <p>Records when a LOT is placed on quality hold (type, reason, user) and when the hold is released. Same lifecycle pattern as <code>DowntimeEvent</code> — created on placement, updated on release. Active holds have <code>ReleasedAt IS NULL</code>. Drives LOT status transitions to/from HOLD. Expanded beyond legacy capabilities.</p>
         </div>
         <div class="table-card">
             <h4>QualityAttachment <span class="scope-badge scope-mvp">MVP</span></h4>
@@ -895,40 +925,40 @@ erDiagram
         <div class="mermaid">
 erDiagram
     DefectCode {
-        int Id PK
-        varchar Code
-        varchar Description
-        int AreaLocationId FK
+        bigint Id PK
+        nvarchar Code
+        nvarchar Description
+        bigint AreaLocationId FK
         bit IsExcused
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
 
     QualitySpec {
-        int Id PK
-        varchar Name
-        int ItemId FK
-        int OperationTemplateId FK
-        varchar Description
+        bigint Id PK
+        nvarchar Name
+        bigint ItemId FK
+        bigint OperationTemplateId FK
+        nvarchar Description
         datetime2 CreatedAt
     }
 
     QualitySpecVersion {
-        int Id PK
-        int QualitySpecId FK
+        bigint Id PK
+        bigint QualitySpecId FK
         int VersionNumber
         datetime2 EffectiveFrom
         datetime2 DeprecatedAt
-        varchar CreatedBy
+        bigint CreatedByUserId FK
         datetime2 CreatedAt
     }
 
     QualitySpecAttribute {
-        int Id PK
-        int QualitySpecVersionId FK
-        varchar AttributeName
-        varchar DataType
-        varchar Uom
+        bigint Id PK
+        bigint QualitySpecVersionId FK
+        nvarchar AttributeName
+        nvarchar DataType
+        nvarchar Uom
         decimal TargetValue
         decimal LowerLimit
         decimal UpperLimit
@@ -936,63 +966,88 @@ erDiagram
         int SortOrder
     }
 
+    InspectionResultCode {
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+    }
+
+    SampleTriggerCode {
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+        nvarchar Description
+    }
+
+    HoldTypeCode {
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+    }
+
+    DispositionCode {
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+    }
+
     QualitySample {
-        int Id PK
-        int LotId FK
-        int QualitySpecVersionId FK
-        int LocationId FK
-        varchar SampleTrigger
-        int SampledByUserId FK
+        bigint Id PK
+        bigint LotId FK
+        bigint QualitySpecVersionId FK
+        bigint LocationId FK
+        bigint SampleTriggerCodeId FK
+        bigint SampledByUserId FK
         datetime2 SampledAt
-        varchar OverallResult
-        varchar Remarks
+        bigint InspectionResultCodeId FK
+        nvarchar Remarks
     }
 
     QualityResult {
-        int Id PK
-        int QualitySampleId FK
-        int QualitySpecAttributeId FK
-        varchar MeasuredValue
-        varchar Uom
+        bigint Id PK
+        bigint QualitySampleId FK
+        bigint QualitySpecAttributeId FK
+        nvarchar MeasuredValue
+        nvarchar Uom
         bit IsPass
     }
 
     QualityAttachment {
-        int Id PK
-        int QualitySampleId FK
-        int NonConformanceId FK
-        varchar FileName
-        varchar FileType
-        varchar FilePath
+        bigint Id PK
+        bigint QualitySampleId FK
+        bigint NonConformanceId FK
+        nvarchar FileName
+        nvarchar FileType
+        nvarchar FilePath
         datetime2 UploadedAt
-        varchar UploadedBy
+        bigint UploadedByUserId FK
     }
 
     NonConformance {
-        int Id PK
-        int LotId FK
-        int DefectCodeId FK
+        bigint Id PK
+        bigint LotId FK
+        bigint DefectCodeId FK
         int Quantity
-        varchar Disposition
-        varchar Remarks
-        int ReportedByUserId FK
-        int TerminalLocationId FK
+        bigint DispositionCodeId FK
+        nvarchar Remarks
+        bigint ReportedByUserId FK
+        bigint TerminalLocationId FK
         datetime2 ReportedAt
         datetime2 ResolvedAt
-        varchar ResolvedBy
+        bigint ResolvedByUserId FK
     }
 
     HoldEvent {
-        int Id PK
-        int LotId FK
-        int NonConformanceId FK
-        varchar HoldType
-        varchar Reason
-        int PlacedByUserId FK
+        bigint Id PK
+        bigint LotId FK
+        bigint NonConformanceId FK
+        bigint HoldTypeCodeId FK
+        nvarchar Reason
+        bigint PlacedByUserId FK
         datetime2 PlacedAt
-        int ReleasedByUserId FK
+        bigint ReleasedByUserId FK
         datetime2 ReleasedAt
-        varchar ReleaseRemarks
+        nvarchar ReleaseRemarks
     }
 
     QualitySpec ||--o{ QualitySpecVersion : versioned
@@ -1003,6 +1058,10 @@ erDiagram
     NonConformance ||--o{ QualityAttachment : attached
     DefectCode ||--o{ NonConformance : classified
     NonConformance ||--o{ HoldEvent : triggers
+    InspectionResultCode ||--o{ QualitySample : "result"
+    SampleTriggerCode ||--o{ QualitySample : "trigger"
+    HoldTypeCode ||--o{ HoldEvent : "type"
+    DispositionCode ||--o{ NonConformance : "disposition"
         </div>
     </div>
 </div>
@@ -1045,57 +1104,63 @@ erDiagram
         <div class="mermaid">
 erDiagram
     DowntimeReasonType {
-        int Id PK
-        varchar Name
+        bigint Id PK
+        nvarchar Name
     }
 
     DowntimeReasonCode {
-        int Id PK
-        varchar Code
-        varchar Description
-        int AreaLocationId FK
-        int DowntimeReasonTypeId FK
+        bigint Id PK
+        nvarchar Code
+        nvarchar Description
+        bigint AreaLocationId FK
+        bigint DowntimeReasonTypeId FK
         bit IsExcused
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
 
     ShiftSchedule {
-        int Id PK
-        varchar Name
+        bigint Id PK
+        nvarchar Name
         time StartTime
         time EndTime
-        varchar DaysOfWeek
+        nvarchar DaysOfWeek
         datetime2 EffectiveFrom
         datetime2 DeprecatedAt
     }
 
     Shift {
-        int Id PK
-        int ShiftScheduleId FK
+        bigint Id PK
+        bigint ShiftScheduleId FK
         date ShiftDate
         datetime2 ActualStart
         datetime2 ActualEnd
     }
 
+    DowntimeSourceCode {
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+    }
+
     DowntimeEvent {
-        int Id PK
-        int LocationId FK
-        int DowntimeReasonCodeId FK
-        int ShiftId FK
+        bigint Id PK
+        bigint LocationId FK
+        bigint DowntimeReasonCodeId FK
+        bigint ShiftId FK
         datetime2 StartedAt
         datetime2 EndedAt
-        varchar Source
-        int OperatorId FK
+        bigint DowntimeSourceCodeId FK
+        bigint OperatorId FK
         int ShotCount
-        varchar Remarks
+        nvarchar Remarks
         datetime2 CreatedAt
     }
 
     OeeSnapshot {
-        int Id PK
-        int LocationId FK
-        int ShiftId FK
+        bigint Id PK
+        bigint LocationId FK
+        bigint ShiftId FK
         date SnapshotDate
         decimal Availability
         decimal Performance
@@ -1115,6 +1180,7 @@ erDiagram
     ShiftSchedule ||--o{ Shift : defines
     Shift ||--o{ DowntimeEvent : during
     Shift ||--o{ OeeSnapshot : summarized
+    DowntimeSourceCode ||--o{ DowntimeEvent : "source"
         </div>
     </div>
 </div>
@@ -1164,76 +1230,76 @@ erDiagram
         <div class="mermaid">
 erDiagram
     LogSeverity {
-        int Id PK
-        varchar Code
-        varchar Name
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
     }
 
     LogEventType {
-        int Id PK
-        varchar Code
-        varchar Name
-        varchar Description
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+        nvarchar Description
     }
 
     LogEntityType {
-        int Id PK
-        varchar Code
-        varchar Name
-        varchar Description
+        bigint Id PK
+        nvarchar Code
+        nvarchar Name
+        nvarchar Description
     }
 
     OperationLog {
-        bigint Id PK
+        bigbigint Id PK
         datetime2 LoggedAt
-        int UserId FK
-        int TerminalLocationId FK
-        int LocationId FK
-        int LogSeverityId FK
-        int LogEventTypeId FK
-        int LogEntityTypeId FK
-        int EntityId
-        varchar Description
-        varchar OldValue
-        varchar NewValue
+        bigint UserId FK
+        bigint TerminalLocationId FK
+        bigint LocationId FK
+        bigint LogSeverityId FK
+        bigint LogEventTypeId FK
+        bigint LogEntityTypeId FK
+        bigint EntityId
+        nvarchar Description
+        nvarchar OldValue
+        nvarchar NewValue
     }
 
     ConfigLog {
-        bigint Id PK
+        bigbigint Id PK
         datetime2 LoggedAt
-        int UserId FK
-        int LogSeverityId FK
-        int LogEventTypeId FK
-        int LogEntityTypeId FK
-        int EntityId
-        varchar Description
-        varchar Changes
+        bigint UserId FK
+        bigint LogSeverityId FK
+        bigint LogEventTypeId FK
+        bigint LogEntityTypeId FK
+        bigint EntityId
+        nvarchar Description
+        nvarchar Changes
     }
 
     InterfaceLog {
-        bigint Id PK
+        bigbigint Id PK
         datetime2 LoggedAt
-        varchar SystemName
-        varchar Direction
-        int LogEventTypeId FK
-        varchar Description
-        varchar RequestPayload
-        varchar ResponsePayload
-        varchar ErrorCondition
-        varchar ErrorDescription
+        nvarchar SystemName
+        nvarchar Direction
+        bigint LogEventTypeId FK
+        nvarchar Description
+        nvarchar RequestPayload
+        nvarchar ResponsePayload
+        nvarchar ErrorCondition
+        nvarchar ErrorDescription
         bit IsHighFidelity
     }
 
     FailureLog {
-        bigint Id PK
+        bigbigint Id PK
         datetime2 AttemptedAt
-        int AppUserId FK
-        int LogEntityTypeId FK
-        int EntityId
-        int LogEventTypeId FK
-        varchar FailureReason
-        varchar ProcedureName
-        varchar AttemptedParameters
+        bigint AppUserId FK
+        bigint LogEntityTypeId FK
+        bigint EntityId
+        bigint LogEventTypeId FK
+        nvarchar FailureReason
+        nvarchar ProcedureName
+        nvarchar AttemptedParameters
     }
 
     LogSeverity ||--o{ OperationLog : severity
@@ -1294,69 +1360,78 @@ erDiagram
     <div class="erd-container">
         <div class="mermaid">
 erDiagram
-    loc__LocationType { int id PK }
-    loc__LocationTypeDefinition { int id PK }
-    loc__LocationAttributeDefinition { int id PK }
-    loc__Location { int id PK }
-    loc__LocationAttribute { int id PK }
+    loc__LocationType { bigint id PK }
+    loc__LocationTypeDefinition { bigint id PK }
+    loc__LocationAttributeDefinition { bigint id PK }
+    loc__Location { bigint id PK }
+    loc__LocationAttribute { bigint id PK }
     %% terminal table removed — terminals are location records with LocationTypeDefinition = Terminal
-    loc__AppUser { int id PK }
+    loc__AppUser { bigint id PK }
 
-    parts__ItemType { int id PK }
-    parts__Uom { int id PK }
-    parts__Item { int id PK }
-    parts__Bom { int id PK }
-    parts__BomLine { int id PK }
-    parts__RouteTemplate { int id PK }
-    parts__RouteStep { int id PK }
-    parts__OperationTemplate { int id PK }
-    parts__ItemLocation { int id PK }
-    parts__ContainerConfig { int id PK }
+    parts__ItemType { bigint id PK }
+    parts__Uom { bigint id PK }
+    parts__Item { bigint id PK }
+    parts__Bom { bigint id PK }
+    parts__BomLine { bigint id PK }
+    parts__RouteTemplate { bigint id PK }
+    parts__RouteStep { bigint id PK }
+    parts__OperationTemplate { bigint id PK }
+    parts__ItemLocation { bigint id PK }
+    parts__ContainerConfig { bigint id PK }
+    parts__DataCollectionField { bigint id PK }
+    parts__OperationTemplateField { bigint id PK }
 
-    lots__LotOriginType { int id PK }
-    lots__LotStatusCode { int id PK }
-    lots__GenealogyRelType { int id PK }
-    lots__Lot { int id PK }
-    lots__LotGenealogy { int id PK }
-    lots__LotStatusHistory { int id PK }
-    lots__LotMovement { int id PK }
-    lots__LotAttributeChange { int id PK }
-    lots__ContainerStatusCode { int id PK }
-    lots__Container { int id PK }
-    lots__ContainerTray { int id PK }
-    lots__SerializedPart { int id PK }
-    lots__ContainerSerial { int id PK }
-    lots__LotLabel { int id PK }
-    lots__ShippingLabel { int id PK }
+    lots__LotOriginType { bigint id PK }
+    lots__LotStatusCode { bigint id PK }
+    lots__GenealogyRelType { bigint id PK }
+    lots__Lot { bigint id PK }
+    lots__LotGenealogy { bigint id PK }
+    lots__LotStatusHistory { bigint id PK }
+    lots__LotMovement { bigint id PK }
+    lots__LotAttributeChange { bigint id PK }
+    lots__ContainerStatusCode { bigint id PK }
+    lots__Container { bigint id PK }
+    lots__ContainerTray { bigint id PK }
+    lots__SerializedPart { bigint id PK }
+    lots__ContainerSerial { bigint id PK }
+    lots__LotLabel { bigint id PK }
+    lots__ShippingLabel { bigint id PK }
+    lots__PrintReasonCode { bigint id PK }
+    lots__LabelTypeCode { bigint id PK }
 
-    wo__WorkOrderStatus { int id PK }
-    wo__OperationStatus { int id PK }
-    wo__WorkOrder { int id PK }
-    wo__WorkOrderOperation { int id PK }
-    wo__ProductionEvent { int id PK }
-    wo__ConsumptionEvent { int id PK }
-    wo__RejectEvent { int id PK }
+    wo__WorkOrderStatus { bigint id PK }
+    wo__OperationStatus { bigint id PK }
+    wo__WorkOrder { bigint id PK }
+    wo__WorkOrderOperation { bigint id PK }
+    wo__ProductionEvent { bigint id PK }
+    wo__ConsumptionEvent { bigint id PK }
+    wo__RejectEvent { bigint id PK }
 
-    qual__DefectCode { int id PK }
-    qual__QualitySpec { int id PK }
-    qual__QualitySpecVersion { int id PK }
-    qual__QualitySpecAttribute { int id PK }
-    qual__QualitySample { int id PK }
-    qual__QualityResult { int id PK }
-    qual__QualityAttachment { int id PK }
-    qual__NonConformance { int id PK }
-    qual__HoldEvent { int id PK }
+    qual__DefectCode { bigint id PK }
+    qual__QualitySpec { bigint id PK }
+    qual__QualitySpecVersion { bigint id PK }
+    qual__QualitySpecAttribute { bigint id PK }
+    qual__QualitySample { bigint id PK }
+    qual__QualityResult { bigint id PK }
+    qual__QualityAttachment { bigint id PK }
+    qual__NonConformance { bigint id PK }
+    qual__HoldEvent { bigint id PK }
+    qual__InspectionResultCode { bigint id PK }
+    qual__SampleTriggerCode { bigint id PK }
+    qual__HoldTypeCode { bigint id PK }
+    qual__DispositionCode { bigint id PK }
 
-    oee__DowntimeReasonType { int id PK }
-    oee__DowntimeReasonCode { int id PK }
-    oee__ShiftSchedule { int id PK }
-    oee__Shift { int id PK }
-    oee__DowntimeEvent { int id PK }
-    oee__OeeSnapshot { int id PK }
+    oee__DowntimeReasonType { bigint id PK }
+    oee__DowntimeReasonCode { bigint id PK }
+    oee__ShiftSchedule { bigint id PK }
+    oee__Shift { bigint id PK }
+    oee__DowntimeEvent { bigint id PK }
+    oee__OeeSnapshot { bigint id PK }
+    oee__DowntimeSourceCode { bigint id PK }
 
-    audit__LogSeverity { int id PK }
-    audit__LogEventType { int id PK }
-    audit__LogEntityType { int id PK }
+    audit__LogSeverity { bigint id PK }
+    audit__LogEventType { bigint id PK }
+    audit__LogEntityType { bigint id PK }
     audit__OperationLog { bigint id PK }
     audit__ConfigLog { bigint id PK }
     audit__InterfaceLog { bigint id PK }
