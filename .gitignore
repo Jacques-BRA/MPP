@@ -40,8 +40,11 @@ test_*.docx
 # Seed data intermediate extracts (regenerable from PDF via pdftotext)
 reference/seed_data/_appendix_*_raw.txt
 
-# Claude Code local state (keep CLAUDE.md; ignore local settings)
-.claude/settings.local.json
+# Claude Code local state (keep CLAUDE.md at repo root; ignore local agent state)
+.claude/
+
+# SQL test runner output
+sql/tests/test_output.txt
 
 # Python (just in case)
 __pycache__/
