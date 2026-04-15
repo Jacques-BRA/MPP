@@ -81,12 +81,13 @@ DROP TABLE #Rc38;
 
 SELECT @PId = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-PARENT-001';
 
+CREATE TABLE #Rc1 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc1
 EXEC Parts.Bom_Create
     @ParentItemId = @PId,
-    @AppUserId    = 1,
-    @Status       = @S OUTPUT,
-    @Message      = @M OUTPUT,
-    @NewId        = @NewId OUTPUT;
+    @AppUserId    = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc1;
+DROP TABLE #Rc1;
 GO
 
 -- =============================================
@@ -112,9 +113,13 @@ SELECT @C1 = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-CHILD-001';
 SELECT @C2 = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-CHILD-002';
 SELECT @C3 = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-CHILD-003';
 
+CREATE TABLE #Rc2 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc2
 EXEC Parts.BomLine_Add
     @BomId = @BomId, @ChildItemId = @C1, @QtyPer = 1.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @Ln1 OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @Ln1 = NewId FROM #Rc2;
+DROP TABLE #Rc2;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -122,9 +127,13 @@ EXEC test.Assert_IsEqual
     @Expected = N'1',
     @Actual   = @SStr;
 
+CREATE TABLE #Rc3 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc3
 EXEC Parts.BomLine_Add
     @BomId = @BomId, @ChildItemId = @C2, @QtyPer = 2.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @Ln2 OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @Ln2 = NewId FROM #Rc3;
+DROP TABLE #Rc3;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -132,9 +141,13 @@ EXEC test.Assert_IsEqual
     @Expected = N'1',
     @Actual   = @SStr;
 
+CREATE TABLE #Rc4 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc4
 EXEC Parts.BomLine_Add
     @BomId = @BomId, @ChildItemId = @C3, @QtyPer = 3.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @Ln3 OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @Ln3 = NewId FROM #Rc4;
+DROP TABLE #Rc4;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -185,9 +198,13 @@ DECLARE @S    BIT,
 
 SELECT @C1 = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-CHILD-001';
 
+CREATE TABLE #Rc5 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc5
 EXEC Parts.BomLine_Add
     @BomId = NULL, @ChildItemId = @C1, @QtyPer = 1.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @LnId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @LnId = NewId FROM #Rc5;
+DROP TABLE #Rc5;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -207,9 +224,13 @@ DECLARE @S    BIT,
 
 SELECT @C1 = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-CHILD-001';
 
+CREATE TABLE #Rc6 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc6
 EXEC Parts.BomLine_Add
     @BomId = 999999, @ChildItemId = @C1, @QtyPer = 1.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @LnId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @LnId = NewId FROM #Rc6;
+DROP TABLE #Rc6;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -232,9 +253,13 @@ FROM Parts.Bom b
 INNER JOIN Parts.Item p ON p.Id = b.ParentItemId
 WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
+CREATE TABLE #Rc7 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc7
 EXEC Parts.BomLine_Add
     @BomId = @BomId, @ChildItemId = 999999, @QtyPer = 1.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @LnId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @LnId = NewId FROM #Rc7;
+DROP TABLE #Rc7;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -256,9 +281,13 @@ DECLARE @S     BIT,
 SELECT @PId = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-PARENT-001';
 SELECT @BomId = Id FROM Parts.Bom WHERE ParentItemId = @PId AND VersionNumber = 1;
 
+CREATE TABLE #Rc8 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc8
 EXEC Parts.BomLine_Add
     @BomId = @BomId, @ChildItemId = @PId, @QtyPer = 1.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @LnId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @LnId = NewId FROM #Rc8;
+DROP TABLE #Rc8;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -292,9 +321,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT @C1 = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-CHILD-001';
 
+CREATE TABLE #Rc9 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc9
 EXEC Parts.BomLine_Add
     @BomId = @BomId, @ChildItemId = @C1, @QtyPer = 5.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @LnId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @LnId = NewId FROM #Rc9;
+DROP TABLE #Rc9;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -348,9 +381,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 DECLARE @CX BIGINT;
 SELECT @CX = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-CHILD-XTRA';
 
+CREATE TABLE #Rc10 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc10
 EXEC Parts.BomLine_Add
     @BomId = @BomId, @ChildItemId = @CX, @QtyPer = 1.0, @UomId = 999999,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @LnId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @LnId = NewId FROM #Rc10;
+DROP TABLE #Rc10;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -403,13 +440,15 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT @Ln2 = Id FROM Parts.BomLine WHERE BomId = @BomId AND SortOrder = 2;
 
+CREATE TABLE #Ru12 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru12
 EXEC Parts.BomLine_Update
     @Id        = @Ln2,
     @QtyPer    = 42.5,
     @UomId     = 1,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru12;
+DROP TABLE #Ru12;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -443,13 +482,15 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT @Ln2 = Id FROM Parts.BomLine WHERE BomId = @BomId AND SortOrder = 2;
 
+CREATE TABLE #Ru13 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru13
 EXEC Parts.BomLine_Update
     @Id        = @Ln2,
     @QtyPer    = 1.0,
     @UomId     = 999999,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru13;
+DROP TABLE #Ru13;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -476,11 +517,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 SELECT @Ln3 = Id FROM Parts.BomLine WHERE BomId = @BomId AND SortOrder = 3;
 SELECT @Ln2 = Id FROM Parts.BomLine WHERE BomId = @BomId AND SortOrder = 2;
 
+CREATE TABLE #Ru14 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru14
 EXEC Parts.BomLine_MoveUp
     @Id        = @Ln3,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru14;
+DROP TABLE #Ru14;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -519,11 +562,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT @Ln1 = Id FROM Parts.BomLine WHERE BomId = @BomId AND SortOrder = 1;
 
+CREATE TABLE #Ru15 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru15
 EXEC Parts.BomLine_MoveUp
     @Id        = @Ln1,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru15;
+DROP TABLE #Ru15;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -564,11 +609,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT @Ln1 = Id FROM Parts.BomLine WHERE BomId = @BomId AND SortOrder = 1;
 
+CREATE TABLE #Ru16 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru16
 EXEC Parts.BomLine_MoveDown
     @Id        = @Ln1,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru16;
+DROP TABLE #Ru16;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -601,11 +648,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT @Rm = Id FROM Parts.BomLine WHERE BomId = @BomId AND SortOrder = 2;
 
+CREATE TABLE #Ru17 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru17
 EXEC Parts.BomLine_Remove
     @Id        = @Rm,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru17;
+DROP TABLE #Ru17;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -653,11 +702,13 @@ FROM Parts.Bom b
 INNER JOIN Parts.Item p ON p.Id = b.ParentItemId
 WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
+CREATE TABLE #Ru18 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru18
 EXEC Parts.Bom_Publish
     @Id        = @BomId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru18;
+DROP TABLE #Ru18;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -683,9 +734,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT @CX = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-CHILD-XTRA';
 
+CREATE TABLE #Rc11 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc11
 EXEC Parts.BomLine_Add
     @BomId = @BomId, @ChildItemId = @CX, @QtyPer = 1.0, @UomId = 1,
-    @AppUserId = 1, @Status = @S OUTPUT, @Message = @M OUTPUT, @NewId = @LnId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @LnId = NewId FROM #Rc11;
+DROP TABLE #Rc11;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -716,13 +771,15 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT TOP 1 @AnyLn = Id FROM Parts.BomLine WHERE BomId = @BomId ORDER BY SortOrder;
 
+CREATE TABLE #Ru19 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru19
 EXEC Parts.BomLine_Update
     @Id        = @AnyLn,
     @QtyPer    = 7.0,
     @UomId     = 1,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru19;
+DROP TABLE #Ru19;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -753,11 +810,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT TOP 1 @LastLn = Id FROM Parts.BomLine WHERE BomId = @BomId ORDER BY SortOrder DESC;
 
+CREATE TABLE #Ru20 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru20
 EXEC Parts.BomLine_MoveUp
     @Id        = @LastLn,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru20;
+DROP TABLE #Ru20;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -788,11 +847,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT TOP 1 @FirstLn = Id FROM Parts.BomLine WHERE BomId = @BomId ORDER BY SortOrder;
 
+CREATE TABLE #Ru21 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru21
 EXEC Parts.BomLine_MoveDown
     @Id        = @FirstLn,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru21;
+DROP TABLE #Ru21;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -823,11 +884,13 @@ WHERE p.PartNumber = N'TEST-BL-PARENT-001' AND b.VersionNumber = 1;
 
 SELECT TOP 1 @AnyLn = Id FROM Parts.BomLine WHERE BomId = @BomId ORDER BY SortOrder;
 
+CREATE TABLE #Ru22 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru22
 EXEC Parts.BomLine_Remove
     @Id        = @AnyLn,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru22;
+DROP TABLE #Ru22;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual

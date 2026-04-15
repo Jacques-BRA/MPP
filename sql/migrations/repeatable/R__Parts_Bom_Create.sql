@@ -2,7 +2,7 @@
 -- Procedure:   Parts.Bom_Create
 -- Author:      Blue Ridge Automation
 -- Created:     2026-04-14
--- Version:     1.0
+-- Version:     2.0
 --
 -- Description:
 --   Creates the first version (VersionNumber = 1) of a BOM for a given
@@ -17,33 +17,26 @@
 --                                       NULL → uses SYSUTCDATETIME().
 --   @AppUserId BIGINT     - Required for audit.
 --
--- Parameters (output):
---   @Status BIT            - 1 on success, 0 on failure.
---   @Message NVARCHAR(500) - Human-readable status message.
---   @NewId BIGINT          - New Bom.Id on success.
---
--- Dependencies:
---   Tables: Parts.Bom, Parts.Item
---   Procs:  Audit.Audit_LogConfigChange, Audit.Audit_LogFailure
+-- Result set:
+--   Single row with Status (BIT), Message (NVARCHAR), NewId (BIGINT).
+--   Status=1 on success, 0 on failure. NewId is NULL on failure.
 --
 -- Change Log:
---   2026-04-14 - 1.0 - Initial version
+--   2026-04-14 - 1.0 - Initial version (OUTPUT params)
+--   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.Bom_Create
     @ParentItemId  BIGINT,
     @EffectiveFrom DATETIME2(3)  = NULL,
-    @AppUserId     BIGINT,
-    @Status        BIT           OUTPUT,
-    @Message       NVARCHAR(500) OUTPUT,
-    @NewId         BIGINT        = NULL OUTPUT
+    @AppUserId     BIGINT
 AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    SET @Status  = 0;
-    SET @Message = N'Unknown error';
-    SET @NewId   = NULL;
+    DECLARE @Status  BIT           = 0;
+    DECLARE @Message NVARCHAR(500) = N'Unknown error';
+    DECLARE @NewId   BIGINT        = NULL;
 
     DECLARE @ProcName NVARCHAR(200) = N'Parts.Bom_Create';
     DECLARE @Params   NVARCHAR(MAX) =
@@ -59,6 +52,7 @@ BEGIN
                 @EntityId = NULL, @LogEventTypeCode = N'Created',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
             RETURN;
         END
 
@@ -70,6 +64,7 @@ BEGIN
                 @EntityId = NULL, @LogEventTypeCode = N'Created',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
             RETURN;
         END
 
@@ -82,6 +77,7 @@ BEGIN
                 @EntityId = NULL, @LogEventTypeCode = N'Created',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
             RETURN;
         END
 
@@ -110,6 +106,7 @@ BEGIN
 
         SET @Status  = 1;
         SET @Message = N'BOM created successfully (Draft — add lines and call _Publish when ready).';
+    SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
@@ -132,6 +129,8 @@ BEGIN
         END TRY
         BEGIN CATCH
         END CATCH
+
+        SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
 
         RAISERROR(@ErrMsg, @ErrSev, @ErrState);
     END CATCH

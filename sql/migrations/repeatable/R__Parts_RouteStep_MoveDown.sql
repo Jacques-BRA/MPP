@@ -120,6 +120,7 @@ BEGIN
         BEGIN
             SET @Status  = 1;
             SET @Message = N'Already last.';
+            SELECT @Status AS Status, @Message AS Message;
             RETURN;
         END
 
