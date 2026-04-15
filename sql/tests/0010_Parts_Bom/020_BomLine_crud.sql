@@ -35,45 +35,49 @@ DECLARE @S     BIT,
         @NewId BIGINT,
         @PId   BIGINT;
 
+CREATE TABLE #Rc35 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc35
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BL-PARENT-001',
     @ItemTypeId  = 4,
     @Description = N'Test BomLine parent',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc35;
+DROP TABLE #Rc35;
 
+CREATE TABLE #Rc36 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc36
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BL-CHILD-001',
     @ItemTypeId  = 2,
     @Description = N'Test BL child 1',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc36;
+DROP TABLE #Rc36;
 
+CREATE TABLE #Rc37 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc37
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BL-CHILD-002',
     @ItemTypeId  = 2,
     @Description = N'Test BL child 2',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc37;
+DROP TABLE #Rc37;
 
+CREATE TABLE #Rc38 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc38
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BL-CHILD-003',
     @ItemTypeId  = 2,
     @Description = N'Test BL child 3',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc38;
+DROP TABLE #Rc38;
 
 SELECT @PId = Id FROM Parts.Item WHERE PartNumber = N'TEST-BL-PARENT-001';
 
@@ -325,15 +329,16 @@ DECLARE @S     BIT,
 -- Use CHILD-001 with a nonexistent UomId; even if dup-check runs first the
 -- status is still 0 — but we want to assert the invalid-Uom path. Instead,
 -- create a throwaway child here.
+CREATE TABLE #Rc39 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc39
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BL-CHILD-XTRA',
     @ItemTypeId  = 2,
     @Description = N'extra',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @LnId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @LnId = NewId FROM #Rc39;
+DROP TABLE #Rc39;
 
 SELECT @BomId = b.Id
 FROM Parts.Bom b

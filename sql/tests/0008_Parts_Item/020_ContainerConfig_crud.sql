@@ -34,15 +34,16 @@ DECLARE @S    BIT,
         @M    NVARCHAR(500),
         @ItemId BIGINT;
 
+CREATE TABLE #Rc19 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc19
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,                     -- FinishedGood
     @PartNumber  = N'TEST-CC-001',
     @Description = N'Container Config Host Item',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @ItemId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @ItemId = NewId FROM #Rc19;
+DROP TABLE #Rc19;
 GO
 
 -- =============================================

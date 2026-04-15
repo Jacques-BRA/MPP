@@ -659,15 +659,16 @@ EXEC Parts.OperationTemplate_Create
     @NewId          = @OtId OUTPUT;
 
 -- Item to own the route
+CREATE TABLE #Rc20 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc20
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,
     @PartNumber  = N'TEST-OP-RT-ITEM',
     @Description = N'Route-owning item for OT dependency test',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @ItemId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @ItemId = NewId FROM #Rc20;
+DROP TABLE #Rc20;
 
 -- RouteTemplate
 EXEC Parts.RouteTemplate_Create

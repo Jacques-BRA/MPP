@@ -88,15 +88,16 @@ EXEC Location.AppUser_Create
 DECLARE @NewId BIGINT = (SELECT TOP 1 NewId FROM #Create3);
 DROP TABLE #Create3;
 
--- Deprecate the user (still uses OUTPUT pattern)
 DECLARE @DepStatus  BIT           = 0;
 DECLARE @DepMessage NVARCHAR(500) = NULL;
 
+CREATE TABLE #RDep (Status BIT, Message NVARCHAR(500));
+INSERT INTO #RDep
 EXEC Location.AppUser_Deprecate
     @Id        = @NewId,
-    @AppUserId = 1,
-    @Status    = @DepStatus  OUTPUT,
-    @Message   = @DepMessage OUTPUT;
+    @AppUserId = 1;
+SELECT @DepStatus = Status, @DepMessage = Message FROM #RDep;
+DROP TABLE #RDep;
 GO
 
 -- Lookup the deprecated user in a fresh batch

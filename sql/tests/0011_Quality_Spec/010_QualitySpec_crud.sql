@@ -31,15 +31,16 @@ DECLARE @S     BIT,
         @NewId BIGINT;
 
 -- Create test Item
+CREATE TABLE #Rc40 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc40
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-QSPEC-ITEM-001',
     @ItemTypeId  = 4,
     @Description = N'Test item for QualitySpec tests',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc40;
+DROP TABLE #Rc40;
 
 -- Create test OperationTemplate (v1)
 EXEC Parts.OperationTemplate_Create

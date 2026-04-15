@@ -76,6 +76,8 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc1 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc1
 EXEC Parts.Item_Create
     @ItemTypeId       = 4,              -- FinishedGood
     @PartNumber       = N'TEST-001',
@@ -86,10 +88,9 @@ EXEC Parts.Item_Create
     @UomId            = 1,              -- EA
     @UnitWeight       = 1.2500,
     @WeightUomId      = 2,              -- LB
-    @AppUserId        = 1,
-    @Status           = @S OUTPUT,
-    @Message          = @M OUTPUT,
-    @NewId            = @NewId OUTPUT;
+    @AppUserId        = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc1;
+DROP TABLE #Rc1;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -178,15 +179,16 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc2 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc2
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,
     @PartNumber  = NULL,
     @Description = N'No Part Number',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc2;
+DROP TABLE #Rc2;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -212,15 +214,16 @@ DECLARE @S    BIT,
         @NewId2 BIGINT;
 
 -- First create
+CREATE TABLE #Rc3 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc3
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,
     @PartNumber  = N'DUP-001',
     @Description = N'Duplicate Target',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc3;
+DROP TABLE #Rc3;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -229,15 +232,16 @@ EXEC test.Assert_IsEqual
     @Actual   = @SStr;
 
 -- Second create with same PartNumber
+CREATE TABLE #Rc4 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc4
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,
     @PartNumber  = N'DUP-001',
     @Description = N'Duplicate Attempt',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId2 OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId2 = NewId FROM #Rc4;
+DROP TABLE #Rc4;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -267,15 +271,16 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc5 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc5
 EXEC Parts.Item_Create
     @ItemTypeId  = 999999,
     @PartNumber  = N'TEST-BADITEMTYPE',
     @Description = N'Bad Item Type',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc5;
+DROP TABLE #Rc5;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -299,15 +304,16 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc6 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc6
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,
     @PartNumber  = N'TEST-BADUOM',
     @Description = N'Bad Uom',
     @UomId       = 999999,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc6;
+DROP TABLE #Rc6;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -326,6 +332,8 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc7 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc7
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,
     @PartNumber  = N'TEST-NOWGTUOM',
@@ -333,10 +341,9 @@ EXEC Parts.Item_Create
     @UomId       = 1,
     @UnitWeight  = 2.5,
     @WeightUomId = NULL,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc7;
+DROP TABLE #Rc7;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -499,25 +506,28 @@ DECLARE @S    BIT,
         @ItemId BIGINT;
 
 -- Create a fresh item to update
+CREATE TABLE #Rc8 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc8
 EXEC Parts.Item_Create
     @ItemTypeId  = 2,
     @PartNumber  = N'TEST-002',
     @Description = N'Test Item 002 Original',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @ItemId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @ItemId = NewId FROM #Rc8;
+DROP TABLE #Rc8;
 
 -- Note: @ItemTypeId and @PartNumber are IMMUTABLE after create and are
 -- not parameters on Item_Update. Only mutable fields are passed.
+CREATE TABLE #Ru13 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru13
 EXEC Parts.Item_Update
     @Id          = @ItemId,
     @Description = N'Test Item 002 Updated',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #Ru13;
+DROP TABLE #Ru13;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -564,13 +574,15 @@ DECLARE @S    BIT,
         @M    NVARCHAR(500),
         @SStr NVARCHAR(1);
 
+CREATE TABLE #Ru14 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru14
 EXEC Parts.Item_Update
     @Id          = NULL,
     @Description = N'No-op',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #Ru14;
+DROP TABLE #Ru14;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -589,29 +601,34 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @ItemId BIGINT;
 
+CREATE TABLE #Rc9 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc9
 EXEC Parts.Item_Create
     @ItemTypeId  = 2,
     @PartNumber  = N'TEST-003',
     @Description = N'Test Item 003 Dep',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @ItemId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @ItemId = NewId FROM #Rc9;
+DROP TABLE #Rc9;
 
+CREATE TABLE #Ru15 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru15
 EXEC Parts.Item_Deprecate
     @Id        = @ItemId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru15;
+DROP TABLE #Ru15;
 
+CREATE TABLE #Ru16 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru16
 EXEC Parts.Item_Update
     @Id          = @ItemId,
     @Description = N'Should not apply',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message FROM #Ru16;
+DROP TABLE #Ru16;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -641,25 +658,27 @@ DECLARE @S    BIT,
         @Id1 BIGINT,
         @Id2 BIGINT;
 
+CREATE TABLE #Rc10 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc10
 EXEC Parts.Item_Create
     @ItemTypeId  = 5,
     @PartNumber  = N'TEST-PT-001',
     @Description = N'PassThrough 1',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @Id1 OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @Id1 = NewId FROM #Rc10;
+DROP TABLE #Rc10;
 
+CREATE TABLE #Rc11 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc11
 EXEC Parts.Item_Create
     @ItemTypeId  = 5,
     @PartNumber  = N'TEST-PT-002',
     @Description = N'PassThrough 2',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @Id2 OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @Id2 = NewId FROM #Rc11;
+DROP TABLE #Rc11;
 
 CREATE TABLE #ListByType (
     Id                BIGINT,
@@ -759,21 +778,24 @@ DECLARE @S    BIT,
         @SStr NVARCHAR(1),
         @ItemId BIGINT;
 
+CREATE TABLE #Rc12 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc12
 EXEC Parts.Item_Create
     @ItemTypeId  = 1,
     @PartNumber  = N'TEST-DEP-001',
     @Description = N'To deprecate',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @ItemId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @ItemId = NewId FROM #Rc12;
+DROP TABLE #Rc12;
 
+CREATE TABLE #Ru17 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru17
 EXEC Parts.Item_Deprecate
     @Id        = @ItemId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru17;
+DROP TABLE #Ru17;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 
@@ -803,11 +825,13 @@ DECLARE @S    BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-DEP-001';
 
+CREATE TABLE #Ru18 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru18
 EXEC Parts.Item_Deprecate
     @Id        = @ItemId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru18;
+DROP TABLE #Ru18;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 

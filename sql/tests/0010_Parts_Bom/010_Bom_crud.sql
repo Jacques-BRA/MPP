@@ -37,45 +37,49 @@ DECLARE @S     BIT,
         @M     NVARCHAR(500),
         @NewId BIGINT;
 
+CREATE TABLE #Rc31 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc31
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BOM-PARENT-001',
     @ItemTypeId  = 4,
     @Description = N'Test BOM parent',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc31;
+DROP TABLE #Rc31;
 
+CREATE TABLE #Rc32 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc32
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BOM-CHILD-001',
     @ItemTypeId  = 2,
     @Description = N'Test BOM child 1',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc32;
+DROP TABLE #Rc32;
 
+CREATE TABLE #Rc33 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc33
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BOM-CHILD-002',
     @ItemTypeId  = 2,
     @Description = N'Test BOM child 2',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc33;
+DROP TABLE #Rc33;
 
+CREATE TABLE #Rc34 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc34
 EXEC Parts.Item_Create
     @PartNumber  = N'TEST-BOM-CHILD-003',
     @ItemTypeId  = 2,
     @Description = N'Test BOM child 3',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc34;
+DROP TABLE #Rc34;
 GO
 
 -- =============================================

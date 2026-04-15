@@ -28,16 +28,17 @@
 --   @WeightUomId BIGINT NULL      - Required if UnitWeight provided.
 --   @AppUserId BIGINT             - Required for audit.
 --
--- Parameters (output):
---   @Status BIT            - 1 on success, 0 on failure.
---   @Message NVARCHAR(500) - Human-readable status message.
+-- Result set:
+--   Single row with Status (BIT), Message (NVARCHAR).
+--   Status=1 on success, 0 on failure.
 --
 -- Dependencies:
 --   Tables: Parts.Item, Parts.Uom
 --   Procs:  Audit.Audit_LogConfigChange, Audit.Audit_LogFailure
 --
 -- Change Log:
---   2026-04-14 - 1.0 - Initial version
+--   2026-04-14 - 1.0 - Initial version (OUTPUT params)
+--   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.Item_Update
     @Id               BIGINT,
@@ -48,16 +49,14 @@ CREATE OR ALTER PROCEDURE Parts.Item_Update
     @UomId            BIGINT,
     @UnitWeight       DECIMAL(10,4)  = NULL,
     @WeightUomId      BIGINT         = NULL,
-    @AppUserId        BIGINT,
-    @Status           BIT            OUTPUT,
-    @Message          NVARCHAR(500)  OUTPUT
+    @AppUserId        BIGINT
 AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    SET @Status  = 0;
-    SET @Message = N'Unknown error';
+    DECLARE @Status  BIT           = 0;
+    DECLARE @Message NVARCHAR(500) = N'Unknown error';
 
     DECLARE @ProcName NVARCHAR(200) = N'Parts.Item_Update';
     DECLARE @Params   NVARCHAR(MAX) =
@@ -78,6 +77,7 @@ BEGIN
                 @EntityId = @Id, @LogEventTypeCode = N'Updated',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
             RETURN;
         END
 
@@ -90,6 +90,7 @@ BEGIN
                 @EntityId = @Id, @LogEventTypeCode = N'Updated',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
             RETURN;
         END
 
@@ -102,6 +103,7 @@ BEGIN
                 @EntityId = @Id, @LogEventTypeCode = N'Updated',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
             RETURN;
         END
 
@@ -114,6 +116,7 @@ BEGIN
                 @EntityId = @Id, @LogEventTypeCode = N'Updated',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
             RETURN;
         END
 
@@ -127,6 +130,7 @@ BEGIN
                 @EntityId = @Id, @LogEventTypeCode = N'Updated',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
             RETURN;
         END
 
@@ -165,6 +169,7 @@ BEGIN
 
         SET @Status  = 1;
         SET @Message = N'Item updated successfully.';
+        SELECT @Status AS Status, @Message AS Message;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
@@ -187,6 +192,7 @@ BEGIN
         BEGIN CATCH
         END CATCH
 
+        SELECT @Status AS Status, @Message AS Message;
         RAISERROR(@ErrMsg, @ErrSev, @ErrState);
     END CATCH
 END;

@@ -31,15 +31,16 @@ DECLARE @S     BIT,
         @M     NVARCHAR(500),
         @NewId BIGINT;
 
+CREATE TABLE #Rc22 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc22
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,
     @PartNumber  = N'TEST-IL-ITEM-001',
     @Description = N'Eligibility test item',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc22;
+DROP TABLE #Rc22;
 GO
 
 -- =============================================
@@ -53,13 +54,14 @@ DECLARE @S      BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
 
+CREATE TABLE #Rc23 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc23
 EXEC Parts.ItemLocation_Add
     @ItemId     = @ItemId,
     @LocationId = 9,                  -- DC-401
-    @AppUserId  = 1,
-    @Status     = @S OUTPUT,
-    @Message    = @M OUTPUT,
-    @NewId      = @IlId OUTPUT;
+    @AppUserId  = 1;
+SELECT @S = Status, @M = Message, @IlId = NewId FROM #Rc23;
+DROP TABLE #Rc23;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -98,13 +100,14 @@ SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
 SELECT @PriorId = Id FROM Parts.ItemLocation
 WHERE ItemId = @ItemId AND LocationId = 9 AND DeprecatedAt IS NULL;
 
+CREATE TABLE #Rc24 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc24
 EXEC Parts.ItemLocation_Add
     @ItemId     = @ItemId,
     @LocationId = 9,
-    @AppUserId  = 1,
-    @Status     = @S OUTPUT,
-    @Message    = @M OUTPUT,
-    @NewId      = @NewId OUTPUT;
+    @AppUserId  = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc24;
+DROP TABLE #Rc24;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -139,13 +142,14 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @NewId BIGINT;
 
+CREATE TABLE #Rc25 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc25
 EXEC Parts.ItemLocation_Add
     @ItemId     = 999999,
     @LocationId = 9,
-    @AppUserId  = 1,
-    @Status     = @S OUTPUT,
-    @Message    = @M OUTPUT,
-    @NewId      = @NewId OUTPUT;
+    @AppUserId  = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc25;
+DROP TABLE #Rc25;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -170,13 +174,14 @@ DECLARE @S      BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
 
+CREATE TABLE #Rc26 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc26
 EXEC Parts.ItemLocation_Add
     @ItemId     = @ItemId,
     @LocationId = 999999,
-    @AppUserId  = 1,
-    @Status     = @S OUTPUT,
-    @Message    = @M OUTPUT,
-    @NewId      = @NewId OUTPUT;
+    @AppUserId  = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc26;
+DROP TABLE #Rc26;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -227,13 +232,14 @@ DECLARE @S      BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
 
+CREATE TABLE #Rc27 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc27
 EXEC Parts.ItemLocation_Add
     @ItemId     = @ItemId,
     @LocationId = 10,                 -- DC-402
-    @AppUserId  = 1,
-    @Status     = @S OUTPUT,
-    @Message    = @M OUTPUT,
-    @NewId      = @IlId OUTPUT;
+    @AppUserId  = 1;
+SELECT @S = Status, @M = Message, @IlId = NewId FROM #Rc27;
+DROP TABLE #Rc27;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -306,12 +312,14 @@ DECLARE @S      BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
 
+CREATE TABLE #Ru29 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru29
 EXEC Parts.ItemLocation_Remove
     @ItemId     = @ItemId,
     @LocationId = 9,
-    @AppUserId  = 1,
-    @Status     = @S OUTPUT,
-    @Message    = @M OUTPUT;
+    @AppUserId  = 1;
+SELECT @S = Status, @M = Message FROM #Ru29;
+DROP TABLE #Ru29;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -350,12 +358,14 @@ DECLARE @S      BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
 
+CREATE TABLE #Ru30 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru30
 EXEC Parts.ItemLocation_Remove
     @ItemId     = @ItemId,
     @LocationId = 9,
-    @AppUserId  = 1,
-    @Status     = @S OUTPUT,
-    @Message    = @M OUTPUT;
+    @AppUserId  = 1;
+SELECT @S = Status, @M = Message FROM #Ru30;
+DROP TABLE #Ru30;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -382,13 +392,14 @@ SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
 SELECT @PriorId = Id FROM Parts.ItemLocation
 WHERE ItemId = @ItemId AND LocationId = 9;
 
+CREATE TABLE #Rc28 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc28
 EXEC Parts.ItemLocation_Add
     @ItemId     = @ItemId,
     @LocationId = 9,
-    @AppUserId  = 1,
-    @Status     = @S OUTPUT,
-    @Message    = @M OUTPUT,
-    @NewId      = @NewId OUTPUT;
+    @AppUserId  = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc28;
+DROP TABLE #Rc28;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual

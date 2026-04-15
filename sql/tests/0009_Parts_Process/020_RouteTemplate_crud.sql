@@ -43,15 +43,16 @@ DECLARE @S     BIT,
         @M     NVARCHAR(500),
         @NewId BIGINT;
 
+CREATE TABLE #Rc21 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc21
 EXEC Parts.Item_Create
     @ItemTypeId  = 4,
     @PartNumber  = N'TEST-RT-ITEM-001',
     @Description = N'Route-owning test item',
     @UomId       = 1,
-    @AppUserId   = 1,
-    @Status      = @S OUTPUT,
-    @Message     = @M OUTPUT,
-    @NewId       = @NewId OUTPUT;
+    @AppUserId   = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rc21;
+DROP TABLE #Rc21;
 
 EXEC Parts.OperationTemplate_Create
     @Code           = N'TEST-RT-OT-1',
