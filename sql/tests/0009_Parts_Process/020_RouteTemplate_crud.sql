@@ -96,13 +96,14 @@ DECLARE @S      BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-RT-ITEM-001';
 
+CREATE TABLE #Rc3 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc3
 EXEC Parts.RouteTemplate_Create
     @ItemId    = @ItemId,
     @Name      = N'TEST-RT-001',
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT,
-    @NewId     = @RtId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @RtId = NewId FROM #Rc3;
+DROP TABLE #Rc3;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -135,13 +136,14 @@ DECLARE @S      BIT,
 
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-RT-ITEM-001';
 
+CREATE TABLE #Rc4 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc4
 EXEC Parts.RouteTemplate_Create
     @ItemId    = @ItemId,
     @Name      = N'TEST-RT-DUP',
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT,
-    @NewId     = @RtId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @RtId = NewId FROM #Rc4;
+DROP TABLE #Rc4;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -166,13 +168,14 @@ DECLARE @S     BIT,
         @SStr  NVARCHAR(1),
         @RtId  BIGINT;
 
+CREATE TABLE #Rc5 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc5
 EXEC Parts.RouteTemplate_Create
     @ItemId    = 999999,
     @Name      = N'TEST-RT-BADITEM',
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT,
-    @NewId     = @RtId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @RtId = NewId FROM #Rc5;
+DROP TABLE #Rc5;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -275,13 +278,14 @@ SELECT @Ot1  = Id FROM Parts.OperationTemplate WHERE Code = N'TEST-RT-OT-1';
 SELECT @Ot2  = Id FROM Parts.OperationTemplate WHERE Code = N'TEST-RT-OT-2';
 SELECT @Ot3  = Id FROM Parts.OperationTemplate WHERE Code = N'TEST-RT-OT-3';
 
+CREATE TABLE #Rc6 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc6
 EXEC Parts.RouteStep_Add
     @RouteTemplateId     = @RtId,
     @OperationTemplateId = @Ot1,
-    @AppUserId           = 1,
-    @Status              = @S OUTPUT,
-    @Message             = @M OUTPUT,
-    @NewId               = @Step1 OUTPUT;
+    @AppUserId           = 1;
+SELECT @S = Status, @M = Message, @Step1 = NewId FROM #Rc6;
+DROP TABLE #Rc6;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -289,13 +293,14 @@ EXEC test.Assert_IsEqual
     @Expected = N'1',
     @Actual   = @SStr;
 
+CREATE TABLE #Rc7 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc7
 EXEC Parts.RouteStep_Add
     @RouteTemplateId     = @RtId,
     @OperationTemplateId = @Ot2,
-    @AppUserId           = 1,
-    @Status              = @S OUTPUT,
-    @Message             = @M OUTPUT,
-    @NewId               = @Step2 OUTPUT;
+    @AppUserId           = 1;
+SELECT @S = Status, @M = Message, @Step2 = NewId FROM #Rc7;
+DROP TABLE #Rc7;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -303,13 +308,14 @@ EXEC test.Assert_IsEqual
     @Expected = N'1',
     @Actual   = @SStr;
 
+CREATE TABLE #Rc8 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc8
 EXEC Parts.RouteStep_Add
     @RouteTemplateId     = @RtId,
     @OperationTemplateId = @Ot3,
-    @AppUserId           = 1,
-    @Status              = @S OUTPUT,
-    @Message             = @M OUTPUT,
-    @NewId               = @Step3 OUTPUT;
+    @AppUserId           = 1;
+SELECT @S = Status, @M = Message, @Step3 = NewId FROM #Rc8;
+DROP TABLE #Rc8;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -393,12 +399,14 @@ SELECT @Ot3  = Id FROM Parts.OperationTemplate WHERE Code = N'TEST-RT-OT-3';
 SELECT @Step2 = Id FROM Parts.RouteStep
 WHERE RouteTemplateId = @RtId AND SequenceNumber = 2;
 
+CREATE TABLE #Ru12 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru12
 EXEC Parts.RouteStep_Update
     @Id                  = @Step2,
     @OperationTemplateId = @Ot3,
-    @AppUserId           = 1,
-    @Status              = @S OUTPUT,
-    @Message             = @M OUTPUT;
+    @AppUserId           = 1;
+SELECT @S = Status, @M = Message FROM #Ru12;
+DROP TABLE #Ru12;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -417,12 +425,14 @@ EXEC test.Assert_IsEqual
     @Actual   = @StoredOtStr;
 
 -- Now restore step2 to OT2 so subsequent tests are predictable
+CREATE TABLE #Ru13 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru13
 EXEC Parts.RouteStep_Update
     @Id                  = @Step2,
     @OperationTemplateId = @Ot2,
-    @AppUserId           = 1,
-    @Status              = @S OUTPUT,
-    @Message             = @M OUTPUT;
+    @AppUserId           = 1;
+SELECT @S = Status, @M = Message FROM #Ru13;
+DROP TABLE #Ru13;
 GO
 
 -- =============================================
@@ -435,12 +445,14 @@ DECLARE @S    BIT,
 
 SELECT @Ot1 = Id FROM Parts.OperationTemplate WHERE Code = N'TEST-RT-OT-1';
 
+CREATE TABLE #Ru14 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru14
 EXEC Parts.RouteStep_Update
     @Id                  = NULL,
     @OperationTemplateId = @Ot1,
-    @AppUserId           = 1,
-    @Status              = @S OUTPUT,
-    @Message             = @M OUTPUT;
+    @AppUserId           = 1;
+SELECT @S = Status, @M = Message FROM #Ru14;
+DROP TABLE #Ru14;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -463,11 +475,13 @@ SELECT @RtId = Id FROM Parts.RouteTemplate WHERE Name = N'TEST-RT-001';
 SELECT @Step3 = Id FROM Parts.RouteStep WHERE RouteTemplateId = @RtId AND SequenceNumber = 3;
 SELECT @Step2 = Id FROM Parts.RouteStep WHERE RouteTemplateId = @RtId AND SequenceNumber = 2;
 
+CREATE TABLE #Ru15 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru15
 EXEC Parts.RouteStep_MoveUp
     @Id        = @Step3,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru15;
+DROP TABLE #Ru15;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -505,11 +519,13 @@ DECLARE @S     BIT,
 SELECT @RtId  = Id FROM Parts.RouteTemplate WHERE Name = N'TEST-RT-001';
 SELECT @Step1 = Id FROM Parts.RouteStep WHERE RouteTemplateId = @RtId AND SequenceNumber = 1;
 
+CREATE TABLE #Ru16 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru16
 EXEC Parts.RouteStep_MoveUp
     @Id        = @Step1,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru16;
+DROP TABLE #Ru16;
 
 -- Accept either status=1 (no-op returns success) or status=0 (no-op
 -- treated as rejection). Either way, SequenceNumber must remain 1.
@@ -535,11 +551,13 @@ DECLARE @S     BIT,
 SELECT @RtId  = Id FROM Parts.RouteTemplate WHERE Name = N'TEST-RT-001';
 SELECT @Step1 = Id FROM Parts.RouteStep WHERE RouteTemplateId = @RtId AND SequenceNumber = 1;
 
+CREATE TABLE #Ru17 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru17
 EXEC Parts.RouteStep_MoveDown
     @Id        = @Step1,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru17;
+DROP TABLE #Ru17;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -570,11 +588,13 @@ SELECT @RtId   = Id FROM Parts.RouteTemplate WHERE Name = N'TEST-RT-001';
 SELECT @RmStep = Id FROM Parts.RouteStep
 WHERE RouteTemplateId = @RtId AND SequenceNumber = 1;
 
+CREATE TABLE #Ru18 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru18
 EXEC Parts.RouteStep_Remove
     @Id        = @RmStep,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru18;
+DROP TABLE #Ru18;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -635,12 +655,13 @@ SELECT @V1Id   = Id FROM Parts.RouteTemplate WHERE Name = N'TEST-RT-001';
 
 SELECT @V1Steps = COUNT(*) FROM Parts.RouteStep WHERE RouteTemplateId = @V1Id;
 
+CREATE TABLE #Rc9 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc9
 EXEC Parts.RouteTemplate_CreateNewVersion
     @ParentRouteTemplateId = @V1Id,
-    @AppUserId             = 1,
-    @Status                = @S OUTPUT,
-    @Message               = @M OUTPUT,
-    @NewId                 = @V2Id OUTPUT;
+    @AppUserId             = 1;
+SELECT @S = Status, @M = Message, @V2Id = NewId FROM #Rc9;
+DROP TABLE #Rc9;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -687,11 +708,13 @@ DECLARE @S       BIT,
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-RT-ITEM-001';
 SELECT @V2Id = Id FROM Parts.RouteTemplate WHERE ItemId = @ItemId AND VersionNumber = 2;
 
+CREATE TABLE #Ru19 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru19
 EXEC Parts.RouteTemplate_Publish
     @Id        = @V2Id,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru19;
+DROP TABLE #Ru19;
 
 -- Invoke read proc (no assertion on its result — validated by direct query below)
 CREATE TABLE #RtActiveV2 (
@@ -740,11 +763,13 @@ DECLARE @V1PublishId BIGINT;
 SELECT @V1PublishId = Id FROM Parts.RouteTemplate
 WHERE ItemId = @ItemId AND VersionNumber = 1;
 
+CREATE TABLE #Ru20 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru20
 EXEC Parts.RouteTemplate_Publish
     @Id        = @V1PublishId,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru20;
+DROP TABLE #Ru20;
 
 UPDATE Parts.RouteTemplate
 SET EffectiveFrom = DATEADD(HOUR, -2, SYSUTCDATETIME()),
@@ -797,11 +822,13 @@ DECLARE @S    BIT,
 -- Name is not unique across versions (CreateNewVersion copies it); scope to v1
 SELECT @V1Id = Id FROM Parts.RouteTemplate WHERE Name = N'TEST-RT-001' AND VersionNumber = 1;
 
+CREATE TABLE #Ru21 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru21
 EXEC Parts.RouteTemplate_Deprecate
     @Id        = @V1Id,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru21;
+DROP TABLE #Ru21;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -833,11 +860,13 @@ SELECT TOP 1 @AnyStep = Id FROM Parts.RouteStep
 WHERE RouteTemplateId = @V1Id
 ORDER BY SequenceNumber DESC;    -- pick a non-first step
 
+CREATE TABLE #Ru22 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru22
 EXEC Parts.RouteStep_MoveUp
     @Id        = @AnyStep,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru22;
+DROP TABLE #Ru22;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -867,11 +896,13 @@ DECLARE @S       BIT,
 SELECT @V1Id = Id FROM Parts.RouteTemplate WHERE Name = N'TEST-RT-001' AND VersionNumber = 1;
 SELECT TOP 1 @AnyStep = Id FROM Parts.RouteStep WHERE RouteTemplateId = @V1Id;
 
+CREATE TABLE #Ru23 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru23
 EXEC Parts.RouteStep_Remove
     @Id        = @AnyStep,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru23;
+DROP TABLE #Ru23;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -902,12 +933,13 @@ DECLARE @S      BIT,
 SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-RT-ITEM-001';
 SELECT @V2Id = Id FROM Parts.RouteTemplate WHERE ItemId = @ItemId AND VersionNumber = 2;
 
+CREATE TABLE #Rc10 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc10
 EXEC Parts.RouteTemplate_CreateNewVersion
     @ParentRouteTemplateId = @V2Id,
-    @AppUserId             = 1,
-    @Status                = @S OUTPUT,
-    @Message               = @M OUTPUT,
-    @NewId                 = @V3Id OUTPUT;
+    @AppUserId             = 1;
+SELECT @S = Status, @M = Message, @V3Id = NewId FROM #Rc10;
+DROP TABLE #Rc10;
 
 -- =============================================
 -- Test 22 (retrofit): RtDraftInvisible - a new Draft is NOT returned by
@@ -946,13 +978,14 @@ DECLARE @OtAny BIGINT;
 SELECT @OtAny = Id FROM Parts.OperationTemplate WHERE Code = N'TEST-RT-OT-1';
 
 DECLARE @NewStepId BIGINT;
+CREATE TABLE #Rc11 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc11
 EXEC Parts.RouteStep_Add
     @RouteTemplateId     = @V2Id,
     @OperationTemplateId = @OtAny,
-    @AppUserId           = 1,
-    @Status              = @S OUTPUT,
-    @Message             = @M OUTPUT,
-    @NewId               = @NewStepId OUTPUT;
+    @AppUserId           = 1;
+SELECT @S = Status, @M = Message, @NewStepId = NewId FROM #Rc11;
+DROP TABLE #Rc11;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -970,11 +1003,13 @@ EXEC test.Assert_IsEqual
 -- =============================================
 -- Test 24 (retrofit): RtPublish happy path - publish v3
 -- =============================================
+CREATE TABLE #Ru24 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru24
 EXEC Parts.RouteTemplate_Publish
     @Id        = @V3Id,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru24;
+DROP TABLE #Ru24;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual
@@ -985,11 +1020,13 @@ EXEC test.Assert_IsEqual
 -- =============================================
 -- Test 25 (retrofit): RtPublishTwice - publishing v3 again is rejected
 -- =============================================
+CREATE TABLE #Ru25 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ru25
 EXEC Parts.RouteTemplate_Publish
     @Id        = @V3Id,
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ru25;
+DROP TABLE #Ru25;
 
 SET @SStr = CAST(@S AS NVARCHAR(1));
 EXEC test.Assert_IsEqual

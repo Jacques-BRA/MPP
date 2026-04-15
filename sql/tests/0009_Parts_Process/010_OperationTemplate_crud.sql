@@ -696,23 +696,25 @@ SELECT @S = Status, @M = Message, @ItemId = NewId FROM #Rc20;
 DROP TABLE #Rc20;
 
 -- RouteTemplate
+CREATE TABLE #Rc1 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc1
 EXEC Parts.RouteTemplate_Create
     @ItemId    = @ItemId,
     @Name      = N'TEST-RT-OT-DEP',
-    @AppUserId = 1,
-    @Status    = @S OUTPUT,
-    @Message   = @M OUTPUT,
-    @NewId     = @RtId OUTPUT;
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @RtId = NewId FROM #Rc1;
+DROP TABLE #Rc1;
 
 -- RouteStep pointing at the OT
+CREATE TABLE #Rc2 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rc2
 EXEC Parts.RouteStep_Add
     @RouteTemplateId     = @RtId,
     @OperationTemplateId = @OtId,
     @IsRequired          = 1,
-    @AppUserId           = 1,
-    @Status              = @S OUTPUT,
-    @Message             = @M OUTPUT,
-    @NewId               = @StepId OUTPUT;
+    @AppUserId           = 1;
+SELECT @S = Status, @M = Message, @StepId = NewId FROM #Rc2;
+DROP TABLE #Rc2;
 
 -- Attempt to deprecate the OT — must fail
 CREATE TABLE #Ru24 (Status BIT, Message NVARCHAR(500));

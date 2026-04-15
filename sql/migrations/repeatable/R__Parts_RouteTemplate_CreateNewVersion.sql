@@ -2,7 +2,7 @@
 -- Procedure:   Parts.RouteTemplate_CreateNewVersion
 -- Author:      Blue Ridge Automation
 -- Created:     2026-04-14
--- Version:     1.0
+-- Version:     2.0
 --
 -- Description:
 --   Clone-to-modify: creates a new RouteTemplate row for the same Item as
@@ -21,33 +21,26 @@
 --                                    NULL → uses SYSUTCDATETIME().
 --   @AppUserId BIGINT             - Required for audit.
 --
--- Parameters (output):
---   @Status BIT            - 1 on success, 0 on failure.
---   @Message NVARCHAR(500) - Human-readable status message.
---   @NewId BIGINT          - New RouteTemplate.Id on success.
---
--- Dependencies:
---   Tables: Parts.RouteTemplate, Parts.RouteStep
---   Procs:  Audit.Audit_LogConfigChange, Audit.Audit_LogFailure
+-- Result set:
+--   Single row with Status (BIT), Message (NVARCHAR), NewId (BIGINT).
+--   Status=1 on success, 0 on failure. NewId is NULL on failure.
 --
 -- Change Log:
---   2026-04-14 - 1.0 - Initial version
+--   2026-04-14 - 1.0 - Initial version (OUTPUT params)
+--   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.RouteTemplate_CreateNewVersion
     @ParentRouteTemplateId BIGINT,
     @EffectiveFrom         DATETIME2     = NULL,
-    @AppUserId             BIGINT,
-    @Status                BIT            OUTPUT,
-    @Message               NVARCHAR(500)  OUTPUT,
-    @NewId                 BIGINT         = NULL OUTPUT
+    @AppUserId             BIGINT
 AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    SET @Status  = 0;
-    SET @Message = N'Unknown error';
-    SET @NewId   = NULL;
+    DECLARE @Status  BIT           = 0;
+    DECLARE @Message NVARCHAR(500) = N'Unknown error';
+    DECLARE @NewId   BIGINT        = NULL;
 
     DECLARE @ProcName NVARCHAR(200) = N'Parts.RouteTemplate_CreateNewVersion';
     DECLARE @Params   NVARCHAR(MAX) =
@@ -64,6 +57,7 @@ BEGIN
                 @EntityId = @ParentRouteTemplateId, @LogEventTypeCode = N'Created',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
             RETURN;
         END
 
@@ -76,6 +70,7 @@ BEGIN
                 @EntityId = @ParentRouteTemplateId, @LogEventTypeCode = N'Created',
                 @FailureReason = @Message, @ProcedureName = @ProcName,
                 @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
             RETURN;
         END
 
@@ -129,6 +124,7 @@ BEGIN
         SET @Status  = 1;
         SET @Message = N'New RouteTemplate version created (' +
                        CAST(@StepCount AS NVARCHAR(10)) + N' step(s) copied).';
+    SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
@@ -151,6 +147,8 @@ BEGIN
         END TRY
         BEGIN CATCH
         END CATCH
+
+        SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
 
         RAISERROR(@ErrMsg, @ErrSev, @ErrState);
     END CATCH
