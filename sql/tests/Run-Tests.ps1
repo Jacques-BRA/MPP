@@ -167,7 +167,7 @@ if ($tableExists -ne "1") {
     if ($anyFailed) { exit 1 } else { exit 0 }
 }
 
-$summaryQuery = "SELECT COUNT(*) AS Total, SUM(CASE WHEN Passed = 1 THEN 1 ELSE 0 END) AS Passed, SUM(CASE WHEN Passed = 0 THEN 1 ELSE 0 END) AS Failed FROM test.TestResults;"
+$summaryQuery = "SELECT COUNT(*) AS Total, ISNULL(SUM(CASE WHEN Passed = 1 THEN 1 ELSE 0 END), 0) AS Passed, ISNULL(SUM(CASE WHEN Passed = 0 THEN 1 ELSE 0 END), 0) AS Failed FROM test.TestResults;"
 $summaryResult = Invoke-SqlQuery -Query $summaryQuery
 
 $dataRow = $summaryResult | Where-Object { $_ -match '^\s*\d+' } | Select-Object -First 1

@@ -1,0 +1,457 @@
+-- =============================================
+-- File:         0009_Parts_Process/030_ItemLocation_crud.sql
+-- Author:       Blue Ridge Automation
+-- Created:      2026-04-14
+-- Description:
+--   Tests for Parts.ItemLocation eligibility junction procs:
+--     Parts.ItemLocation_ListByItem
+--     Parts.ItemLocation_ListByLocation
+--     Parts.ItemLocation_Add
+--     Parts.ItemLocation_Remove
+--
+--   Covers: add happy path, idempotent re-add (same pair), invalid
+--   ItemId/LocationId, list by item and location, remove happy +
+--   remove-twice rejection, reactivation of a deprecated pairing
+--   (Add returns the SAME Id), and ConfigLog audit trail.
+--
+--   Pre-conditions:
+--     - Migration 0001-0006 applied
+--     - AppUser Id=1 exists
+--     - Seed Cells present: DC-401 Id=9, DC-402 Id=10, DC-501 Id=11
+--     - ItemLocation procs deployed
+-- =============================================
+
+EXEC test.BeginTestFile @FileName = N'0009_Parts_Process/030_ItemLocation_crud.sql';
+GO
+
+-- =============================================
+-- Setup: create a test Item
+-- =============================================
+DECLARE @S     BIT,
+        @M     NVARCHAR(500),
+        @NewId BIGINT;
+
+EXEC Parts.Item_Create
+    @ItemTypeId  = 4,
+    @PartNumber  = N'TEST-IL-ITEM-001',
+    @Description = N'Eligibility test item',
+    @UomId       = 1,
+    @AppUserId   = 1,
+    @Status      = @S OUTPUT,
+    @Message     = @M OUTPUT,
+    @NewId       = @NewId OUTPUT;
+GO
+
+-- =============================================
+-- Test 1: ItemLocation_Add happy path
+-- =============================================
+DECLARE @S      BIT,
+        @M      NVARCHAR(500),
+        @SStr   NVARCHAR(1),
+        @ItemId BIGINT,
+        @IlId   BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+EXEC Parts.ItemLocation_Add
+    @ItemId     = @ItemId,
+    @LocationId = 9,                  -- DC-401
+    @AppUserId  = 1,
+    @Status     = @S OUTPUT,
+    @Message    = @M OUTPUT,
+    @NewId      = @IlId OUTPUT;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[AddHappy] Status is 1',
+    @Expected = N'1',
+    @Actual   = @SStr;
+
+DECLARE @IlIdStr NVARCHAR(20) = CAST(@IlId AS NVARCHAR(20));
+EXEC test.Assert_IsNotNull
+    @TestName = N'[AddHappy] NewId is not NULL',
+    @Value    = @IlIdStr;
+
+-- Exactly one active row for (Item, DC-401)
+DECLARE @RowCount INT = (
+    SELECT COUNT(*) FROM Parts.ItemLocation
+    WHERE ItemId = @ItemId AND LocationId = 9 AND DeprecatedAt IS NULL
+);
+EXEC test.Assert_RowCount
+    @TestName      = N'[AddHappy] One active (Item, DC-401) row',
+    @ExpectedCount = 1,
+    @ActualCount   = @RowCount;
+GO
+
+-- =============================================
+-- Test 2: ItemLocation_Add same pair again - idempotent
+--   Should return Status=1 and the SAME NewId as before (already active).
+-- =============================================
+DECLARE @S      BIT,
+        @M      NVARCHAR(500),
+        @SStr   NVARCHAR(1),
+        @ItemId BIGINT,
+        @PriorId BIGINT,
+        @NewId  BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+SELECT @PriorId = Id FROM Parts.ItemLocation
+WHERE ItemId = @ItemId AND LocationId = 9 AND DeprecatedAt IS NULL;
+
+EXEC Parts.ItemLocation_Add
+    @ItemId     = @ItemId,
+    @LocationId = 9,
+    @AppUserId  = 1,
+    @Status     = @S OUTPUT,
+    @Message    = @M OUTPUT,
+    @NewId      = @NewId OUTPUT;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[AddSamePair] Status is 1',
+    @Expected = N'1',
+    @Actual   = @SStr;
+
+-- NewId should match the prior Id (idempotent)
+DECLARE @PriorIdStr NVARCHAR(20) = CAST(@PriorId AS NVARCHAR(20));
+DECLARE @NewIdStr   NVARCHAR(20) = CAST(@NewId   AS NVARCHAR(20));
+EXEC test.Assert_IsEqual
+    @TestName = N'[AddSamePair] NewId matches prior Id (idempotent)',
+    @Expected = @PriorIdStr,
+    @Actual   = @NewIdStr;
+
+-- Still exactly one row total
+DECLARE @TotalRows INT = (
+    SELECT COUNT(*) FROM Parts.ItemLocation
+    WHERE ItemId = @ItemId AND LocationId = 9
+);
+EXEC test.Assert_RowCount
+    @TestName      = N'[AddSamePair] Still exactly 1 (Item, DC-401) row total',
+    @ExpectedCount = 1,
+    @ActualCount   = @TotalRows;
+GO
+
+-- =============================================
+-- Test 3: ItemLocation_Add invalid ItemId
+-- =============================================
+DECLARE @S     BIT,
+        @M     NVARCHAR(500),
+        @SStr  NVARCHAR(1),
+        @NewId BIGINT;
+
+EXEC Parts.ItemLocation_Add
+    @ItemId     = 999999,
+    @LocationId = 9,
+    @AppUserId  = 1,
+    @Status     = @S OUTPUT,
+    @Message    = @M OUTPUT,
+    @NewId      = @NewId OUTPUT;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[AddBadItem] Status is 0',
+    @Expected = N'0',
+    @Actual   = @SStr;
+
+DECLARE @NewIdStr NVARCHAR(20) = CAST(@NewId AS NVARCHAR(20));
+EXEC test.Assert_IsNull
+    @TestName = N'[AddBadItem] NewId is NULL',
+    @Value    = @NewIdStr;
+GO
+
+-- =============================================
+-- Test 4: ItemLocation_Add invalid LocationId
+-- =============================================
+DECLARE @S      BIT,
+        @M      NVARCHAR(500),
+        @SStr   NVARCHAR(1),
+        @ItemId BIGINT,
+        @NewId  BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+EXEC Parts.ItemLocation_Add
+    @ItemId     = @ItemId,
+    @LocationId = 999999,
+    @AppUserId  = 1,
+    @Status     = @S OUTPUT,
+    @Message    = @M OUTPUT,
+    @NewId      = @NewId OUTPUT;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[AddBadLoc] Status is 0',
+    @Expected = N'0',
+    @Actual   = @SStr;
+GO
+
+-- =============================================
+-- Test 5: ItemLocation_ListByItem - 1 row (DC-401 only so far)
+-- =============================================
+DECLARE @S      BIT,
+        @M      NVARCHAR(500),
+        @SStr   NVARCHAR(1),
+        @ItemId BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+CREATE TABLE #IlByItem1 (
+    Id BIGINT, ItemId BIGINT, LocationId BIGINT,
+    LocationName NVARCHAR(200), LocationCode NVARCHAR(50),
+    DefinitionName NVARCHAR(200),
+    CreatedAt DATETIME2(3), DeprecatedAt DATETIME2(3)
+);
+INSERT INTO #IlByItem1 EXEC Parts.ItemLocation_ListByItem @ItemId = @ItemId;
+DECLARE @ActiveCount INT = (SELECT COUNT(*) FROM #IlByItem1);
+DECLARE @LocName NVARCHAR(200) = (SELECT TOP 1 LocationName FROM #IlByItem1);
+DROP TABLE #IlByItem1;
+
+EXEC test.Assert_RowCount
+    @TestName      = N'[ListByItem1] 1 row returned by proc',
+    @ExpectedCount = 1,
+    @ActualCount   = @ActiveCount;
+
+EXEC test.Assert_IsNotNull
+    @TestName = N'[ListByItem1] LocationName populated in proc result',
+    @Value    = @LocName;
+GO
+
+-- =============================================
+-- Test 6: ItemLocation_Add second pair (same Item, DC-402)
+-- =============================================
+DECLARE @S      BIT,
+        @M      NVARCHAR(500),
+        @SStr   NVARCHAR(1),
+        @ItemId BIGINT,
+        @IlId   BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+EXEC Parts.ItemLocation_Add
+    @ItemId     = @ItemId,
+    @LocationId = 10,                 -- DC-402
+    @AppUserId  = 1,
+    @Status     = @S OUTPUT,
+    @Message    = @M OUTPUT,
+    @NewId      = @IlId OUTPUT;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[AddSecond] Status is 1',
+    @Expected = N'1',
+    @Actual   = @SStr;
+GO
+
+-- =============================================
+-- Test 7: ItemLocation_ListByItem - now returns 2 rows
+-- =============================================
+DECLARE @S      BIT,
+        @M      NVARCHAR(500),
+        @SStr   NVARCHAR(1),
+        @ItemId BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+CREATE TABLE #IlByItem2 (
+    Id BIGINT, ItemId BIGINT, LocationId BIGINT,
+    LocationName NVARCHAR(200), LocationCode NVARCHAR(50),
+    DefinitionName NVARCHAR(200),
+    CreatedAt DATETIME2(3), DeprecatedAt DATETIME2(3)
+);
+INSERT INTO #IlByItem2 EXEC Parts.ItemLocation_ListByItem @ItemId = @ItemId;
+DECLARE @ActiveCount INT = (SELECT COUNT(*) FROM #IlByItem2);
+DROP TABLE #IlByItem2;
+
+EXEC test.Assert_RowCount
+    @TestName      = N'[ListByItem2] 2 rows returned by proc',
+    @ExpectedCount = 2,
+    @ActualCount   = @ActiveCount;
+GO
+
+-- =============================================
+-- Test 8: ItemLocation_ListByLocation for DC-401 returns 1 row
+-- =============================================
+DECLARE @S     BIT,
+        @M     NVARCHAR(500),
+        @SStr  NVARCHAR(1),
+        @ItemId BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+CREATE TABLE #IlByLoc (
+    Id BIGINT, ItemId BIGINT, LocationId BIGINT,
+    PartNumber NVARCHAR(50), Description NVARCHAR(500),
+    ItemTypeName NVARCHAR(200),
+    CreatedAt DATETIME2(3), DeprecatedAt DATETIME2(3)
+);
+INSERT INTO #IlByLoc EXEC Parts.ItemLocation_ListByLocation @LocationId = 9;
+DECLARE @TestItemAtLoc INT = (
+    SELECT COUNT(*) FROM #IlByLoc WHERE PartNumber = N'TEST-IL-ITEM-001'
+);
+DROP TABLE #IlByLoc;
+
+EXEC test.Assert_RowCount
+    @TestName      = N'[ListByLoc] Test item present at DC-401 (via proc)',
+    @ExpectedCount = 1,
+    @ActualCount   = @TestItemAtLoc;
+GO
+
+-- =============================================
+-- Test 9: ItemLocation_Remove happy path (DC-401 pair)
+-- =============================================
+DECLARE @S      BIT,
+        @M      NVARCHAR(500),
+        @SStr   NVARCHAR(1),
+        @ItemId BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+EXEC Parts.ItemLocation_Remove
+    @ItemId     = @ItemId,
+    @LocationId = 9,
+    @AppUserId  = 1,
+    @Status     = @S OUTPUT,
+    @Message    = @M OUTPUT;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[RemoveHappy] Status is 1',
+    @Expected = N'1',
+    @Actual   = @SStr;
+
+-- Row is now deprecated (soft-delete)
+DECLARE @DepCount INT = (
+    SELECT COUNT(*) FROM Parts.ItemLocation
+    WHERE ItemId = @ItemId AND LocationId = 9 AND DeprecatedAt IS NOT NULL
+);
+EXEC test.Assert_RowCount
+    @TestName      = N'[RemoveHappy] Row deprecated',
+    @ExpectedCount = 1,
+    @ActualCount   = @DepCount;
+
+-- No active row for (Item, DC-401) remains
+DECLARE @ActiveAfter INT = (
+    SELECT COUNT(*) FROM Parts.ItemLocation
+    WHERE ItemId = @ItemId AND LocationId = 9 AND DeprecatedAt IS NULL
+);
+EXEC test.Assert_RowCount
+    @TestName      = N'[RemoveHappy] No active row remains',
+    @ExpectedCount = 0,
+    @ActualCount   = @ActiveAfter;
+GO
+
+-- =============================================
+-- Test 10: ItemLocation_Remove same pair again rejected
+-- =============================================
+DECLARE @S      BIT,
+        @M      NVARCHAR(500),
+        @SStr   NVARCHAR(1),
+        @ItemId BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+EXEC Parts.ItemLocation_Remove
+    @ItemId     = @ItemId,
+    @LocationId = 9,
+    @AppUserId  = 1,
+    @Status     = @S OUTPUT,
+    @Message    = @M OUTPUT;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[RemoveTwice] Status is 0 (no active row)',
+    @Expected = N'0',
+    @Actual   = @SStr;
+GO
+
+-- =============================================
+-- Test 11: ItemLocation_Add for previously-deprecated pair - reactivation
+--   Same Id must be returned, and exactly 1 row (ItemId, LocationId)
+--   should exist with DeprecatedAt IS NULL.
+-- =============================================
+DECLARE @S       BIT,
+        @M       NVARCHAR(500),
+        @SStr    NVARCHAR(1),
+        @ItemId  BIGINT,
+        @PriorId BIGINT,
+        @NewId   BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-IL-ITEM-001';
+
+-- Capture the deprecated row's Id
+SELECT @PriorId = Id FROM Parts.ItemLocation
+WHERE ItemId = @ItemId AND LocationId = 9;
+
+EXEC Parts.ItemLocation_Add
+    @ItemId     = @ItemId,
+    @LocationId = 9,
+    @AppUserId  = 1,
+    @Status     = @S OUTPUT,
+    @Message    = @M OUTPUT,
+    @NewId      = @NewId OUTPUT;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[Reactivate] Status is 1',
+    @Expected = N'1',
+    @Actual   = @SStr;
+
+-- Same Id returned
+DECLARE @PriorIdStr NVARCHAR(20) = CAST(@PriorId AS NVARCHAR(20));
+DECLARE @NewIdStr   NVARCHAR(20) = CAST(@NewId   AS NVARCHAR(20));
+EXEC test.Assert_IsEqual
+    @TestName = N'[Reactivate] Same Id returned (no new insert)',
+    @Expected = @PriorIdStr,
+    @Actual   = @NewIdStr;
+
+-- Exactly 1 row for (Item, DC-401) and it's active
+DECLARE @TotalCount INT = (
+    SELECT COUNT(*) FROM Parts.ItemLocation
+    WHERE ItemId = @ItemId AND LocationId = 9
+);
+EXEC test.Assert_RowCount
+    @TestName      = N'[Reactivate] Exactly 1 row for (Item, DC-401)',
+    @ExpectedCount = 1,
+    @ActualCount   = @TotalCount;
+
+DECLARE @ActiveCount INT = (
+    SELECT COUNT(*) FROM Parts.ItemLocation
+    WHERE ItemId = @ItemId AND LocationId = 9 AND DeprecatedAt IS NULL
+);
+EXEC test.Assert_RowCount
+    @TestName      = N'[Reactivate] That row is active',
+    @ExpectedCount = 1,
+    @ActualCount   = @ActiveCount;
+GO
+
+-- =============================================
+-- Test 12: Audit trail - ConfigLog has >= 3 ItemLocation entries
+-- =============================================
+DECLARE @AuditCount INT;
+SELECT @AuditCount = COUNT(*)
+FROM Audit.ConfigLog cl
+INNER JOIN Audit.LogEntityType let ON let.Id = cl.LogEntityTypeId
+WHERE let.Code = N'ItemLocation';
+
+DECLARE @AuditCond BIT = CASE WHEN @AuditCount >= 3 THEN 1 ELSE 0 END;
+EXEC test.Assert_IsTrue
+    @TestName  = N'[Audit] ConfigLog has >= 3 ItemLocation entries',
+    @Condition = @AuditCond;
+GO
+
+-- =============================================
+-- Cleanup
+-- =============================================
+DELETE il
+FROM Parts.ItemLocation il
+INNER JOIN Parts.Item i ON i.Id = il.ItemId
+WHERE i.PartNumber LIKE N'TEST-IL-ITEM-%';
+
+DELETE FROM Parts.Item WHERE PartNumber LIKE N'TEST-IL-ITEM-%';
+GO
+
+-- =============================================
+-- Final summary
+-- =============================================
+EXEC test.PrintSummary;
+GO

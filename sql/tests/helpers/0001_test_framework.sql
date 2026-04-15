@@ -251,3 +251,53 @@ BEGIN
     PRINT N'';
 END;
 GO
+
+-- =============================================
+-- Procedure:  test.Assert_Contains
+-- Purpose:    Asserts @HaystackStr contains @NeedleStr (case-insensitive).
+-- =============================================
+CREATE OR ALTER PROCEDURE test.Assert_Contains
+    @TestName    NVARCHAR(500),
+    @HaystackStr NVARCHAR(MAX),
+    @NeedleStr   NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Passed BIT;
+    DECLARE @Detail NVARCHAR(1000) = NULL;
+    DECLARE @File   NVARCHAR(200) = ISNULL((SELECT TOP 1 FileName FROM test.CurrentTestFile), N'(unknown)');
+
+    IF @HaystackStr IS NULL OR @NeedleStr IS NULL
+    BEGIN
+        SET @Passed = 0;
+        SET @Detail = N'HaystackStr or NeedleStr was NULL';
+    END
+    ELSE IF CHARINDEX(LOWER(@NeedleStr), LOWER(@HaystackStr)) > 0
+        SET @Passed = 1;
+    ELSE
+    BEGIN
+        SET @Passed = 0;
+        SET @Detail = N'String "' + LEFT(@NeedleStr, 100) + N'" not found in: ' + LEFT(@HaystackStr, 300);
+    END
+
+    INSERT INTO test.TestResults (TestFile, TestName, Passed, Detail)
+    VALUES (@File, @TestName, @Passed, @Detail);
+
+    IF @Passed = 1
+        PRINT N'  PASS: ' + @TestName;
+    ELSE
+        PRINT N'  FAIL: ' + @TestName + N' -- ' + ISNULL(@Detail, N'(no detail)');
+END;
+GO
+
+-- =============================================
+-- Procedure:  test.EndTestFile
+-- Purpose:    Wrapper for test.PrintSummary. Prints summary for the current file.
+-- =============================================
+CREATE OR ALTER PROCEDURE test.EndTestFile
+AS
+BEGIN
+    EXEC test.PrintSummary;
+END;
+GO
