@@ -4,8 +4,8 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.1 — Working Draft
-**Date:** 2026-04-06
+**Version:** 0.6 — Working Draft
+**Date:** 2026-04-15
 
 ---
 
@@ -18,6 +18,7 @@
 | 0.3 | 2026-04-09 | Blue Ridge Automation | Naming convention changed from snake_case to UpperCamelCase for all DB identifiers (tables, columns, code values). Merged Department into Area per ISA-95 — Department location type removed, 5 departments become Area-type locations. Added Enterprise (level 0) to hierarchy. Updated §2.2 (FDS-02-001) hierarchy table, §2.3 (FDS-02-003), all defect/downtime filtering references. |
 | 0.4 | 2026-04-10 | Blue Ridge Automation | Major restructure of location model: split `LocationType` (5 ISA-95 tiers) from `LocationTypeDefinition` (polymorphic kinds) and introduced `LocationAttributeDefinition` for attribute schemas per kind. Terminal, DieCastMachine, CNCMachine, InventoryLocation, etc. are now `LocationTypeDefinition` rows under the `Cell` type. Rewrote §2.1–2.5. Added §5.3 FDS-05-008 explicit login→scan-location→scan-lot movement workflow. Updated FDS-05-004 and FDS-05-020 to clarify Die Cast uses pre-printed LTTs (no Initial print event). Expanded FDS-06-019 with Pattern A (inline reject) vs Pattern B (split-to-scrap) scrap handling. Added FDS-07-019 clarifying Sort Cage is NOT a LOT merge event. Added bordered + alternating row Word table styling via pandoc reference doc. |
 | 0.5 | 2026-04-10 | Blue Ridge Automation | §11 Audit & Logging expanded: added fourth log stream `Audit.FailureLog` for attempted-but-rejected operations (new FDS-11-004). High-Fidelity Interface Logging renumbered from FDS-11-004 to FDS-11-005 to make room. Added FDS-11-008 documenting the code-string signatures for the four shared audit procs. Renumbered FDS-11-007 → FDS-11-009 (Retention Policy) and FDS-11-008 → FDS-11-010 (BIGINT Primary Keys) to accommodate. Normalized vocabulary examples in FDS-11-006/007 updated to UpperCamelCase (`Created`/`Updated`/`Deprecated`/`LotCreated` etc. instead of UPPER_SNAKE). |
+| 0.6 | 2026-04-15 | Blue Ridge Automation | Reflects Phase 5/6 SQL completion and the Ignition JDBC stored-procedure convention change. Data model realigned to v1.3: added HoldEvent place/release lifecycle table, SortOrder + MoveUp/MoveDown pattern on `Location.Location`, OperationTemplate→DataCollectionField junction (replacing hardcoded BIT flags), and seven new code tables backing all former enum/status columns. Versioning pattern for RouteTemplate, OperationTemplate, and Bom standardized on the three-state `Draft / Published / Deprecated` model (PublishedAt + DeprecatedAt). Added FDS-11-011 documenting the Ignition JDBC single-result-set convention: stored procedures SHALL NOT use `OUTPUT` parameters; mutation procs SHALL return `SELECT Status, Message, NewId` as their sole result set, read procs SHALL return a single result set (empty = not found), and the four shared audit writers SHALL emit no result set (they run inside caller transactions and would otherwise break INSERT-EXEC with ROLLBACK). |
 
 ---
 
@@ -1331,6 +1332,14 @@ All log tables SHALL use the normalized `LogEntityType` table. Entity types SHAL
 
 #### FDS-11-008 — Code-String Signatures for Shared Audit Procs
 The four shared audit procedures SHALL accept the event type, entity type, and severity as code strings (e.g., `'Location'`, `'Created'`, `'Info'`) rather than integer IDs. Each shared proc SHALL resolve the code strings to internal IDs via the seeded lookup tables. This keeps entity-specific procs self-documenting and removes hard-coded integer constants from the CRUD layer. A code-string that does not resolve SHALL cause the shared proc to raise an error (indicating a seeding gap or a typo).
+
+#### FDS-11-011 — Ignition JDBC Single-Result-Set Convention
+All stored procedures consumed by Ignition Named Queries SHALL return exactly one result set and SHALL NOT declare `OUTPUT` parameters. The Ignition JDBC driver surfaces `OUTPUT` parameters as the first result set and discards any subsequent `SELECT`, so `OUTPUT`-based signatures are incompatible with the platform.
+
+- **Mutation procs** (Create / Update / Delete / Deprecate / Publish / MoveUp / MoveDown / etc.) SHALL declare `@Status`, `@Message`, and any returned identifier (`@NewId`, `@NewVersionId`, …) as local variables and SHALL emit a single final `SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;` at every exit point. The CATCH block SHALL populate these locals, `RAISERROR` for observability, then fall through to the same terminal `SELECT`.
+- **Read procs** SHALL return a single result set. An empty result set is the contract for "not found" — read procs SHALL NOT return `@Status`/`@Message` and SHALL NOT raise for missing rows.
+- **The four shared audit writers** (`Audit.Audit_LogConfigChange`, `Audit.Audit_LogFailure`, `Audit.Audit_LogInterfaceCall`, `Audit.Audit_LogOperation`) SHALL NOT emit any result set. They execute inside caller-owned transactions; emitting a result set breaks the `INSERT … EXEC` + `ROLLBACK` pattern used by mutation tests and callers.
+- **Callers** SHALL consume mutation results via `INSERT … EXEC @t (Status, Message, NewId) EXEC …` (or the Ignition equivalent) and SHALL treat `Status = 0` together with a non-NULL `Message` as the failure contract.
 
 ### 11.4 Data Retention
 

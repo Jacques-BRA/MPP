@@ -15,6 +15,7 @@
 | 0.2 | 2026-04-09 | Blue Ridge Automation | Added decision text and status tags to all 19 assumptions. 4 resolved (UJ-06, UJ-15 + mapped OI-01, OI-08, OI-09). 8 pending customer validation, 4 pending internal review (Ben), 7 remain open. Added status legend. |
 | 0.3 | 2026-04-09 | Blue Ridge Automation | UpperCamelCase naming convention applied to all DB references. Department references updated to Area per ISA-95. |
 | 0.4 | 2026-04-10 | Blue Ridge Automation | Location model references updated for the new three-tier polymorphic model (LocationType → LocationTypeDefinition → LocationAttributeDefinition). See FDS v0.4 for details. |
+| 0.5 | 2026-04-15 | Blue Ridge Automation | Aligned to data model v1.3 and Phase 5/6 SQL delivery. Configuration Tool arc now reflects three-state versioning (Draft / Published / Deprecated) for RouteTemplate, OperationTemplate, and Bom — engineers author across sessions, publish to release for production, and deprecate rather than delete. OperationTemplate data collection described via the DataCollectionField junction (configurable per step) instead of hardcoded flags. Location management references the SortOrder + MoveUp/MoveDown arrow-button pattern (no drag-and-drop, per project convention). Plant Floor arc references HoldEvent as a single place/release lifecycle table consistent with DowntimeEvent. Added note that all Configuration Tool screens bind to Ignition Named Queries over stored procs returning a single result set (see FDS §11 FDS-11-011). |
 
 ---
 

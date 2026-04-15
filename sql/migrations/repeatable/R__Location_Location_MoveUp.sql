@@ -1,0 +1,183 @@
+-- =============================================
+-- Procedure:   Location.Location_MoveUp
+-- Author:      Blue Ridge Automation
+-- Created:     2026-04-13
+-- Version:     2.0
+--
+-- Description:
+--   Moves a Location up in the sort order by swapping SortOrder with
+--   the nearest active sibling above (lower SortOrder) within the same
+--   parent. No-op (Status=1) if already at the top position.
+--   Handles NULL ParentLocationId (root-level siblings).
+--
+-- Parameters (input):
+--   @Id BIGINT        - PK of the Location to move. Required.
+--   @AppUserId BIGINT - User performing the action. Required for audit.
+--
+-- Result set:
+--   Single row with Status (BIT), Message (NVARCHAR).
+--   Status=1 on success (including no-op), 0 on failure.
+--
+-- Dependencies:
+--   Tables: Location.Location
+--   Procs:  Audit.Audit_LogConfigChange, Audit.Audit_LogFailure
+--
+-- Error Handling:
+--   - Validation/business-rule failures: @Status=0, @Message set, Audit_LogFailure, RETURN.
+--   - CATCH handler: rollback, @Status=0, @Message captured, Audit_LogFailure, RAISERROR.
+--
+-- Change Log:
+--   2026-04-13 - 1.0 - Initial version
+--   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
+-- =============================================
+CREATE OR ALTER PROCEDURE Location.Location_MoveUp
+    @Id        BIGINT,
+    @AppUserId BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Result variables (returned via SELECT instead of OUTPUT)
+    DECLARE @Status  BIT           = 0;
+    DECLARE @Message NVARCHAR(500) = N'Unknown error';
+
+    -- Capture input for failure-log snapshots
+    DECLARE @ProcName NVARCHAR(200) = N'Location.Location_MoveUp';
+    DECLARE @Params   NVARCHAR(MAX) =
+        (SELECT @Id AS Id
+         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
+
+    BEGIN TRY
+        -- ====================
+        -- Parameter validation
+        -- ====================
+        IF @Id IS NULL OR @AppUserId IS NULL
+        BEGIN
+            SET @Message = N'Required parameter missing.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'Location',
+                @EntityId            = @Id,
+                @LogEventTypeCode    = N'Updated',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
+            RETURN;
+        END
+
+        -- Get current row's SortOrder and parent
+        DECLARE @CurrentSort INT, @ParentId BIGINT;
+        SELECT @CurrentSort = SortOrder,
+               @ParentId    = ParentLocationId
+        FROM Location.Location
+        WHERE Id = @Id AND DeprecatedAt IS NULL;
+
+        IF @CurrentSort IS NULL
+        BEGIN
+            SET @Message = N'Location not found or deprecated.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'Location',
+                @EntityId            = @Id,
+                @LogEventTypeCode    = N'Updated',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
+            RETURN;
+        END
+
+        -- Find nearest active sibling ABOVE (lower SortOrder)
+        DECLARE @SwapId BIGINT, @SwapSort INT;
+
+        IF @ParentId IS NULL
+            SELECT TOP 1 @SwapId = Id, @SwapSort = SortOrder
+            FROM Location.Location
+            WHERE ParentLocationId IS NULL
+              AND DeprecatedAt IS NULL
+              AND SortOrder < @CurrentSort
+            ORDER BY SortOrder DESC;
+        ELSE
+            SELECT TOP 1 @SwapId = Id, @SwapSort = SortOrder
+            FROM Location.Location
+            WHERE ParentLocationId = @ParentId
+              AND DeprecatedAt IS NULL
+              AND SortOrder < @CurrentSort
+            ORDER BY SortOrder DESC;
+
+        -- Already first — no-op, success
+        IF @SwapId IS NULL
+        BEGIN
+            SET @Status  = 1;
+            SET @Message = N'Already at the top position.';
+            SELECT @Status AS Status, @Message AS Message;
+            RETURN;
+        END
+
+        -- ====================
+        -- Mutation (atomic)
+        -- ====================
+        DECLARE @OldValue NVARCHAR(MAX) =
+            (SELECT @Id AS Id, @CurrentSort AS OldSortOrder,
+                    @SwapId AS SwapId, @SwapSort AS SwapOldSortOrder
+             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
+
+        DECLARE @NewValue NVARCHAR(MAX) =
+            (SELECT @Id AS Id, @SwapSort AS NewSortOrder,
+                    @SwapId AS SwapId, @CurrentSort AS SwapNewSortOrder
+             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
+
+        BEGIN TRANSACTION;
+
+        UPDATE Location.Location SET SortOrder = @SwapSort WHERE Id = @Id;
+        UPDATE Location.Location SET SortOrder = @CurrentSort WHERE Id = @SwapId;
+
+        -- Success audit INSIDE the transaction
+        EXEC Audit.Audit_LogConfigChange
+            @AppUserId         = @AppUserId,
+            @LogEntityTypeCode = N'Location',
+            @EntityId          = @Id,
+            @LogEventTypeCode  = N'Updated',
+            @LogSeverityCode   = N'Info',
+            @Description       = N'Location moved up.',
+            @OldValue          = @OldValue,
+            @NewValue          = @NewValue;
+
+        COMMIT TRANSACTION;
+
+        SET @Status  = 1;
+        SET @Message = N'Moved up successfully.';
+        SELECT @Status AS Status, @Message AS Message;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrMsg   NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrSev   INT            = ERROR_SEVERITY();
+        DECLARE @ErrState INT            = ERROR_STATE();
+
+        SET @Status  = 0;
+        SET @Message = N'Unexpected error: ' + LEFT(@ErrMsg, 400);
+
+        BEGIN TRY
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'Location',
+                @EntityId            = @Id,
+                @LogEventTypeCode    = N'Updated',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+        END TRY
+        BEGIN CATCH
+            -- Swallow; don't mask the original exception
+        END CATCH
+
+        SELECT @Status AS Status, @Message AS Message;
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END;
+GO
