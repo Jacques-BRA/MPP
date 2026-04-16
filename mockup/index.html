@@ -497,7 +497,8 @@
       border-radius: var(--radius);
       background: var(--bg-input);
       color: var(--text-primary);
-      min-width: 180px;
+      min-width: 0;
+      width: 100%;
       outline: none;
     }
 
@@ -1289,7 +1290,7 @@
           </div>
 
           <!-- Right: detail area -->
-          <div class="detail-area" style="flex:1;padding:12px;gap:10px;overflow-y:auto;">
+          <div class="detail-area" style="flex:1;display:flex;flex-direction:column;padding:12px;gap:10px;overflow-y:auto;">
 
             <!-- Location Details panel -->
             <div class="detail-panel" style="margin-bottom:10px;">
@@ -1324,7 +1325,7 @@
                     <div class="field-label">Sort Order</div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                       <input class="search-input" style="width: 50px; text-align: center;" type="text" value="3" readonly />
-                      <div class="arrows" style="flex-direction: row; gap: 2px;">
+                      <div class="arrows">
                         <button class="arrow-btn" title="Move Up">&#9650;</button>
                         <button class="arrow-btn" title="Move Down">&#9660;</button>
                       </div>
