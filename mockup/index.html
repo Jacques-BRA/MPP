@@ -1315,9 +1315,21 @@
                     <input class="search-input" style="width:100%;" type="text" value="Die Cast (Area)" readonly style="background:var(--bg-row-alt);color:var(--text-muted);" />
                   </div>
                 </div>
-                <div class="field">
-                  <div class="field-label">Description</div>
-                  <input class="search-input" style="width:100%;" type="text" value="400-ton Toshiba die cast press, Bay 3" />
+                <div class="field-row" style="margin-bottom:10px;">
+                  <div class="field">
+                    <div class="field-label">Description</div>
+                    <input class="search-input" style="width:100%;" type="text" value="400-ton Toshiba die cast press, Bay 3" />
+                  </div>
+                  <div class="field" style="flex: 0 0 120px;">
+                    <div class="field-label">Sort Order</div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <input class="search-input" style="width: 50px; text-align: center;" type="text" value="3" readonly />
+                      <div class="arrows" style="flex-direction: row; gap: 2px;">
+                        <button class="arrow-btn" title="Move Up">&#9650;</button>
+                        <button class="arrow-btn" title="Move Down">&#9660;</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1348,7 +1360,7 @@
                         </div>
                       </td>
                       <td>Tonnage</td>
-                      <td><input class="search-input" style="width:70px;" type="text" value="400" /></td>
+                      <td><div style="display:flex;align-items:center;gap:6px;"><input class="search-input" style="width:70px;" type="text" value="400" /><span style="font-size:9px;color:var(--text-muted);white-space:nowrap;">DECIMAL</span></div></td>
                       <td>tons</td>
                       <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
                     </tr>
@@ -1360,7 +1372,7 @@
                         </div>
                       </td>
                       <td>NumberOfCavities</td>
-                      <td><input class="search-input" style="width:70px;" type="text" value="2" /></td>
+                      <td><div style="display:flex;align-items:center;gap:6px;"><input class="search-input" style="width:70px;" type="text" value="2" /><span style="font-size:9px;color:var(--text-muted);white-space:nowrap;">INT</span></div></td>
                       <td>—</td>
                       <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
                     </tr>
@@ -1372,7 +1384,7 @@
                         </div>
                       </td>
                       <td>RefCycleTimeSec</td>
-                      <td><input class="search-input" style="width:70px;" type="text" value="62.5" /></td>
+                      <td><div style="display:flex;align-items:center;gap:6px;"><input class="search-input" style="width:70px;" type="text" value="62.5" /><span style="font-size:9px;color:var(--text-muted);white-space:nowrap;">DECIMAL</span></div></td>
                       <td>sec</td>
                       <td><input type="checkbox" style="accent-color:var(--accent);" /></td>
                     </tr>
@@ -2936,50 +2948,134 @@
 
     <!-- Modal 2: Location Type Definition Editor -->
     <div class="modal-overlay" id="modal-loc-type-editor">
-      <div class="modal modal-lg">
+      <div class="modal modal-lg" style="max-height: 85vh;">
         <div class="modal-header">
           Location Type Definitions
           <button class="close-btn" onclick="closeModal('modal-loc-type-editor')">&times;</button>
         </div>
-        <div class="modal-body">
-          <div style="margin-bottom: 12px; font-size: 11px; color: var(--text-muted);">
-            Define the kinds of locations and their attribute schemas. Changes here affect all locations of each type.
+        <div class="modal-body" style="padding: 0; display: flex; flex-direction: column; overflow: hidden;">
+          <div style="padding: 12px 16px; font-size: 11px; color: var(--text-muted); border-bottom: 1px solid var(--border-default); flex-shrink: 0;">
+            Select a location type tier, then choose a definition to edit its attribute schema.
           </div>
 
-          <!-- Cell Types group -->
-          <div class="detail-panel" style="margin-bottom: 12px;">
-            <div class="detail-header">
-              Cell Types
-              <span style="font-size: 10px; color: var(--text-muted); font-weight: 400;">(ISA-95 tier: Cell)</span>
-            </div>
-            <div style="overflow: auto;">
-              <table class="data-table">
-                <thead><tr><th>Code</th><th>Name</th><th>Attributes</th><th style="width: 50px;"></th></tr></thead>
-                <tbody>
-                  <tr class="selected"><td>DieCastMachine</td><td>Die Cast Machine</td><td style="font-size: 10px; color: var(--text-muted);">Tonnage, NumberOfCavities, RefCycleTimeSec</td><td><button class="btn btn-sm">Edit</button></td></tr>
-                  <tr><td>CNCMachine</td><td>CNC Machine</td><td style="font-size: 10px; color: var(--text-muted);">SpindleCount, CoolantType</td><td><button class="btn btn-sm">Edit</button></td></tr>
-                  <tr><td>TrimPress</td><td>Trim Press</td><td style="font-size: 10px; color: var(--text-muted);">Tonnage</td><td><button class="btn btn-sm">Edit</button></td></tr>
-                  <tr><td>Terminal</td><td>Operator Terminal</td><td style="font-size: 10px; color: var(--text-muted);">IpAddress, DefaultPrinter, HasBarcodeScanner</td><td><button class="btn btn-sm">Edit</button></td></tr>
-                  <tr><td>InventoryLocation</td><td>Inventory Location</td><td style="font-size: 10px; color: var(--text-muted);">IsPhysical, IsLineside, MaxLotCapacity</td><td><button class="btn btn-sm">Edit</button></td></tr>
-                </tbody>
-              </table>
+          <!-- Top: Type dropdown + Definition list -->
+          <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-default); flex-shrink: 0;">
+            <div class="field-row" style="margin-bottom: 10px;">
+              <div class="field" style="flex: 0 0 200px;">
+                <div class="field-label">Location Type (ISA-95 Tier)</div>
+                <select class="select" style="width: 100%;" id="loc-type-tier-select" onchange="switchLocTypeTier(this.value)">
+                  <option value="cell" selected>Cell</option>
+                  <option value="area">Area</option>
+                  <option value="workcenter">Work Center</option>
+                  <option value="site">Site</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </div>
+              <div class="field" style="flex: 1;">
+                <div class="field-label">Definitions for this tier</div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; padding-top: 2px;" id="loc-type-def-chips">
+                  <button class="btn btn-sm" style="background: var(--bg-selected); color: var(--accent); border-color: var(--accent);" onclick="selectLocTypeDef('diecast')">DieCastMachine</button>
+                  <button class="btn btn-sm" onclick="selectLocTypeDef('cnc')">CNCMachine</button>
+                  <button class="btn btn-sm" onclick="selectLocTypeDef('trim')">TrimPress</button>
+                  <button class="btn btn-sm" onclick="selectLocTypeDef('terminal')">Terminal</button>
+                  <button class="btn btn-sm" onclick="selectLocTypeDef('inventory')">InventoryLocation</button>
+                  <button class="btn btn-sm" onclick="selectLocTypeDef('assembly')">AssemblyStation</button>
+                  <button class="btn btn-sm" onclick="selectLocTypeDef('serialized')">SerializedAssemblyLine</button>
+                  <button class="btn btn-sm" onclick="selectLocTypeDef('scale')">Scale</button>
+                  <button class="btn btn-sm btn-primary" style="font-size: 9px;">+ Add</button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Area Types group -->
-          <div class="detail-panel">
-            <div class="detail-header">
-              Area Types
-              <span style="font-size: 10px; color: var(--text-muted); font-weight: 400;">(ISA-95 tier: Area)</span>
+          <!-- Middle: Selected definition details -->
+          <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-default); flex-shrink: 0;">
+            <div class="detail-panel">
+              <div class="detail-header">
+                Definition Details
+                <span class="badge badge-type">Cell &bull; DieCastMachine</span>
+                <div class="detail-header-actions">
+                  <button class="btn btn-sm">Save</button>
+                  <button class="btn btn-sm btn-danger">Deprecate</button>
+                </div>
+              </div>
+              <div class="detail-body">
+                <div class="field-row">
+                  <div class="field">
+                    <div class="field-label">Code</div>
+                    <input class="search-input" style="width: 100%;" type="text" value="DieCastMachine" readonly />
+                  </div>
+                  <div class="field">
+                    <div class="field-label">Name</div>
+                    <input class="search-input" style="width: 100%;" type="text" value="Die Cast Machine" />
+                  </div>
+                  <div class="field">
+                    <div class="field-label">Icon</div>
+                    <input class="search-input" style="width: 100%;" type="text" value="material/precision_manufacturing" placeholder="Perspective icon path" />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div style="overflow: auto;">
-              <table class="data-table">
-                <thead><tr><th>Code</th><th>Name</th><th>Attributes</th><th style="width: 50px;"></th></tr></thead>
-                <tbody>
-                  <tr><td>ProductionArea</td><td>Production Area</td><td style="font-size: 10px; color: var(--text-muted);">(none)</td><td><button class="btn btn-sm">Edit</button></td></tr>
-                  <tr><td>SupportArea</td><td>Support Area</td><td style="font-size: 10px; color: var(--text-muted);">(none)</td><td><button class="btn btn-sm">Edit</button></td></tr>
-                </tbody>
-              </table>
+          </div>
+
+          <!-- Bottom: Attribute definitions (builder pattern) -->
+          <div style="padding: 12px 16px; flex: 1; overflow: auto;">
+            <div class="detail-panel">
+              <div class="detail-header">
+                Attribute Definitions
+                <span style="font-size: 10px; color: var(--text-muted); font-weight: 400;">3 attributes</span>
+                <div class="detail-header-actions">
+                  <button class="btn btn-sm btn-primary">+ Add Attribute</button>
+                </div>
+              </div>
+              <div style="overflow: auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 36px;"></th>
+                      <th>Attribute Name</th>
+                      <th>Data Type</th>
+                      <th>Required</th>
+                      <th>Default Value</th>
+                      <th>UOM</th>
+                      <th>Description</th>
+                      <th style="width: 60px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn">&#9660;</button></div></td>
+                      <td><input class="search-input" style="width: 120px;" type="text" value="Tonnage" /></td>
+                      <td><select class="select" style="width: 90px;"><option selected>DECIMAL</option><option>INT</option><option>VARCHAR</option><option>BIT</option></select></td>
+                      <td style="text-align: center;"><input type="checkbox" checked /></td>
+                      <td><input class="search-input" style="width: 70px;" type="text" placeholder="&mdash;" /></td>
+                      <td><input class="search-input" style="width: 60px;" type="text" value="tons" /></td>
+                      <td><input class="search-input" style="width: 140px;" type="text" value="Die cast press tonnage" /></td>
+                      <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                    </tr>
+                    <tr class="selected">
+                      <td><div class="arrows"><button class="arrow-btn">&#9650;</button><button class="arrow-btn">&#9660;</button></div></td>
+                      <td><input class="search-input" style="width: 120px;" type="text" value="NumberOfCavities" /></td>
+                      <td><select class="select" style="width: 90px;"><option>DECIMAL</option><option selected>INT</option><option>VARCHAR</option><option>BIT</option></select></td>
+                      <td style="text-align: center;"><input type="checkbox" checked /></td>
+                      <td><input class="search-input" style="width: 70px;" type="text" placeholder="&mdash;" /></td>
+                      <td><input class="search-input" style="width: 60px;" type="text" placeholder="&mdash;" /></td>
+                      <td><input class="search-input" style="width: 140px;" type="text" value="Die cast cavity count" /></td>
+                      <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                    </tr>
+                    <tr>
+                      <td><div class="arrows"><button class="arrow-btn">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                      <td><input class="search-input" style="width: 120px;" type="text" value="RefCycleTimeSec" /></td>
+                      <td><select class="select" style="width: 90px;"><option selected>DECIMAL</option><option>INT</option><option>VARCHAR</option><option>BIT</option></select></td>
+                      <td style="text-align: center;"><input type="checkbox" /></td>
+                      <td><input class="search-input" style="width: 70px;" type="text" value="60.0" /></td>
+                      <td><input class="search-input" style="width: 60px;" type="text" value="sec" /></td>
+                      <td><input class="search-input" style="width: 140px;" type="text" value="Reference cycle time for OEE" /></td>
+                      <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -2991,59 +3087,83 @@
 
     <!-- Modal 3: Add Item -->
     <div class="modal-overlay" id="modal-add-item">
-      <div class="modal">
+      <div class="modal" style="width: 560px;">
         <div class="modal-header">
           Add Item
           <button class="close-btn" onclick="closeModal('modal-add-item')">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="field-row">
-            <div class="field">
-              <div class="field-label">Part Number *</div>
-              <input class="field-value" placeholder="e.g., 5G0">
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Identity</div>
+            <div class="field-row" style="margin-bottom: 10px;">
+              <div class="field">
+                <div class="field-label">Part Number *</div>
+                <input class="search-input" style="width: 100%;" type="text" placeholder="e.g., 5G0" />
+              </div>
+              <div class="field">
+                <div class="field-label">Item Type *</div>
+                <select class="select" style="width: 100%;">
+                  <option value="">Select...</option>
+                  <option>Raw Material</option>
+                  <option>Component</option>
+                  <option>Sub-Assembly</option>
+                  <option>Finished Good</option>
+                  <option>Pass-Through</option>
+                </select>
+              </div>
+              <div class="field">
+                <div class="field-label">UOM *</div>
+                <select class="select" style="width: 100%;">
+                  <option selected>EA</option>
+                  <option>LB</option>
+                  <option>KG</option>
+                  <option>PCS</option>
+                </select>
+              </div>
             </div>
             <div class="field">
-              <div class="field-label">Item Type *</div>
-              <select class="select" style="width: 100%;">
-                <option>Select...</option>
-                <option>Raw Material</option>
-                <option>Component</option>
-                <option>Sub-Assembly</option>
-                <option>Finished Good</option>
-                <option>Pass-Through</option>
-              </select>
-            </div>
-          </div>
-          <div class="field">
-            <div class="field-label">Description *</div>
-            <input class="field-value" placeholder="Item description">
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <div class="field-label">UOM *</div>
-              <select class="select" style="width: 100%;"><option selected>EA</option><option>LB</option><option>KG</option></select>
-            </div>
-            <div class="field">
-              <div class="field-label">Unit Weight</div>
-              <input class="field-value" placeholder="0.00">
-            </div>
-            <div class="field">
-              <div class="field-label">Weight UOM</div>
-              <select class="select" style="width: 100%;"><option>LB</option><option>KG</option></select>
+              <div class="field-label">Description *</div>
+              <input class="search-input" style="width: 100%;" type="text" placeholder="e.g., 5G0 Front Cover Assembly" />
             </div>
           </div>
-          <div class="field-row">
-            <div class="field">
-              <div class="field-label">Default Sub-LOT Qty</div>
-              <input class="field-value" placeholder="24">
+
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Weight</div>
+            <div class="field-row">
+              <div class="field">
+                <div class="field-label">Unit Weight</div>
+                <input class="search-input" style="width: 100%;" type="text" placeholder="0.00" />
+              </div>
+              <div class="field">
+                <div class="field-label">Weight UOM</div>
+                <select class="select" style="width: 100%;">
+                  <option value="">—</option>
+                  <option>LB</option>
+                  <option>KG</option>
+                </select>
+              </div>
             </div>
-            <div class="field">
-              <div class="field-label">Max LOT Size</div>
-              <input class="field-value" placeholder="100">
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">LOT Configuration</div>
+            <div class="field-row">
+              <div class="field">
+                <div class="field-label">Default Sub-LOT Qty</div>
+                <input class="search-input" style="width: 100%;" type="text" placeholder="24" />
+              </div>
+              <div class="field">
+                <div class="field-label">Max LOT Size</div>
+                <input class="search-input" style="width: 100%;" type="text" placeholder="100" />
+              </div>
             </div>
+          </div>
+
+          <div>
+            <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">ERP Integration</div>
             <div class="field">
               <div class="field-label">Macola Part #</div>
-              <input class="field-value" placeholder="Optional">
+              <input class="search-input" style="width: 100%;" type="text" placeholder="Optional — for future Macola integration" />
             </div>
           </div>
         </div>
