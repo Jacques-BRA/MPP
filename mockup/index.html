@@ -1081,6 +1081,951 @@
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Plant Hierarchy
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-plant-hierarchy">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Plant</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Plant Hierarchy</span>
+            </div>
+            <h1 style="font-size:15px;font-weight:600;">Plant Hierarchy</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary" onclick="openModal('modal-add-location')">+ Add Location</button>
+          <button class="btn btn-icon" onclick="openModal('modal-loc-type-editor')" title="Location Type Editor">&#9881;</button>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: tree panel -->
+          <div class="tree-panel" style="width:240px;min-width:240px;border-right:1px solid var(--border);background:var(--bg-nav);display:flex;flex-direction:column;">
+            <div style="padding:8px 10px;border-bottom:1px solid var(--border);">
+              <input class="search-input" style="width:100%;" type="text" placeholder="&#128269; Search locations…" />
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:4px 0;">
+
+              <!-- Enterprise -->
+              <div class="tree-item" style="padding-left:10px;font-weight:600;">
+                <span>&#9660;</span>
+                <span>&#127965;</span>
+                <span style="flex:1;">Madison Precision Products</span>
+                <span style="font-size:10px;color:var(--text-muted);">Enterprise</span>
+              </div>
+
+              <!-- Site -->
+              <div class="tree-item level-1" style="padding-left:28px;">
+                <span>&#9660;</span>
+                <span>&#127963;</span>
+                <span style="flex:1;">Madison Facility</span>
+                <span style="font-size:10px;color:var(--text-muted);">Site</span>
+              </div>
+
+              <!-- Die Cast area -->
+              <div class="tree-item level-2" style="padding-left:46px;">
+                <span>&#9660;</span>
+                <span>&#9878;</span>
+                <span style="flex:1;">Die Cast</span>
+                <span style="font-size:10px;color:var(--text-muted);">Area</span>
+              </div>
+
+              <!-- DC Machine #7 (selected) -->
+              <div class="tree-item selected level-3" style="padding-left:64px;">
+                <span>&#9654;</span>
+                <span>&#9881;</span>
+                <span style="flex:1;">DC Machine #7</span>
+                <span style="font-size:10px;color:var(--text-muted);">Cell</span>
+              </div>
+
+              <!-- DC Machine #12 -->
+              <div class="tree-item level-3" style="padding-left:64px;">
+                <span>&#9654;</span>
+                <span>&#9881;</span>
+                <span style="flex:1;">DC Machine #12</span>
+                <span style="font-size:10px;color:var(--text-muted);">Cell</span>
+              </div>
+
+              <!-- DC Machine #15 -->
+              <div class="tree-item level-3" style="padding-left:64px;">
+                <span>&#9654;</span>
+                <span>&#9881;</span>
+                <span style="flex:1;">DC Machine #15</span>
+                <span style="font-size:10px;color:var(--text-muted);">Cell</span>
+              </div>
+
+              <!-- Trim Shop area -->
+              <div class="tree-item level-2" style="padding-left:46px;">
+                <span>&#9660;</span>
+                <span>&#9878;</span>
+                <span style="flex:1;">Trim Shop</span>
+                <span style="font-size:10px;color:var(--text-muted);">Area</span>
+              </div>
+
+              <!-- Trim Press #1 -->
+              <div class="tree-item level-3" style="padding-left:64px;">
+                <span>&#9654;</span>
+                <span>&#9881;</span>
+                <span style="flex:1;">Trim Press #1</span>
+                <span style="font-size:10px;color:var(--text-muted);">Cell</span>
+              </div>
+
+              <!-- Machine Shop area (collapsed) -->
+              <div class="tree-item level-2" style="padding-left:46px;">
+                <span>&#9654;</span>
+                <span>&#9878;</span>
+                <span style="flex:1;">Machine Shop</span>
+                <span style="font-size:10px;color:var(--text-muted);">Area</span>
+              </div>
+
+              <!-- Production Control area (collapsed) -->
+              <div class="tree-item level-2" style="padding-left:46px;">
+                <span>&#9654;</span>
+                <span>&#9878;</span>
+                <span style="flex:1;">Production Control</span>
+                <span style="font-size:10px;color:var(--text-muted);">Area</span>
+              </div>
+
+              <!-- Quality Control area (collapsed) -->
+              <div class="tree-item level-2" style="padding-left:46px;">
+                <span>&#9654;</span>
+                <span>&#9878;</span>
+                <span style="flex:1;">Quality Control</span>
+                <span style="font-size:10px;color:var(--text-muted);">Area</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Right: detail area -->
+          <div class="detail-area" style="flex:1;padding:12px;gap:10px;overflow-y:auto;">
+
+            <!-- Location Details panel -->
+            <div class="detail-panel" style="margin-bottom:10px;">
+              <div class="detail-header">
+                <h2>Location Details</h2>
+                <span class="badge badge-type">Cell &bull; DieCastMachine</span>
+                <div style="flex:1;"></div>
+                <button class="btn btn-primary btn-sm" onclick="showToast('success','Location saved.')">Save</button>
+                <button class="btn btn-danger btn-sm" onclick="showToast('info','Location deprecated.')">Deprecate</button>
+              </div>
+              <div class="detail-body">
+                <div class="field-row" style="margin-bottom:10px;">
+                  <div class="field">
+                    <div class="field-label">Name</div>
+                    <input class="search-input" style="width:100%;" type="text" value="DC Machine #7" />
+                  </div>
+                  <div class="field">
+                    <div class="field-label">Code</div>
+                    <input class="search-input" style="width:100%;" type="text" value="DC-007" />
+                  </div>
+                  <div class="field">
+                    <div class="field-label">Parent</div>
+                    <input class="search-input" style="width:100%;" type="text" value="Die Cast (Area)" readonly style="background:var(--bg-row-alt);color:var(--text-muted);" />
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="field-label">Description</div>
+                  <input class="search-input" style="width:100%;" type="text" value="400-ton Toshiba die cast press, Bay 3" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Attributes panel -->
+            <div class="detail-panel">
+              <div class="detail-header">
+                <h2>Attributes</h2>
+                <span style="font-size:11px;color:var(--text-muted);">(DieCastMachine schema)</span>
+              </div>
+              <div style="overflow-x:auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th style="width:46px;"></th>
+                      <th>Attribute</th>
+                      <th>Value</th>
+                      <th>UOM</th>
+                      <th>Req</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="arrows">
+                          <button class="arrow-btn disabled">&#9650;</button>
+                          <button class="arrow-btn">&#9660;</button>
+                        </div>
+                      </td>
+                      <td>Tonnage</td>
+                      <td><input class="search-input" style="width:70px;" type="text" value="400" /></td>
+                      <td>tons</td>
+                      <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="arrows">
+                          <button class="arrow-btn">&#9650;</button>
+                          <button class="arrow-btn">&#9660;</button>
+                        </div>
+                      </td>
+                      <td>NumberOfCavities</td>
+                      <td><input class="search-input" style="width:70px;" type="text" value="2" /></td>
+                      <td>—</td>
+                      <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="arrows">
+                          <button class="arrow-btn">&#9650;</button>
+                          <button class="arrow-btn disabled">&#9660;</button>
+                        </div>
+                      </td>
+                      <td>RefCycleTimeSec</td>
+                      <td><input class="search-input" style="width:70px;" type="text" value="62.5" /></td>
+                      <td>sec</td>
+                      <td><input type="checkbox" style="accent-color:var(--accent);" /></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div><!-- /detail-area -->
+        </div><!-- /main split -->
+      </div><!-- /screen-plant-hierarchy -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Item Master
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-item-master">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Parts</span><span class="crumb-sep">›</span>
+              <span>Item Master</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">5G0 Front Cover</span>
+            </div>
+            <h1 style="font-size:15px;font-weight:600;">Item Master</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary" onclick="openModal('modal-add-item')">+ Add Item</button>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: item list -->
+          <div class="tree-panel" style="width:240px;min-width:240px;border-right:1px solid var(--border);background:var(--bg-nav);display:flex;flex-direction:column;">
+            <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;">
+              <input class="search-input" style="width:100%;" type="text" placeholder="&#128269; Search items…" />
+              <select class="select" style="width:100%;">
+                <option>All Types</option>
+                <option>Raw Material</option>
+                <option>Component</option>
+                <option>Sub-Assembly</option>
+                <option>Finished Good</option>
+                <option>Pass-Through</option>
+              </select>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:4px 0;">
+
+              <!-- 5G0 selected -->
+              <div class="tree-item selected" style="padding-left:10px;justify-content:space-between;">
+                <div style="display:flex;flex-direction:column;gap:1px;overflow:hidden;">
+                  <span style="font-weight:600;font-size:12px;">5G0</span>
+                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Front Cover Assy</span>
+                </div>
+                <span class="badge badge-type" style="font-size:10px;padding:1px 5px;">FG</span>
+              </div>
+
+              <!-- 5G0-C -->
+              <div class="tree-item" style="padding-left:10px;justify-content:space-between;">
+                <div style="display:flex;flex-direction:column;gap:1px;overflow:hidden;">
+                  <span style="font-weight:600;font-size:12px;">5G0-C</span>
+                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Front Cover Casting</span>
+                </div>
+                <span class="badge badge-type" style="font-size:10px;padding:1px 5px;">COMP</span>
+              </div>
+
+              <!-- PNA -->
+              <div class="tree-item" style="padding-left:10px;justify-content:space-between;">
+                <div style="display:flex;flex-direction:column;gap:1px;overflow:hidden;">
+                  <span style="font-weight:600;font-size:12px;">PNA</span>
+                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Mounting Pin</span>
+                </div>
+                <span class="badge badge-type" style="font-size:10px;padding:1px 5px;">COMP</span>
+              </div>
+
+              <!-- 6MA-HSG (draft) -->
+              <div class="tree-item" style="padding-left:10px;justify-content:space-between;opacity:0.75;">
+                <div style="display:flex;flex-direction:column;gap:1px;overflow:hidden;">
+                  <span style="font-weight:600;font-size:12px;color:var(--status-draft);">6MA-HSG</span>
+                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Cam Holder Housing</span>
+                </div>
+                <span class="badge badge-draft" style="font-size:10px;padding:1px 5px;">PT</span>
+              </div>
+
+              <!-- RPY -->
+              <div class="tree-item" style="padding-left:10px;justify-content:space-between;">
+                <div style="display:flex;flex-direction:column;gap:1px;overflow:hidden;">
+                  <span style="font-weight:600;font-size:12px;">RPY</span>
+                  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Assembly Set</span>
+                </div>
+                <span class="badge badge-type" style="font-size:10px;padding:1px 5px;">FG</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Right: detail area -->
+          <div class="detail-area" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+
+            <!-- Item Details (always visible) -->
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg-panel);">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:600;">5G0 — Front Cover Assy</span>
+                <span class="badge badge-published">Finished Good</span>
+                <div style="flex:1;"></div>
+                <button class="btn btn-primary btn-sm" onclick="showToast('success','Item saved.')">Save</button>
+                <button class="btn btn-danger btn-sm">Deprecate</button>
+              </div>
+              <div class="field-row" style="margin-bottom:8px;">
+                <div class="field">
+                  <div class="field-label">Part Number</div>
+                  <input class="search-input" type="text" value="5G0" readonly style="background:var(--bg-row-alt);color:var(--text-muted);" />
+                </div>
+                <div class="field">
+                  <div class="field-label">Item Type</div>
+                  <input class="search-input" type="text" value="Finished Good" readonly style="background:var(--bg-row-alt);color:var(--text-muted);" />
+                </div>
+                <div class="field">
+                  <div class="field-label">UOM</div>
+                  <select class="select"><option selected>EA</option><option>LB</option><option>KG</option></select>
+                </div>
+              </div>
+              <div class="field-row" style="margin-bottom:8px;">
+                <div class="field" style="flex:2;min-width:200px;">
+                  <div class="field-label">Description</div>
+                  <input class="search-input" style="width:100%;" type="text" value="5G0 Front Cover Assembly" />
+                </div>
+                <div class="field" style="flex:1;">
+                  <div class="field-label">Macola Part #</div>
+                  <input class="search-input" style="width:100%;" type="text" value="5G0-FC-001" />
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <div class="field-label">Unit Weight</div>
+                  <input class="search-input" style="width:80px;" type="text" value="3.25" />
+                </div>
+                <div class="field">
+                  <div class="field-label">Weight UOM</div>
+                  <select class="select"><option>EA</option><option selected>LB</option><option>KG</option></select>
+                </div>
+                <div class="field">
+                  <div class="field-label">Default Sub-Lot Qty</div>
+                  <input class="search-input" style="width:80px;" type="text" value="24" />
+                </div>
+                <div class="field">
+                  <div class="field-label">Max Lot Size</div>
+                  <input class="search-input" style="width:80px;" type="text" value="100" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab container -->
+            <div id="item-tabs" style="display:flex;flex-direction:column;flex:1;overflow:hidden;background:var(--bg-panel);">
+              <div class="tab-strip">
+                <button class="tab-item active" data-tab="tab-container-config" onclick="switchTab('item-tabs','tab-container-config')">Container Config</button>
+                <button class="tab-item" data-tab="tab-routes" onclick="switchTab('item-tabs','tab-routes')">Routes</button>
+                <button class="tab-item" data-tab="tab-boms" onclick="switchTab('item-tabs','tab-boms')">BOMs</button>
+                <button class="tab-item" data-tab="tab-quality-specs-link" onclick="switchTab('item-tabs','tab-quality-specs-link')">Quality Specs</button>
+                <button class="tab-item" data-tab="tab-eligibility" onclick="switchTab('item-tabs','tab-eligibility')">Eligibility</button>
+              </div>
+
+              <!-- Tab: Container Config -->
+              <div class="tab-content active" data-tab="tab-container-config">
+                <div class="detail-panel">
+                  <div class="detail-header"><h2>Container Configuration</h2></div>
+                  <div class="detail-body">
+                    <div class="field-row" style="margin-bottom:10px;">
+                      <div class="field">
+                        <div class="field-label">Trays Per Container</div>
+                        <input class="search-input" style="width:80px;" type="text" value="4" />
+                      </div>
+                      <div class="field">
+                        <div class="field-label">Parts Per Tray</div>
+                        <input class="search-input" style="width:80px;" type="text" value="12" />
+                      </div>
+                      <div class="field">
+                        <div class="field-label">Serialized</div>
+                        <select class="select"><option selected>Yes</option><option>No</option></select>
+                      </div>
+                    </div>
+                    <div class="field-row">
+                      <div class="field">
+                        <div class="field-label">Dunnage Code</div>
+                        <input class="search-input" style="width:120px;" type="text" value="RD-5G0F" />
+                      </div>
+                      <div class="field">
+                        <div class="field-label">Customer Code</div>
+                        <input class="search-input" style="width:140px;" type="text" value="HONDA-5G0" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab: Routes -->
+              <div class="tab-content" data-tab="tab-routes">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                  <div class="version-selector">
+                    <select class="select"><option selected>v2 — Effective 2026-01-15 (Published)</option><option>v1 — Effective 2025-06-01 (Deprecated)</option></select>
+                  </div>
+                  <span class="badge badge-published">Published</span>
+                  <div style="flex:1;"></div>
+                  <button class="btn btn-sm">New Version</button>
+                </div>
+                <div class="detail-panel">
+                  <div style="overflow-x:auto;">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th style="width:46px;">#</th>
+                          <th style="width:46px;"></th>
+                          <th>Step Name</th>
+                          <th>Area</th>
+                          <th>Data Collection</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>1</td>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Die Cast</td>
+                          <td>Die Cast</td>
+                          <td><span style="font-size:11px;color:var(--text-muted);">Die, Cavity, Weight, Good, Bad</span></td>
+                        </tr>
+                        <tr>
+                          <td>2</td>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Trim</td>
+                          <td>Trim Shop</td>
+                          <td><span style="font-size:11px;color:var(--text-muted);">Weight, Good, Bad</span></td>
+                        </tr>
+                        <tr>
+                          <td>3</td>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>CNC Machining</td>
+                          <td>Machine Shop</td>
+                          <td><span style="font-size:11px;color:var(--text-muted);">Good, Bad</span></td>
+                        </tr>
+                        <tr>
+                          <td>4</td>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Assembly Front</td>
+                          <td>Die Cast</td>
+                          <td><span style="font-size:11px;color:var(--text-muted);">Serial, Material Verify, Good, Bad</span></td>
+                        </tr>
+                        <tr>
+                          <td>5</td>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Pack &amp; Ship</td>
+                          <td>Prod Control</td>
+                          <td><span style="font-size:11px;color:var(--text-muted);">Good</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style="padding:8px 10px;">
+                    <em style="font-size:11px;color:var(--text-muted);">Published route — read-only. Click New Version to create a draft copy for editing.</em>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab: BOMs -->
+              <div class="tab-content" data-tab="tab-boms">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                  <div class="version-selector">
+                    <select class="select"><option selected>v1 — Effective 2026-01-15 (Published)</option></select>
+                  </div>
+                  <span class="badge badge-published">Published</span>
+                  <div style="flex:1;"></div>
+                  <button class="btn btn-sm">New Version</button>
+                </div>
+                <div class="detail-panel">
+                  <div style="overflow-x:auto;">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th style="width:46px;">#</th>
+                          <th style="width:46px;"></th>
+                          <th>Component</th>
+                          <th>Part Number</th>
+                          <th>Qty</th>
+                          <th>UOM</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>1</td>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Front Cover Casting</td>
+                          <td>5G0-C</td>
+                          <td>1</td>
+                          <td>EA</td>
+                        </tr>
+                        <tr>
+                          <td>2</td>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Mounting Pin</td>
+                          <td>PNA</td>
+                          <td>2</td>
+                          <td>EA</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style="padding:8px 10px;">
+                    <em style="font-size:11px;color:var(--text-muted);">Published BOM — read-only. Click New Version to create a draft copy for editing.</em>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab: Quality Specs -->
+              <div class="tab-content" data-tab="tab-quality-specs-link">
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Linked Quality Specs for 5G0 Front Cover</div>
+                <div class="detail-panel">
+                  <div style="overflow-x:auto;">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Spec Name</th>
+                          <th>Active Version</th>
+                          <th>Status</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>5G0 Dimensional Spec</td>
+                          <td>v2</td>
+                          <td><span class="badge badge-published">Published</span></td>
+                          <td><button class="btn btn-sm" onclick="toggleCategory('quality');navigateTo('quality','quality-specs');">Go to spec &#8594;</button></td>
+                        </tr>
+                        <tr>
+                          <td>5G0 Visual Inspection</td>
+                          <td>v1</td>
+                          <td><span class="badge badge-published">Published</span></td>
+                          <td><button class="btn btn-sm" onclick="toggleCategory('quality');navigateTo('quality','quality-specs');">Go to spec &#8594;</button></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab: Eligibility -->
+              <div class="tab-content" data-tab="tab-eligibility">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                  <label style="font-size:12px;color:var(--text-muted);">Area:</label>
+                  <select class="select"><option>All Areas</option><option selected>Die Cast</option><option>Trim Shop</option><option>Machine Shop</option></select>
+                </div>
+                <div class="detail-panel">
+                  <div class="detail-header"><h2>Machine Eligibility — Die Cast area</h2></div>
+                  <div style="overflow-x:auto;">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Machine</th>
+                          <th>Code</th>
+                          <th>Tonnage</th>
+                          <th>Eligible</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>DC Machine #3</td>
+                          <td>DC-003</td>
+                          <td>400 tons</td>
+                          <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                        </tr>
+                        <tr>
+                          <td>DC Machine #7</td>
+                          <td>DC-007</td>
+                          <td>400 tons</td>
+                          <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                        </tr>
+                        <tr>
+                          <td>DC Machine #12</td>
+                          <td>DC-012</td>
+                          <td>400 tons</td>
+                          <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                        </tr>
+                        <tr>
+                          <td>DC Machine #15</td>
+                          <td>DC-015</td>
+                          <td>250 tons</td>
+                          <td><input type="checkbox" style="accent-color:var(--accent);" /></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /item-tabs -->
+          </div><!-- /detail-area -->
+        </div><!-- /main split -->
+      </div><!-- /screen-item-master -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Operation Templates
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-operation-templates">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Parts</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Operation Templates</span>
+            </div>
+            <h1 style="font-size:15px;font-weight:600;">Operation Templates</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary">+ New Template</button>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: grouped list -->
+          <div class="tree-panel" style="width:240px;min-width:240px;border-right:1px solid var(--border);background:var(--bg-nav);display:flex;flex-direction:column;">
+            <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;">
+              <select class="select" style="width:100%;"><option>All Areas</option><option>Die Cast</option><option>Trim Shop</option><option>Machine Shop</option><option>Assembly</option></select>
+              <input class="search-input" style="width:100%;" type="text" placeholder="&#128269; Search templates…" />
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:4px 0;">
+
+              <div style="padding:4px 10px 2px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);">Die Cast</div>
+              <div class="tree-item selected" style="padding-left:14px;justify-content:space-between;">
+                <span>Die Cast Operation</span>
+                <span style="font-size:11px;color:var(--text-muted);">v2</span>
+              </div>
+
+              <div style="padding:8px 10px 2px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);">Trim Shop</div>
+              <div class="tree-item" style="padding-left:14px;justify-content:space-between;">
+                <span>Trim Operation</span>
+                <span style="font-size:11px;color:var(--text-muted);">v1</span>
+              </div>
+
+              <div style="padding:8px 10px 2px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);">Machine Shop</div>
+              <div class="tree-item" style="padding-left:14px;justify-content:space-between;">
+                <span>CNC Machining</span>
+                <span style="font-size:11px;color:var(--text-muted);">v1</span>
+              </div>
+
+              <div style="padding:8px 10px 2px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);">Assembly</div>
+              <div class="tree-item" style="padding-left:14px;justify-content:space-between;">
+                <span>Assembly Front (Serialized)</span>
+                <span style="font-size:11px;color:var(--text-muted);">v1</span>
+              </div>
+              <div class="tree-item" style="padding-left:14px;justify-content:space-between;">
+                <span>Pack &amp; Ship</span>
+                <span style="font-size:11px;color:var(--text-muted);">v1</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Right: detail area -->
+          <div class="detail-area" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+
+            <!-- Template Details -->
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg-panel);">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:600;">Die Cast Operation</span>
+                <span style="font-size:11px;color:var(--text-muted);">v2</span>
+                <div style="flex:1;"></div>
+                <button class="btn btn-primary btn-sm" onclick="showToast('success','Template saved.')">Save</button>
+                <button class="btn btn-sm">New Version</button>
+                <button class="btn btn-danger btn-sm">Deprecate</button>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <div class="field-label">Code</div>
+                  <input class="search-input" type="text" value="DIE-CAST" readonly style="background:var(--bg-row-alt);color:var(--text-muted);" />
+                </div>
+                <div class="field" style="flex:2;">
+                  <div class="field-label">Name</div>
+                  <input class="search-input" style="width:100%;" type="text" value="Die Cast Operation" />
+                </div>
+                <div class="field">
+                  <div class="field-label">Area</div>
+                  <select class="select"><option selected>Die Cast</option><option>Trim Shop</option><option>Machine Shop</option><option>Assembly</option></select>
+                </div>
+              </div>
+              <div class="field" style="margin-top:8px;">
+                <div class="field-label">Description</div>
+                <input class="search-input" style="width:100%;" type="text" value="Primary die cast operation with die, cavity, weight, and count collection." />
+              </div>
+            </div>
+
+            <!-- Data Collection Fields builder -->
+            <div style="flex:1;overflow-y:auto;padding:12px 14px;background:var(--bg-content);">
+              <div class="detail-panel">
+                <div class="detail-header">
+                  <h2>Data Collection Fields</h2>
+                  <span style="font-size:11px;color:var(--text-muted);">5 fields</span>
+                  <div style="flex:1;"></div>
+                  <button class="btn btn-sm btn-primary">+ Add Field</button>
+                </div>
+                <div style="overflow-x:auto;">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="width:46px;"></th>
+                        <th>Field</th>
+                        <th>Required</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn">&#9660;</button></div></td>
+                        <td>CollectsDieInfo</td>
+                        <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                        <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="arrows"><button class="arrow-btn">&#9650;</button><button class="arrow-btn">&#9660;</button></div></td>
+                        <td>CollectsCavityInfo</td>
+                        <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                        <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="arrows"><button class="arrow-btn">&#9650;</button><button class="arrow-btn">&#9660;</button></div></td>
+                        <td>CollectsWeight</td>
+                        <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                        <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="arrows"><button class="arrow-btn">&#9650;</button><button class="arrow-btn">&#9660;</button></div></td>
+                        <td>CollectsGoodCount</td>
+                        <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                        <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="arrows"><button class="arrow-btn">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                        <td>CollectsBadCount</td>
+                        <td><input type="checkbox" style="accent-color:var(--accent);" /></td>
+                        <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /detail-area -->
+        </div><!-- /main split -->
+      </div><!-- /screen-operation-templates -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Quality Specs
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-quality-specs">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Quality</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Quality Specs</span>
+            </div>
+            <h1 style="font-size:15px;font-weight:600;">Quality Specs</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary">+ New Spec</button>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: spec list -->
+          <div class="tree-panel" style="width:240px;min-width:240px;border-right:1px solid var(--border);background:var(--bg-nav);display:flex;flex-direction:column;">
+            <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;">
+              <select class="select" style="width:100%;"><option>All Items</option><option selected>5G0 Front Cover</option><option>RPY Assembly Set</option></select>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:4px 0;">
+
+              <div class="tree-item selected" style="padding-left:10px;justify-content:space-between;">
+                <span style="flex:1;">5G0 Dimensional Spec</span>
+                <span class="badge badge-published" style="font-size:10px;padding:1px 5px;">Published v2</span>
+              </div>
+
+              <div class="tree-item" style="padding-left:10px;justify-content:space-between;">
+                <span style="flex:1;">5G0 Visual Inspection</span>
+                <span class="badge badge-published" style="font-size:10px;padding:1px 5px;">Published v1</span>
+              </div>
+
+              <div class="tree-item" style="padding-left:10px;justify-content:space-between;">
+                <span style="flex:1;">RPY Assembly Check</span>
+                <span class="badge badge-draft" style="font-size:10px;padding:1px 5px;">Draft v1</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Right: detail area -->
+          <div class="detail-area" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+
+            <!-- Spec Details -->
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg-panel);">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:600;">5G0 Dimensional Spec</span>
+                <div style="flex:1;"></div>
+                <button class="btn btn-primary btn-sm" onclick="showToast('success','Spec saved.')">Save</button>
+                <button class="btn btn-danger btn-sm">Deprecate</button>
+              </div>
+              <div class="field-row" style="margin-bottom:8px;">
+                <div class="field" style="flex:2;">
+                  <div class="field-label">Name</div>
+                  <input class="search-input" style="width:100%;" type="text" value="5G0 Dimensional Spec" />
+                </div>
+                <div class="field">
+                  <div class="field-label">Linked Item</div>
+                  <input class="search-input" type="text" value="5G0" readonly style="background:var(--bg-row-alt);color:var(--text-muted);" />
+                </div>
+                <div class="field" style="flex:2;">
+                  <div class="field-label">Linked Operation</div>
+                  <input class="search-input" style="width:100%;" type="text" value="CNC Machining" readonly style="background:var(--bg-row-alt);color:var(--text-muted);" />
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="version-selector">
+                  <select class="select"><option selected>v2 — Effective 2026-03-01 (Published)</option><option>v1 — Effective 2025-06-01 (Deprecated)</option></select>
+                </div>
+                <span class="badge badge-published">Published</span>
+                <div style="flex:1;"></div>
+                <button class="btn btn-sm">New Version</button>
+              </div>
+            </div>
+
+            <!-- Tab container -->
+            <div id="spec-tabs" style="display:flex;flex-direction:column;flex:1;overflow:hidden;background:var(--bg-panel);">
+              <div class="tab-strip">
+                <button class="tab-item active" data-tab="spec-tab-attributes" onclick="switchTab('spec-tabs','spec-tab-attributes')">Attributes</button>
+                <button class="tab-item" data-tab="spec-tab-history" onclick="switchTab('spec-tabs','spec-tab-history')">Version History</button>
+              </div>
+
+              <!-- Tab: Attributes -->
+              <div class="tab-content active" data-tab="spec-tab-attributes">
+                <div class="detail-panel">
+                  <div style="overflow-x:auto;">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th style="width:46px;"></th>
+                          <th>Attribute</th>
+                          <th>Type</th>
+                          <th>Target</th>
+                          <th>Lower</th>
+                          <th>Upper</th>
+                          <th>UOM</th>
+                          <th>Trigger</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Surface Flatness</td>
+                          <td>DECIMAL</td>
+                          <td>0.002</td>
+                          <td>0.001</td>
+                          <td>0.003</td>
+                          <td>in</td>
+                          <td>FirstPiece</td>
+                        </tr>
+                        <tr>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Bore Diameter</td>
+                          <td>DECIMAL</td>
+                          <td>25.40</td>
+                          <td>25.38</td>
+                          <td>25.42</td>
+                          <td>mm</td>
+                          <td>FirstPiece</td>
+                        </tr>
+                        <tr>
+                          <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
+                          <td>Porosity Visual</td>
+                          <td>PASS/FAIL</td>
+                          <td>Pass</td>
+                          <td>—</td>
+                          <td>—</td>
+                          <td>—</td>
+                          <td>Hourly</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style="padding:8px 10px;">
+                    <em style="font-size:11px;color:var(--text-muted);">Published spec — read-only. Click New Version to create a draft copy for editing.</em>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab: Version History -->
+              <div class="tab-content" data-tab="spec-tab-history">
+                <div class="detail-panel">
+                  <div style="overflow-x:auto;">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Version</th>
+                          <th>Effective</th>
+                          <th>Status</th>
+                          <th>Created By</th>
+                          <th>Created</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="selected">
+                          <td>v2</td>
+                          <td>2026-03-01</td>
+                          <td><span class="badge badge-published">Published</span></td>
+                          <td>J. Potgieter</td>
+                          <td>2026-02-28</td>
+                        </tr>
+                        <tr>
+                          <td>v1</td>
+                          <td>2025-06-01</td>
+                          <td><span class="badge badge-deprecated">Deprecated</span></td>
+                          <td>J. Potgieter</td>
+                          <td>2025-05-15</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /spec-tabs -->
+          </div><!-- /detail-area -->
+        </div><!-- /main split -->
+      </div><!-- /screen-quality-specs -->
+
       <!-- Additional screens inserted by subsequent tasks -->
 
     </main>
