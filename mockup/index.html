@@ -474,6 +474,21 @@
       background: var(--status-type-bg);
     }
 
+    .badge-warning {
+      color: #e65100;
+      background: #fff3e0;
+    }
+
+    body.theme-dark .badge-warning {
+      color: #ffb74d;
+      background: #3e2000;
+    }
+
+    .badge-muted {
+      color: var(--text-muted);
+      background: var(--bg-row-alt);
+    }
+
     /* ─── Form Controls ───────────────────────────────────────────────── */
     .search-input {
       height: 28px;
@@ -915,7 +930,8 @@
       background: var(--border);
       border-radius: 3px;
       overflow: hidden;
-      margin-top: 6px;
+      margin-top: 2px;
+      margin-bottom: 6px;
     }
 
     .tile-bar-fill {
@@ -925,10 +941,81 @@
       transition: width 0.3s ease;
     }
 
+    /* Tile stat rows (for dashboard tiles with label + count + bar) */
+    .tile-stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    .tile-row-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    .tile-row-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-left: 8px;
+    }
+
+    /* Filter sidebar layout (left-panel list-detail variant) */
+    .filter-sidebar {
+      width: 180px;
+      min-width: 180px;
+      border-right: 1px solid var(--border);
+      background: var(--bg-nav);
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      gap: 8px;
+    }
+
+    .filter-sidebar label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+      display: block;
+    }
+
+    .filter-sidebar .select,
+    .filter-sidebar .search-input,
+    .filter-sidebar input[type=date] {
+      width: 100%;
+    }
+
+    .filter-sidebar input[type=date] {
+      height: 28px;
+      padding: 0 6px;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .filter-sidebar input[type=date]:focus {
+      border-color: var(--accent);
+    }
+
     /* ─── Expandable Detail Row ───────────────────────────────────────── */
     .expandable-detail {
+      display: none;
       background: var(--bg-row-alt);
       border-top: 1px dashed var(--border);
+    }
+
+    .expandable-detail.open {
+      display: table-row;
+    }
+
+    .expandable-detail td {
       padding: 10px 14px;
     }
 
@@ -2026,7 +2113,775 @@
         </div><!-- /main split -->
       </div><!-- /screen-quality-specs -->
 
-      <!-- Additional screens inserted by subsequent tasks -->
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Defect Codes
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-defect-codes">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Quality</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Defect Codes</span>
+            </div>
+            <h1>Defect Codes</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary">+ Add Code</button>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: filter sidebar -->
+          <div class="filter-sidebar">
+            <div>
+              <label>Area</label>
+              <select class="select">
+                <option>All Areas</option>
+                <option>Die Cast</option>
+                <option>Trim Shop</option>
+                <option>Machine Shop</option>
+                <option>Prod Control</option>
+                <option>Quality Control</option>
+                <option>HSP</option>
+              </select>
+            </div>
+            <div>
+              <label>Search</label>
+              <input class="search-input" type="text" placeholder="&#128269; Search…" />
+            </div>
+            <label class="checkbox">
+              <input type="checkbox" />
+              Include deprecated
+            </label>
+          </div>
+
+          <!-- Right: data table -->
+          <div style="flex:1;overflow-y:auto;background:var(--bg-content);padding:12px;">
+            <div class="detail-panel">
+              <div style="overflow-x:auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Description</th>
+                      <th>Area</th>
+                      <th>Excused</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>DC-0135</td>
+                      <td>Porosity</td>
+                      <td>Die Cast</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr class="selected">
+                      <td>DC-0136</td>
+                      <td>Cold Shut</td>
+                      <td>Die Cast</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>DC-0137</td>
+                      <td>Flash</td>
+                      <td>Die Cast</td>
+                      <td>&#9745;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>DC-0138</td>
+                      <td>Misrun</td>
+                      <td>Die Cast</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>MS-0001</td>
+                      <td>Dimensional (OOT)</td>
+                      <td>Machine Shop</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>MS-0143</td>
+                      <td>Surface Finish</td>
+                      <td>Machine Shop</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>MS-0154</td>
+                      <td>Tool Marks</td>
+                      <td>Machine Shop</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>TS-0101</td>
+                      <td>Burr — Trim</td>
+                      <td>Trim Shop</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>HSP-0247</td>
+                      <td>Vendor Defect — Dimensional</td>
+                      <td>HSP</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /main split -->
+      </div><!-- /screen-defect-codes -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Downtime Codes
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-downtime-codes">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Operations</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Downtime Codes</span>
+            </div>
+            <h1>Downtime Codes</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary">+ Add Code</button>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: filter sidebar -->
+          <div class="filter-sidebar">
+            <div>
+              <label>Area</label>
+              <select class="select">
+                <option>All</option>
+                <option>Die Cast</option>
+                <option>Machine Shop</option>
+                <option>Trim Shop</option>
+              </select>
+            </div>
+            <div>
+              <label>Reason Type</label>
+              <select class="select">
+                <option>All Types</option>
+                <option>Equipment</option>
+                <option>Mold</option>
+                <option>Quality</option>
+                <option>Setup</option>
+                <option>Miscellaneous</option>
+                <option>Unscheduled</option>
+              </select>
+            </div>
+            <div>
+              <label>Search</label>
+              <input class="search-input" type="text" placeholder="&#128269; Search…" />
+            </div>
+            <label class="checkbox">
+              <input type="checkbox" />
+              Include deprecated
+            </label>
+          </div>
+
+          <!-- Right: data table -->
+          <div style="flex:1;overflow-y:auto;background:var(--bg-content);padding:12px;">
+            <div class="detail-panel">
+              <div style="overflow-x:auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Description</th>
+                      <th>Area</th>
+                      <th>Type</th>
+                      <th>Excused</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>DC-0001</td>
+                      <td>Die Stuck</td>
+                      <td>Die Cast</td>
+                      <td>Equipment</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>DC-0002</td>
+                      <td>Hydraulic Leak</td>
+                      <td>Die Cast</td>
+                      <td>Equipment</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr class="selected">
+                      <td>DC-0015</td>
+                      <td>Mold Change</td>
+                      <td>Die Cast</td>
+                      <td>Setup</td>
+                      <td>&#9745;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>DC-0030</td>
+                      <td>Quality Hold — Line Stop</td>
+                      <td>Die Cast</td>
+                      <td>Quality</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>MS-0001</td>
+                      <td>Tool Change</td>
+                      <td>Machine Shop</td>
+                      <td>Setup</td>
+                      <td>&#9745;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>MS-0010</td>
+                      <td>Spindle Error</td>
+                      <td>Machine Shop</td>
+                      <td>Equipment</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                    <tr>
+                      <td>TS-0001</td>
+                      <td>Trim Die Repair</td>
+                      <td>Trim Shop</td>
+                      <td>Mold</td>
+                      <td>&#9744;</td>
+                      <td><button class="btn btn-sm">Edit</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /main split -->
+      </div><!-- /screen-downtime-codes -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Shift Schedules
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-shift-schedules">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Operations</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Shift Schedules</span>
+            </div>
+            <h1>Shift Schedules</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary">+ Add Schedule</button>
+        </div>
+
+        <!-- Content (no filter sidebar) -->
+        <div style="flex:1;overflow-y:auto;background:var(--bg-content);padding:12px;border-top:1px solid var(--border);">
+          <div class="detail-panel">
+            <div style="overflow-x:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Days</th>
+                    <th>Effective</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="selected">
+                    <td>First Shift</td>
+                    <td>06:00</td>
+                    <td>14:00</td>
+                    <td>
+                      <div class="dow-visual">
+                        <div class="dow-day active">M</div>
+                        <div class="dow-day active">T</div>
+                        <div class="dow-day active">W</div>
+                        <div class="dow-day active">T</div>
+                        <div class="dow-day active">F</div>
+                        <div class="dow-day inactive">S</div>
+                        <div class="dow-day inactive">S</div>
+                      </div>
+                    </td>
+                    <td>2026-01-01</td>
+                    <td><button class="btn btn-sm">Edit</button></td>
+                  </tr>
+                  <tr>
+                    <td>Second Shift</td>
+                    <td>14:00</td>
+                    <td>22:00</td>
+                    <td>
+                      <div class="dow-visual">
+                        <div class="dow-day active">M</div>
+                        <div class="dow-day active">T</div>
+                        <div class="dow-day active">W</div>
+                        <div class="dow-day active">T</div>
+                        <div class="dow-day active">F</div>
+                        <div class="dow-day inactive">S</div>
+                        <div class="dow-day inactive">S</div>
+                      </div>
+                    </td>
+                    <td>2026-01-01</td>
+                    <td><button class="btn btn-sm">Edit</button></td>
+                  </tr>
+                  <tr>
+                    <td>Weekend OT</td>
+                    <td>06:00</td>
+                    <td>16:00</td>
+                    <td>
+                      <div class="dow-visual">
+                        <div class="dow-day inactive">M</div>
+                        <div class="dow-day inactive">T</div>
+                        <div class="dow-day inactive">W</div>
+                        <div class="dow-day inactive">T</div>
+                        <div class="dow-day inactive">F</div>
+                        <div class="dow-day active">S</div>
+                        <div class="dow-day active">S</div>
+                      </div>
+                    </td>
+                    <td>2026-01-01</td>
+                    <td><button class="btn btn-sm">Edit</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /screen-shift-schedules -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Users
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-users">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>System</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Users</span>
+            </div>
+            <h1>Users</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary">+ Add User</button>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: filter sidebar -->
+          <div class="filter-sidebar">
+            <div>
+              <label>Search</label>
+              <input class="search-input" type="text" placeholder="&#128269; Search…" />
+            </div>
+            <label class="checkbox">
+              <input type="checkbox" />
+              Include deprecated
+            </label>
+          </div>
+
+          <!-- Right: data table -->
+          <div style="flex:1;overflow-y:auto;background:var(--bg-content);padding:12px;">
+            <div class="detail-panel">
+              <div style="overflow-x:auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Display Name</th>
+                      <th>AD Account</th>
+                      <th>Clock #</th>
+                      <th>Role</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="selected">
+                      <td>J. Potgieter</td>
+                      <td style="font-family:monospace;font-size:11px;">jpotgieter@mpp.local</td>
+                      <td>1042</td>
+                      <td><span class="badge badge-type">Engineering</span></td>
+                      <td style="white-space:nowrap;">
+                        <button class="btn btn-sm">Edit</button>
+                        <button class="btn btn-sm" style="margin-left:4px;">PIN</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Bootstrap Admin</td>
+                      <td style="font-family:monospace;font-size:11px;">system.bootstrap</td>
+                      <td>0001</td>
+                      <td><span class="badge badge-type">Admin</span></td>
+                      <td style="white-space:nowrap;">
+                        <button class="btn btn-sm">Edit</button>
+                        <button class="btn btn-sm" style="margin-left:4px;">PIN</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Diane Martinez</td>
+                      <td style="font-family:monospace;font-size:11px;">dmartinez@mpp.local</td>
+                      <td>2015</td>
+                      <td><span class="badge badge-warning">Quality</span></td>
+                      <td style="white-space:nowrap;">
+                        <button class="btn btn-sm">Edit</button>
+                        <button class="btn btn-sm" style="margin-left:4px;">PIN</button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Carlos Reyes</td>
+                      <td style="font-family:monospace;font-size:11px;">creyes@mpp.local</td>
+                      <td>3047</td>
+                      <td><span class="badge badge-muted">Operator</span></td>
+                      <td style="white-space:nowrap;">
+                        <button class="btn btn-sm">Edit</button>
+                        <button class="btn btn-sm" style="margin-left:4px;">PIN</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /main split -->
+      </div><!-- /screen-users -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Audit Log
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-audit-log">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>System</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Audit Log</span>
+            </div>
+            <h1>Audit Log</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: filter sidebar -->
+          <div class="filter-sidebar">
+            <div>
+              <label>Start Date</label>
+              <input type="date" value="2026-04-15" />
+            </div>
+            <div>
+              <label>End Date</label>
+              <input type="date" value="2026-04-16" />
+            </div>
+            <div>
+              <label>Entity Type</label>
+              <select class="select">
+                <option>All</option>
+                <option>Location</option>
+                <option>Item</option>
+                <option>Bom</option>
+                <option>RouteTemplate</option>
+                <option>OperationTemplate</option>
+                <option>QualitySpec</option>
+                <option>AppUser</option>
+              </select>
+            </div>
+            <div>
+              <label>User</label>
+              <select class="select">
+                <option>All</option>
+                <option>J. Potgieter</option>
+                <option>Bootstrap Admin</option>
+              </select>
+            </div>
+            <div>
+              <label>Search</label>
+              <input class="search-input" type="text" placeholder="&#128269; Search…" />
+            </div>
+          </div>
+
+          <!-- Right: data table -->
+          <div style="flex:1;overflow-y:auto;background:var(--bg-content);padding:12px;">
+            <div class="detail-panel">
+              <div style="overflow-x:auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>User</th>
+                      <th>Entity Type</th>
+                      <th>Entity</th>
+                      <th>Event</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('open')">
+                      <td style="font-family:monospace;font-size:11px;">2026-04-16 09:42:15</td>
+                      <td>J. Potgieter</td>
+                      <td>Location</td>
+                      <td>DC Machine #7</td>
+                      <td>Updated</td>
+                      <td>Tonnage changed from 350 to 400</td>
+                    </tr>
+                    <tr class="expandable-detail">
+                      <td colspan="6"><div class="json-block">{
+  "OldValue": { "Tonnage": 350 },
+  "NewValue": { "Tonnage": 400 }
+}</div></td>
+                    </tr>
+                    <tr style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('open')">
+                      <td style="font-family:monospace;font-size:11px;">2026-04-16 09:38:02</td>
+                      <td>J. Potgieter</td>
+                      <td>Item</td>
+                      <td>5G0 Front Cover</td>
+                      <td>Updated</td>
+                      <td>UnitWeight changed from 3.15 to 3.25</td>
+                    </tr>
+                    <tr class="expandable-detail">
+                      <td colspan="6"><div class="json-block">{
+  "OldValue": { "UnitWeight": 3.15 },
+  "NewValue": { "UnitWeight": 3.25 }
+}</div></td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:monospace;font-size:11px;">2026-04-16 09:30:00</td>
+                      <td>J. Potgieter</td>
+                      <td>RouteTemplate</td>
+                      <td>5G0 Route v2</td>
+                      <td>Created</td>
+                      <td>New version created from v1</td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:monospace;font-size:11px;">2026-04-15 16:45:12</td>
+                      <td>Bootstrap Admin</td>
+                      <td>AppUser</td>
+                      <td>D. Martinez</td>
+                      <td>Created</td>
+                      <td>User created with role Quality</td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:monospace;font-size:11px;">2026-04-15 14:22:01</td>
+                      <td>J. Potgieter</td>
+                      <td>OperationTemplate</td>
+                      <td>Die Cast v2</td>
+                      <td>Updated</td>
+                      <td>Added CollectsWeight field</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /main split -->
+      </div><!-- /screen-audit-log -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Failure Log
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-failure-log">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>System</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Failure Log</span>
+            </div>
+            <h1>Failure Log</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: filter sidebar -->
+          <div class="filter-sidebar">
+            <div>
+              <label>Start Date</label>
+              <input type="date" value="2026-04-09" />
+            </div>
+            <div>
+              <label>End Date</label>
+              <input type="date" value="2026-04-16" />
+            </div>
+            <div>
+              <label>Entity Type</label>
+              <select class="select">
+                <option>All</option>
+                <option>Location</option>
+                <option>Item</option>
+                <option>Bom</option>
+                <option>RouteTemplate</option>
+                <option>OperationTemplate</option>
+                <option>QualitySpec</option>
+                <option>AppUser</option>
+              </select>
+            </div>
+            <div>
+              <label>Procedure</label>
+              <select class="select">
+                <option>All Procs</option>
+                <option>Location_Create</option>
+                <option>Item_Deprecate</option>
+                <option>Bom_Publish</option>
+              </select>
+            </div>
+            <div>
+              <label>Search</label>
+              <input class="search-input" type="text" placeholder="&#128269; Search…" />
+            </div>
+          </div>
+
+          <!-- Right: content area -->
+          <div style="flex:1;overflow-y:auto;background:var(--bg-content);">
+
+            <!-- Dashboard tiles -->
+            <div class="dashboard-tiles">
+
+              <div class="dashboard-tile" style="flex:1;min-width:240px;">
+                <div class="tile-label">Top Rejection Reasons (7 days)</div>
+                <div class="tile-stat-row">
+                  <span class="tile-row-label">Duplicate code exists</span>
+                  <span class="tile-row-value">12</span>
+                </div>
+                <div class="tile-bar"><div class="tile-bar-fill" style="width:100%;"></div></div>
+                <div class="tile-stat-row">
+                  <span class="tile-row-label">Active dependents exist</span>
+                  <span class="tile-row-value">8</span>
+                </div>
+                <div class="tile-bar"><div class="tile-bar-fill" style="width:67%;"></div></div>
+                <div class="tile-stat-row">
+                  <span class="tile-row-label">Required parameter missing</span>
+                  <span class="tile-row-value">5</span>
+                </div>
+                <div class="tile-bar"><div class="tile-bar-fill" style="width:42%;"></div></div>
+              </div>
+
+              <div class="dashboard-tile" style="flex:1;min-width:240px;">
+                <div class="tile-label">Top Failing Procedures (7 days)</div>
+                <div class="tile-stat-row">
+                  <span class="tile-row-label">Location.Location_Create</span>
+                  <span class="tile-row-value">9</span>
+                </div>
+                <div class="tile-bar"><div class="tile-bar-fill" style="width:100%;"></div></div>
+                <div class="tile-stat-row">
+                  <span class="tile-row-label">Parts.Item_Deprecate</span>
+                  <span class="tile-row-value">7</span>
+                </div>
+                <div class="tile-bar"><div class="tile-bar-fill" style="width:78%;"></div></div>
+                <div class="tile-stat-row">
+                  <span class="tile-row-label">Parts.Bom_Publish</span>
+                  <span class="tile-row-value">4</span>
+                </div>
+                <div class="tile-bar"><div class="tile-bar-fill" style="width:44%;"></div></div>
+              </div>
+
+            </div><!-- /dashboard-tiles -->
+
+            <!-- Failure table -->
+            <div style="padding:0 12px 12px 12px;">
+              <div class="detail-panel">
+                <div style="overflow-x:auto;">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Entity</th>
+                        <th>Procedure</th>
+                        <th>Failure Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('open')">
+                        <td style="font-family:monospace;font-size:11px;">2026-04-16 09:44:30</td>
+                        <td>J. Potgieter</td>
+                        <td>Location</td>
+                        <td>Location_Create</td>
+                        <td>A location with this Code already exists.</td>
+                      </tr>
+                      <tr class="expandable-detail">
+                        <td colspan="5"><div class="json-block">{
+  "Code": "DC-007",
+  "Name": "DC Machine #7 duplicate",
+  "ParentLocationId": 3
+}</div></td>
+                      </tr>
+                      <tr style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('open')">
+                        <td style="font-family:monospace;font-size:11px;">2026-04-16 09:40:12</td>
+                        <td>J. Potgieter</td>
+                        <td>Item</td>
+                        <td>Item_Deprecate</td>
+                        <td>Cannot deprecate: active RouteTemplate references exist.</td>
+                      </tr>
+                      <tr class="expandable-detail">
+                        <td colspan="5"><div class="json-block">{
+  "ItemId": 1,
+  "ActiveDependents": ["RouteTemplate v2", "Bom v1"]
+}</div></td>
+                      </tr>
+                      <tr>
+                        <td style="font-family:monospace;font-size:11px;">2026-04-15 16:50:00</td>
+                        <td>Bootstrap Admin</td>
+                        <td>Location</td>
+                        <td>Location_Create</td>
+                        <td>Required parameter missing.</td>
+                      </tr>
+                      <tr>
+                        <td style="font-family:monospace;font-size:11px;">2026-04-15 11:22:33</td>
+                        <td>J. Potgieter</td>
+                        <td>Bom</td>
+                        <td>Bom_Publish</td>
+                        <td>Cannot publish: BOM has no lines.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /right content -->
+        </div><!-- /main split -->
+      </div><!-- /screen-failure-log -->
 
     </main>
   </div>
