@@ -2884,6 +2884,176 @@
       </div><!-- /screen-failure-log -->
 
     </main>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         MODALS
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Modal 1: Add Location -->
+    <div class="modal-overlay" id="modal-add-location">
+      <div class="modal">
+        <div class="modal-header">
+          Add Location
+          <button class="close-btn" onclick="closeModal('modal-add-location')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- LocationTypeDefinition dropdown -->
+          <div class="field">
+            <div class="field-label">Location Type Definition</div>
+            <select class="select" style="width: 100%;">
+              <option>Select...</option>
+              <option>DieCastMachine (Cell)</option>
+              <option>CNCMachine (Cell)</option>
+              <option>TrimPress (Cell)</option>
+              <option>Terminal (Cell)</option>
+              <option>InventoryLocation (Cell)</option>
+              <option>ProductionLine (WorkCenter)</option>
+            </select>
+          </div>
+          <!-- Name + Code row -->
+          <div class="field-row">
+            <div class="field">
+              <div class="field-label">Name</div>
+              <input class="field-value" placeholder="e.g., DC Machine #20">
+            </div>
+            <div class="field">
+              <div class="field-label">Code</div>
+              <input class="field-value" placeholder="e.g., DC-020">
+            </div>
+          </div>
+          <!-- Description -->
+          <div class="field">
+            <div class="field-label">Description</div>
+            <input class="field-value" placeholder="Optional description">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-add-location')">Cancel</button>
+          <button class="btn btn-primary" onclick="closeModal('modal-add-location')">Create Location</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Location Type Definition Editor -->
+    <div class="modal-overlay" id="modal-loc-type-editor">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          Location Type Definitions
+          <button class="close-btn" onclick="closeModal('modal-loc-type-editor')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom: 12px; font-size: 11px; color: var(--text-muted);">
+            Define the kinds of locations and their attribute schemas. Changes here affect all locations of each type.
+          </div>
+
+          <!-- Cell Types group -->
+          <div class="detail-panel" style="margin-bottom: 12px;">
+            <div class="detail-header">
+              Cell Types
+              <span style="font-size: 10px; color: var(--text-muted); font-weight: 400;">(ISA-95 tier: Cell)</span>
+            </div>
+            <div style="overflow: auto;">
+              <table class="data-table">
+                <thead><tr><th>Code</th><th>Name</th><th>Attributes</th><th style="width: 50px;"></th></tr></thead>
+                <tbody>
+                  <tr class="selected"><td>DieCastMachine</td><td>Die Cast Machine</td><td style="font-size: 10px; color: var(--text-muted);">Tonnage, NumberOfCavities, RefCycleTimeSec</td><td><button class="btn btn-sm">Edit</button></td></tr>
+                  <tr><td>CNCMachine</td><td>CNC Machine</td><td style="font-size: 10px; color: var(--text-muted);">SpindleCount, CoolantType</td><td><button class="btn btn-sm">Edit</button></td></tr>
+                  <tr><td>TrimPress</td><td>Trim Press</td><td style="font-size: 10px; color: var(--text-muted);">Tonnage</td><td><button class="btn btn-sm">Edit</button></td></tr>
+                  <tr><td>Terminal</td><td>Operator Terminal</td><td style="font-size: 10px; color: var(--text-muted);">IpAddress, DefaultPrinter, HasBarcodeScanner</td><td><button class="btn btn-sm">Edit</button></td></tr>
+                  <tr><td>InventoryLocation</td><td>Inventory Location</td><td style="font-size: 10px; color: var(--text-muted);">IsPhysical, IsLineside, MaxLotCapacity</td><td><button class="btn btn-sm">Edit</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Area Types group -->
+          <div class="detail-panel">
+            <div class="detail-header">
+              Area Types
+              <span style="font-size: 10px; color: var(--text-muted); font-weight: 400;">(ISA-95 tier: Area)</span>
+            </div>
+            <div style="overflow: auto;">
+              <table class="data-table">
+                <thead><tr><th>Code</th><th>Name</th><th>Attributes</th><th style="width: 50px;"></th></tr></thead>
+                <tbody>
+                  <tr><td>ProductionArea</td><td>Production Area</td><td style="font-size: 10px; color: var(--text-muted);">(none)</td><td><button class="btn btn-sm">Edit</button></td></tr>
+                  <tr><td>SupportArea</td><td>Support Area</td><td style="font-size: 10px; color: var(--text-muted);">(none)</td><td><button class="btn btn-sm">Edit</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-loc-type-editor')">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 3: Add Item -->
+    <div class="modal-overlay" id="modal-add-item">
+      <div class="modal">
+        <div class="modal-header">
+          Add Item
+          <button class="close-btn" onclick="closeModal('modal-add-item')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="field-row">
+            <div class="field">
+              <div class="field-label">Part Number *</div>
+              <input class="field-value" placeholder="e.g., 5G0">
+            </div>
+            <div class="field">
+              <div class="field-label">Item Type *</div>
+              <select class="select" style="width: 100%;">
+                <option>Select...</option>
+                <option>Raw Material</option>
+                <option>Component</option>
+                <option>Sub-Assembly</option>
+                <option>Finished Good</option>
+                <option>Pass-Through</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">Description *</div>
+            <input class="field-value" placeholder="Item description">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <div class="field-label">UOM *</div>
+              <select class="select" style="width: 100%;"><option selected>EA</option><option>LB</option><option>KG</option></select>
+            </div>
+            <div class="field">
+              <div class="field-label">Unit Weight</div>
+              <input class="field-value" placeholder="0.00">
+            </div>
+            <div class="field">
+              <div class="field-label">Weight UOM</div>
+              <select class="select" style="width: 100%;"><option>LB</option><option>KG</option></select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <div class="field-label">Default Sub-LOT Qty</div>
+              <input class="field-value" placeholder="24">
+            </div>
+            <div class="field">
+              <div class="field-label">Max LOT Size</div>
+              <input class="field-value" placeholder="100">
+            </div>
+            <div class="field">
+              <div class="field-label">Macola Part #</div>
+              <input class="field-value" placeholder="Optional">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-add-item')">Cancel</button>
+          <button class="btn btn-primary" onclick="closeModal('modal-add-item')">Create Item</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
