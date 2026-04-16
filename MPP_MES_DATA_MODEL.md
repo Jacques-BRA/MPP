@@ -19,6 +19,8 @@
 | 0.5.1 | 2026-04-13 | Blue Ridge Automation | Added `SortOrder INT NOT NULL DEFAULT 0` column to `Location.Location` table for display ordering among siblings. Auto-incremented on creation, updated via MoveUp/MoveDown operations. |
 | 0.6 | 2026-04-13 | Blue Ridge Automation | **Data type standardization across all ~51 tables.** All primary keys changed from `INT` to `BIGINT IDENTITY`. All foreign keys changed from `INT` to `BIGINT` to match. All `VARCHAR(N)` columns changed to `NVARCHAR(N)` (Unicode support for Honda EDI data). Audit `EntityId` columns (OperationLog, ConfigLog, FailureLog) changed to `BIGINT` to match arbitrary PK references. Non-PK/FK value columns (SortOrder, SequenceNumber, PieceCount, VersionNumber, counts, quantities) remain `INT`. `BIT`, `DECIMAL`, and `DATETIME2(3)` columns unchanged. ERD updated to match. |
 | 1.1 | 2026-04-14 | Blue Ridge Automation | **OperationTemplate versioning — schema change.** Added `VersionNumber INT NOT NULL DEFAULT 1` to `Parts.OperationTemplate`; changed `UNIQUE (Code)` → `UNIQUE (Code, VersionNumber)`. Supports the clone-to-modify workflow: `_CreateNewVersion` inserts a new row sharing the Code with `VersionNumber = MAX(siblings)+1`, copies the parent's `OperationTemplateField` rows, and historical `RouteStep` rows continue pointing at the parent's Id so production traceability is preserved. Mirrors the versioning pattern already used by `RouteTemplate` and (later) `Bom` / `QualitySpec`. Schema plumbing delivered as part of Phase 5 — see Phased Plan v1.3. |
+| 1.5 | 2026-04-15 | Blue Ridge Automation | **Phase 8 Oee reference tables built.** Migration `0009_phase8_oee_reference.sql` creates `Oee.DowntimeReasonType` (6 seeded rows, read-only), `Oee.DowntimeReasonCode` (mutable, FK to Area Location + nullable ReasonType + nullable SourceCode), `Oee.ShiftSchedule` (mutable, `DaysOfWeekBitmask INT` with Mon=1…Sun=64 and CHECK 1-127, `TIME(0)` start/end), and `Oee.Shift` (runtime instances). +1 `Audit.LogEntityType` row (ShiftSchedule at Id=30). 13 new procs including a JSON-fed `DowntimeReasonCode_BulkLoadFromSeed` that maps CSV `DeptCode` (DC/MS/TS) to three caller-supplied Area Location Ids and generates unique `Code` as `{DeptCode}-{NNNN}` from zero-padded `ReasonId`. Dev seed updated with Trim Shop Area row. 779/779 tests passing. |
+| 1.4 | 2026-04-15 | Blue Ridge Automation | **Production data collection capture — closing the template→event gap.** `OperationTemplate` + `OperationTemplateField` + `DataCollectionField` define *what* to collect at an operation, but nothing persisted *what was actually collected* when a LOT passed through. Fixed by extending `Workorder.ProductionEvent` and adding a new child table: (1) added `OperationTemplateId BIGINT FK → Parts.OperationTemplate NOT NULL` to tie each event to the template it executed under (previously only inferable via WorkOrderOperation→RouteStep, which is unreliable given OI-07's background-only work orders); (2) added hot typed columns `DieIdentifier NVARCHAR(50) NULL` (die name/number captured from the machine's `LocationAttribute` value at event time — NOT an FK to Location; OI-10 tool life may later add a parallel `DieId BIGINT FK` if a `Die` table is introduced), `CavityNumber INT NULL`, `WeightValue DECIMAL(10,3) NULL`, `WeightUomId BIGINT FK → Parts.Uom NULL`; (3) new `Workorder.ProductionEventValue` child keyed by `(ProductionEventId, DataCollectionFieldId)` with `Value NVARCHAR(255)` + `NumericValue DECIMAL(18,4) NULL` for any field not promoted to a hot column (extensible vocabulary path). UI behavior: the die-cast screen reads `OperationTemplateField` to render the required inputs; submit writes one `ProductionEvent` header + N `ProductionEventValue` children. Phase 8 procs to implement. |
 | 1.3 | 2026-04-14 | Blue Ridge Automation | **Phase 6 BOM Management built + Phase 5 Draft/Published retrofit.** Migration `0007_bom_and_route_publish.sql` creates `Parts.Bom` (versioned, Draft/Published/Deprecated states via `PublishedAt DATETIME2(3) NULL` + existing `DeprecatedAt`) and `Parts.BomLine` (no soft-delete — hard DELETE with SortOrder compaction; filtered unique index `UQ_BomLine_Bom_ChildItem` prevents duplicate child references in one BOM). Same migration ALTERs `Parts.RouteTemplate` to add `PublishedAt DATETIME2(3) NULL` — retroactive three-state model for Phase 5. Drafts are mutable but invisible to production; `_GetActiveForItem` procs filter `PublishedAt IS NOT NULL`. Published rows are immutable — BomLine/RouteStep mutations reject on published parents. New procs: `Bom_{Publish, ListByParentItem, Get, GetActiveForItem, Create, CreateNewVersion, Deprecate, WhereUsedByChildItem}` (8), `BomLine_{Add, Update, MoveUp, MoveDown, Remove, ListByBom}` (6), `RouteTemplate_Publish` (1) = 15 new procs. Phase 5 retrofit also updated 5 RouteStep mutation procs to reject on published parents. Audit.LogEntityType +1 (BomLine at Id=27). Audit.FailureLog_GetTopReasons enhanced with optional `@ProcedureName` filter (legitimate production feature + test-noise mitigation). 2 new test files + 1 updated (Phase 5), ~100 new assertions. Full suite now 737/737. |
 | 1.2 | 2026-04-14 | Blue Ridge Automation | **Phase 5 Process Definition built and tested.** Migration `0006_routes_operations_eligibility.sql` creates 5 tables: `Parts.OperationTemplate` (versioned, clone-to-modify), `Parts.OperationTemplateField`, `Parts.RouteTemplate` (versioned per Item), `Parts.RouteStep` (no soft-delete — hard DELETE scoped to un-deprecated parent routes; production history preserved via the immutable route snapshot), `Parts.ItemLocation` (eligibility junction with active/deprecated toggle). Filtered unique indexes enforce active-set semantics: `UQ_OperationTemplate_Code_Version`, `UQ_OperationTemplateField_ActiveTemplateField`, `UQ_RouteTemplate_Item_Version`, `UQ_ItemLocation_ActiveItemLocation`. 21 new stored procedures: OperationTemplate ×5 + OperationTemplateField ×3 + RouteTemplate ×5 + RouteStep ×6 + ItemLocation ×4 (ListByItem/Add + reactivate/ListByLocation/Remove). 3 new test files, ~145 new assertions. Full suite now 637/637 passing. One test correctness fix along the way: historical-AsOfDate test needed v1.EffectiveFrom backdated so the AsOf window actually catches v1 (Create and CreateNewVersion ran milliseconds apart in test). |
 | 1.0 | 2026-04-14 | Blue Ridge Automation | **Phase 4 Item Master + Container Config built and tested.** Migration `0005_item_master_container_config.sql` creates `Parts.Item` with full user attribution (`CreatedAt`, `UpdatedAt`, `CreatedByUserId FK`, `UpdatedByUserId FK`) and `Parts.ContainerConfig` with Honda packing rules plus the OI-02 columns `ClosureMethod NVARCHAR(20) NULL` and `TargetWeight DECIMAL(10,4) NULL` added proactively as nullable pending MPP customer validation of scale-driven container closure. Filtered unique index `UQ_ContainerConfig_ActiveItemId` enforces one active config per Item at the schema level. 10 new stored procedures (6 Item + 4 ContainerConfig), ~80 new tests. Bulk-load proc deferred — will be written once MPP supplies a parts-list export format. Also fixed `Parts.Uom_Deprecate` column reference bug (was checking `DefaultUomId`, corrected to `UomId OR WeightUomId`). Full suite now 509/509 passing. |
@@ -698,21 +700,44 @@ Individual operation execution — the actual step that happened.
 
 ### ProductionEvent
 
-Immutable record of production output.
+Immutable record of production output and of the data collection required by the operation template. One row per LOT-passes-through-operation. Hot data collection fields (die, cavity, weight, counts) are typed columns on this table; any additional `DataCollectionField` configured on the operation template is captured in child `ProductionEventValue` rows.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
 | WorkOrderOperationId | BIGINT | FK → WorkOrderOperation.Id, NULL | |
+| OperationTemplateId | BIGINT | FK → Parts.OperationTemplate.Id, NOT NULL | The versioned operation template this event executed under. Direct FK so events remain queryable even when work orders are absent (OI-07 background-only WOs). |
 | LotId | BIGINT | FK → Lot.Id, NOT NULL | |
-| LocationId | BIGINT | FK → Location.Id, NOT NULL | |
+| LocationId | BIGINT | FK → Location.Id, NOT NULL | Machine/cell where the operation ran |
 | ItemId | BIGINT | FK → Item.Id, NOT NULL | |
 | GoodCount | INT | NOT NULL | |
 | NoGoodCount | INT | NOT NULL, DEFAULT 0 | |
+| DieIdentifier | NVARCHAR(50) | NULL | Die name/number captured from the machine's `LocationAttribute` value at event time. Not an FK (dies are currently a location-attribute concept, not a first-class entity). If OI-10 resolves to a dedicated `Die` table, a parallel `DieId BIGINT FK` will be added — this column remains as the historical snapshot. |
+| CavityNumber | INT | NULL | Cavity captured when the operation template requires `CavityInfo` |
+| WeightValue | DECIMAL(10,3) | NULL | Captured when operation template requires `Weight` (e.g., scale-driven container closure, OI-02) |
+| WeightUomId | BIGINT | FK → Parts.Uom.Id, NULL | Required whenever `WeightValue` is set |
 | OperatorId | BIGINT | FK → AppUser.Id, NOT NULL | |
 | TerminalLocationId | BIGINT | FK → Location.Id (Terminal), NULL | Terminal where action was performed |
 | RecordedAt | DATETIME2(3) | NOT NULL | |
 | Remarks | NVARCHAR(500) | NULL | |
+
+### ProductionEventValue
+
+Child of `ProductionEvent` — holds any `DataCollectionField` value configured on the operation template but *not* promoted to a typed column on `ProductionEvent`. Lets engineering extend the data collection vocabulary without schema changes. One row per field collected for a given event.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK | |
+| ProductionEventId | BIGINT | FK → ProductionEvent.Id, NOT NULL, ON DELETE CASCADE | |
+| DataCollectionFieldId | BIGINT | FK → Parts.DataCollectionField.Id, NOT NULL | Which field this value satisfies |
+| Value | NVARCHAR(255) | NOT NULL | String representation (canonical storage) |
+| NumericValue | DECIMAL(18,4) | NULL | Populated when the field is numeric — enables range queries without parsing `Value` |
+| UomId | BIGINT | FK → Parts.Uom.Id, NULL | Required when the field is a measurement |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+
+**Unique constraint:** `UNIQUE (ProductionEventId, DataCollectionFieldId)` — a given field is captured once per event.
+
+**Rule:** fields already represented as typed columns on `ProductionEvent` (GoodCount, NoGoodCount, DieIdentifier, CavityNumber, WeightValue) SHALL NOT also be written to `ProductionEventValue`. The Phase 8 write proc enforces this.
 
 ### ConsumptionEvent
 
@@ -935,49 +960,64 @@ Downtime tracking, shift management, materialized OEE metrics.
 
 ### DowntimeReasonType
 
+Read-only, seeded in migration `0009`. 6 fixed rows.
+
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
-| Name | NVARCHAR(100) | NOT NULL | Equipment, Miscellaneous, Mold, Quality, Setup, Unscheduled |
+| Code | NVARCHAR(30) | NOT NULL, UNIQUE | Equipment, Miscellaneous, Mold, Quality, Setup, Unscheduled |
+| Name | NVARCHAR(100) | NOT NULL | |
 
 ### DowntimeReasonCode
 
-~660 reason codes.
+~353 active seed rows from `downtime_reason_codes.csv` (DC=86, MS=239, TS=25). Loaded via `Oee.DowntimeReasonCode_BulkLoadFromSeed`.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
-| Code | NVARCHAR(20) | NOT NULL | |
+| Code | NVARCHAR(20) | NOT NULL, UNIQUE | Generated as `{DeptCode}-{NNNN}` (e.g., `DC-0003`) by the bulk-load proc from the CSV's `DeptCode` + zero-padded `ReasonId`. Engineering-created codes are free-form. |
 | Description | NVARCHAR(500) | NOT NULL | |
 | AreaLocationId | BIGINT | FK → Location.Id, NOT NULL | Area (organizational grouping) |
-| DowntimeReasonTypeId | BIGINT | FK → DowntimeReasonType.Id, NULL | |
+| DowntimeReasonTypeId | BIGINT | FK → DowntimeReasonType.Id, NULL | NULL allowed — CSV rows with missing TypeDesc load as NULL and engineering backfills via `_Update` before go-live |
+| DowntimeSourceCodeId | BIGINT | FK → DowntimeSourceCode.Id, NULL | CSV carries no source column; always NULL at initial load |
 | IsExcused | BIT | NOT NULL, DEFAULT 0 | |
-| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT SYSUTCDATETIME() | |
+| CreatedByUserId | BIGINT | FK → AppUser.Id, NOT NULL | |
+| UpdatedAt | DATETIME2(3) | NULL | |
+| UpdatedByUserId | BIGINT | FK → AppUser.Id, NULL | |
 | DeprecatedAt | DATETIME2(3) | NULL | |
 
 ### ShiftSchedule
 
+Named shift patterns (First Shift 6a–2p M-F, Second Shift 2p–10p, Weekend OT, etc.).
+
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
-| Name | NVARCHAR(100) | NOT NULL | |
-| StartTime | TIME | NOT NULL | |
-| EndTime | TIME | NOT NULL | |
-| DaysOfWeek | NVARCHAR(20) | NOT NULL | e.g., "MTWTF", "MTWRF" |
-| EffectiveFrom | DATETIME2(3) | NOT NULL | |
+| Name | NVARCHAR(100) | NOT NULL, UNIQUE | |
+| Description | NVARCHAR(500) | NULL | |
+| StartTime | TIME(0) | NOT NULL | |
+| EndTime | TIME(0) | NOT NULL | Shift spans midnight when `EndTime < StartTime` (runtime handles this) |
+| DaysOfWeekBitmask | INT | NOT NULL, CHECK 1-127 | Mon=1, Tue=2, Wed=4, Thu=8, Fri=16, Sat=32, Sun=64. Mon-Fri = 31; Sat+Sun = 96. |
+| EffectiveFrom | DATE | NOT NULL | |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT SYSUTCDATETIME() | |
+| CreatedByUserId | BIGINT | FK → AppUser.Id, NOT NULL | |
+| UpdatedAt | DATETIME2(3) | NULL | |
+| UpdatedByUserId | BIGINT | FK → AppUser.Id, NULL | |
 | DeprecatedAt | DATETIME2(3) | NULL | |
 
 ### Shift
 
-Actual shift instances.
+Runtime shift instances — written by Arc 2 (plant-floor shift controller) when a scheduled shift starts. The Config Tool only reads via `Oee.Shift_List` for admin visibility.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
 | ShiftScheduleId | BIGINT | FK → ShiftSchedule.Id, NOT NULL | |
-| ShiftDate | DATE | NOT NULL | |
 | ActualStart | DATETIME2(3) | NOT NULL | |
-| ActualEnd | DATETIME2(3) | NULL | |
+| ActualEnd | DATETIME2(3) | NULL | NULL while the shift is active |
+| Remarks | NVARCHAR(500) | NULL | |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT SYSUTCDATETIME() | |
 
 ### DowntimeSourceCode
 

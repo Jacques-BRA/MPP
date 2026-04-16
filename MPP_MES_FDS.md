@@ -4,7 +4,7 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.6 — Working Draft
+**Version:** 0.7 — Working Draft
 **Date:** 2026-04-15
 
 ---
@@ -18,6 +18,7 @@
 | 0.3 | 2026-04-09 | Blue Ridge Automation | Naming convention changed from snake_case to UpperCamelCase for all DB identifiers (tables, columns, code values). Merged Department into Area per ISA-95 — Department location type removed, 5 departments become Area-type locations. Added Enterprise (level 0) to hierarchy. Updated §2.2 (FDS-02-001) hierarchy table, §2.3 (FDS-02-003), all defect/downtime filtering references. |
 | 0.4 | 2026-04-10 | Blue Ridge Automation | Major restructure of location model: split `LocationType` (5 ISA-95 tiers) from `LocationTypeDefinition` (polymorphic kinds) and introduced `LocationAttributeDefinition` for attribute schemas per kind. Terminal, DieCastMachine, CNCMachine, InventoryLocation, etc. are now `LocationTypeDefinition` rows under the `Cell` type. Rewrote §2.1–2.5. Added §5.3 FDS-05-008 explicit login→scan-location→scan-lot movement workflow. Updated FDS-05-004 and FDS-05-020 to clarify Die Cast uses pre-printed LTTs (no Initial print event). Expanded FDS-06-019 with Pattern A (inline reject) vs Pattern B (split-to-scrap) scrap handling. Added FDS-07-019 clarifying Sort Cage is NOT a LOT merge event. Added bordered + alternating row Word table styling via pandoc reference doc. |
 | 0.5 | 2026-04-10 | Blue Ridge Automation | §11 Audit & Logging expanded: added fourth log stream `Audit.FailureLog` for attempted-but-rejected operations (new FDS-11-004). High-Fidelity Interface Logging renumbered from FDS-11-004 to FDS-11-005 to make room. Added FDS-11-008 documenting the code-string signatures for the four shared audit procs. Renumbered FDS-11-007 → FDS-11-009 (Retention Policy) and FDS-11-008 → FDS-11-010 (BIGINT Primary Keys) to accommodate. Normalized vocabulary examples in FDS-11-006/007 updated to UpperCamelCase (`Created`/`Updated`/`Deprecated`/`LotCreated` etc. instead of UPPER_SNAKE). |
+| 0.7 | 2026-04-15 | Blue Ridge Automation | **Production data collection capture.** Closed a gap where `OperationTemplate` + `OperationTemplateField` + `DataCollectionField` defined *what* to collect but nothing persisted *what was actually collected* when a LOT passed through. Updated §3.4 (FDS-03-012 operation-template definition — replaced stale `Collects*`/`Requires*` BIT-flag table with the `OperationTemplateField` → `DataCollectionField` junction wording that matches data model rev 0.7+). Updated §6.2 (FDS-06-001 die cast screen — now driven by `OperationTemplateField` rows rather than flags) and FDS-06-003 (die cast production event — now captures `OperationTemplateId`, `DieIdentifier`, `CavityNumber`, `WeightValue`/`WeightUomId` as hot columns plus N `ProductionEventValue` children for any other configured field). Added new FDS-03-017a specifying how the Perspective screen resolves operation-template fields into inputs and writes the header+children transactionally. Data model aligned at v1.4 (new `Workorder.ProductionEventValue` table + `ProductionEvent` extensions). |
 | 0.6 | 2026-04-15 | Blue Ridge Automation | Reflects Phase 5/6 SQL completion and the Ignition JDBC stored-procedure convention change. Data model realigned to v1.3: added HoldEvent place/release lifecycle table, SortOrder + MoveUp/MoveDown pattern on `Location.Location`, OperationTemplate→DataCollectionField junction (replacing hardcoded BIT flags), and seven new code tables backing all former enum/status columns. Versioning pattern for RouteTemplate, OperationTemplate, and Bom standardized on the three-state `Draft / Published / Deprecated` model (PublishedAt + DeprecatedAt). Added FDS-11-011 documenting the Ignition JDBC single-result-set convention: stored procedures SHALL NOT use `OUTPUT` parameters; mutation procs SHALL return `SELECT Status, Message, NewId` as their sole result set, read procs SHALL return a single result set (empty = not found), and the four shared audit writers SHALL emit no result set (they run inside caller transactions and would otherwise break INSERT-EXEC with ROLLBACK). |
 
 ---
@@ -478,22 +479,31 @@ The system SHALL allow insertion and deletion of operations within a route durin
 ### 3.4 Operation Templates
 
 #### FDS-03-012 — Operation Template Design
-Operation templates define what data to collect at a type of operation. They are reusable across products. Each template SHALL specify:
+Operation templates define what data to collect at a type of operation. They are reusable across products and versioned (Draft/Published/Deprecated). Each template SHALL specify:
 
 | Field | Purpose |
 |---|---|
-| name, code | Identity |
+| Code, VersionNumber | Identity within a version family |
+| Name | Human-readable label |
 | AreaLocationId | Area this operation belongs to (for defect/downtime code filtering) |
-| RequiresMaterialVerification | Operator must scan source LOT barcode before consuming |
-| RequiresSerialNumber | Operation produces serialized parts |
-| CollectsDieInfo | Screen shows die number field |
-| CollectsCavityInfo | Screen shows cavity number field |
-| CollectsWeight | Screen shows weight entry (with scale integration where available) |
-| CollectsGoodCount | Screen shows good count entry |
-| CollectsBadCount | Screen shows reject count entry |
+| Description | Optional notes |
+| *(data collection requirements)* | Defined by `OperationTemplateField` rows referencing `DataCollectionField` — not hardcoded on the template itself |
+
+Data collection requirements are modeled as a one-to-many junction (`Parts.OperationTemplateField`) linking the template to zero-or-more `Parts.DataCollectionField` rows, each with an `IsRequired` flag. `DataCollectionField` is an extensible vocabulary seeded with the initial set (MaterialVerification, SerialNumber, DieInfo, CavityInfo, Weight, GoodCount, BadCount) and expandable by engineering without schema changes. (Replaces the `Collects*` / `Requires*` BIT flags from earlier drafts per data model rev 0.7.)
 
 #### FDS-03-013 — Operation Templates Drive Screen Behavior
-The Perspective production screen SHALL dynamically render input fields based on the operation template's flags. A Die Cast screen shows die/cavity/weight fields; an Assembly screen shows serial number and material verification fields. The same screen component is reused — the template controls which sections are visible. (FRS 3.11.6)
+The Perspective production screen SHALL dynamically render input fields based on the operation template's `OperationTemplateField` rows. A Die Cast screen shows die/cavity/weight fields; an Assembly screen shows serial number and material verification fields. The same screen component is reused — the junction rows control which sections are visible and whether each field is required. (FRS 3.11.6)
+
+#### FDS-03-017a — Data Collection Capture at Event Time
+When a LOT passes through an operation, the system SHALL persist every field configured on the operation template as part of the production event:
+
+1. On screen load, the client SHALL read `OperationTemplateField` rows for the active template to determine the visible inputs.
+2. On submit, the Phase 8 `ProductionEvent_Record` stored procedure SHALL, in one transaction:
+   a. Insert one `Workorder.ProductionEvent` header row carrying `OperationTemplateId` and the hot typed columns for fields that have been promoted (GoodCount, NoGoodCount, DieIdentifier, CavityNumber, WeightValue, WeightUomId).
+   b. Insert one `Workorder.ProductionEventValue` child row per non-hot `DataCollectionField` configured on the template, keyed by `(ProductionEventId, DataCollectionFieldId)`, with both the string `Value` and the typed `NumericValue` / `UomId` where applicable.
+   c. Reject the submission if any `IsRequired = 1` field on the template is missing from the payload.
+   d. Reject the submission if the payload duplicates a hot-column field in `ProductionEventValue` (hot columns are the sole home for promoted fields).
+3. `DieIdentifier` SHALL be captured from the machine's current `LocationAttribute` value at event time — it is the historical snapshot of the die mounted on the machine when the event occurred, not a reference to any die table (OI-10 pending).
 
 ### 3.5 Part-to-Location Eligibility
 
@@ -770,7 +780,7 @@ This section replaces the paper production sheets (DCFM-1589/1785/2003 and MS1FM
 ### 6.2 Die Cast Workflow
 
 #### FDS-06-001 — Die Cast Production Screen
-The Die Cast production screen SHALL be driven by the operation template flags (`CollectsDieInfo`, `CollectsCavityInfo`, `CollectsWeight`, `CollectsGoodCount`, `CollectsBadCount`). The screen SHALL present:
+The Die Cast production screen SHALL be driven by the active operation template's `OperationTemplateField` rows (typically configured with `DieInfo`, `CavityInfo`, `Weight`, `GoodCount`, `BadCount` for die cast operations). Fields flagged `IsRequired = 1` on the junction SHALL be mandatory on submit. The screen SHALL present:
 - LOT selection (scan LTT barcode or select from active LOTs at this machine)
 - Part number (entered by operator at LOT creation per FDS-05-004)
 - Shot counts: total shots, good shots, warm-up shots (per paper form fields DCFM-1785)
@@ -786,10 +796,11 @@ Before recording production, the system SHALL validate:
 - If any validation fails, the system SHALL display a clear error and prevent the recording
 
 #### FDS-06-003 — Die Cast Production Event
-On submission, the system SHALL:
-1. Write an immutable `ProductionEvent` (lot, location, item, good count, no-good count, operator, TerminalLocation, timestamp)
-2. Update the LOT's `PieceCount` to reflect the good count
-3. Log to `Audit.OperationLog`
+On submission, the system SHALL (per FDS-03-017a, in one transaction):
+1. Write an immutable `Workorder.ProductionEvent` header carrying `OperationTemplateId`, `LotId`, `LocationId`, `ItemId`, `GoodCount`, `NoGoodCount`, `DieIdentifier` (from the machine's `LocationAttribute`), `CavityNumber`, `WeightValue` + `WeightUomId`, `OperatorId`, `TerminalLocationId`, and `RecordedAt`.
+2. Write one `Workorder.ProductionEventValue` child row per non-hot `DataCollectionField` configured on the active operation template.
+3. Update the LOT's `PieceCount` to reflect the good count.
+4. Log to `Audit.OperationLog`.
 
 > 🔶 **PENDING INTERNAL REVIEW — UJ-14:** Warm-up shots are tracked as a downtime sub-category rather than on the production event. The Die Cast operator logs warm-up time as a `DowntimeEvent` with `ReasonType` = Setup and records the warm-up shot count in the `ShotCount` column on that downtime event. Good/bad production shot counts remain on the `ProductionEvent`. This separates warm-up activity (time + shots wasted) from production activity (good parts made). Needs review with Ben.
 

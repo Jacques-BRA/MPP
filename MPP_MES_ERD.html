@@ -779,7 +779,11 @@ erDiagram
         </div>
         <div class="table-card">
             <h4>ProductionEvent <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>Immutable record of production activity: good count, no-good count, operator, terminal location, timestamp against a LOT and machine. Die/cavity info lives on the <code>Lot</code> record (one LOT = one die/cavity), not on the event.</p>
+            <p>Immutable record of a LOT passing through an operation. Header carries <code>OperationTemplateId</code> plus hot typed columns: good/no-good counts, <code>DieIdentifier</code> (snapshot of the machine's current die), <code>CavityNumber</code>, <code>WeightValue</code>/<code>WeightUomId</code>, operator, terminal location, timestamp. Additional <code>DataCollectionField</code> values configured on the template land in <code>ProductionEventValue</code> children.</p>
+        </div>
+        <div class="table-card">
+            <h4>ProductionEventValue <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Child of <code>ProductionEvent</code>. Holds any <code>DataCollectionField</code> value that isn't promoted to a hot column on the event. One row per (event, field), with both a string <code>Value</code> and a typed <code>NumericValue</code>/<code>UomId</code> where applicable. Enables extending the data-collection vocabulary without schema changes.</p>
         </div>
         <div class="table-card">
             <h4>ConsumptionEvent <span class="scope-badge scope-mvp">MVP</span></h4>
@@ -833,15 +837,30 @@ erDiagram
     ProductionEvent {
         bigint Id PK
         bigint WorkOrderOperationId FK
+        bigint OperationTemplateId FK
         bigint LotId FK
         bigint LocationId FK
         bigint ItemId FK
         int GoodCount
         int NoGoodCount
+        nvarchar DieIdentifier
+        int CavityNumber
+        decimal WeightValue
+        bigint WeightUomId FK
         bigint OperatorId FK
         bigint TerminalLocationId FK
         datetime2 RecordedAt
         nvarchar Remarks
+    }
+
+    ProductionEventValue {
+        bigint Id PK
+        bigint ProductionEventId FK
+        bigint DataCollectionFieldId FK
+        nvarchar Value
+        decimal NumericValue
+        bigint UomId FK
+        datetime2 CreatedAt
     }
 
     ConsumptionEvent {
@@ -879,6 +898,7 @@ erDiagram
     WorkOrderOperation ||--o{ ProductionEvent : produces
     WorkOrderOperation ||--o{ ConsumptionEvent : consumes
     ProductionEvent ||--o{ RejectEvent : "rejected in"
+    ProductionEvent ||--o{ ProductionEventValue : captures
         </div>
     </div>
 </div>
@@ -1404,6 +1424,7 @@ erDiagram
     wo__WorkOrder { bigint id PK }
     wo__WorkOrderOperation { bigint id PK }
     wo__ProductionEvent { bigint id PK }
+    wo__ProductionEventValue { bigint id PK }
     wo__ConsumptionEvent { bigint id PK }
     wo__RejectEvent { bigint id PK }
 
@@ -1490,6 +1511,11 @@ erDiagram
     wo__WorkOrderOperation ||--o{ wo__ProductionEvent : produces
     wo__WorkOrderOperation ||--o{ wo__ConsumptionEvent : consumes
     wo__ProductionEvent ||--o{ wo__RejectEvent : rejected
+    wo__ProductionEvent ||--o{ wo__ProductionEventValue : captures
+    parts__OperationTemplate ||--o{ wo__ProductionEvent : executed
+    parts__DataCollectionField ||--o{ wo__ProductionEventValue : field
+    parts__Uom ||--o{ wo__ProductionEvent : weight_uom
+    parts__Uom ||--o{ wo__ProductionEventValue : uom
 
     parts__Item ||--o{ wo__WorkOrder : item
     parts__RouteTemplate ||--o{ wo__WorkOrder : route

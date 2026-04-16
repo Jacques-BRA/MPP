@@ -71,47 +71,31 @@ When in doubt about scope, check `reference/MPP_Scope_Matrix.xlsx` — it is the
 
 ## Current State (as of 2026-04-15)
 
-- **Data model:** v1.3 — 7 schemas, ~60 tables. BIGINT PKs/FKs everywhere, NVARCHAR (no VARCHAR). Location schema uses three-tier polymorphic model. Audit schema has 4 log streams. All enum/status columns are code-table backed with FKs (7 new code tables added 2026-04-13). User attribution via `BIGINT FK → AppUser.Id` (no free-text CreatedBy). OperationTemplate data collection is configurable via junction table (no hardcoded BIT flags). HoldEvent is a single place/release lifecycle table (same pattern as DowntimeEvent). SortOrder on Location.Location with MoveUp/MoveDown pattern. Tool life tracking remains a gap (OI-10).
-- **FDS:** v0.6 working draft — all 15 sections + appendix placeholders. §11 Audit has 4 log streams with code-string audit proc signatures. FDS-11-011 codifies the Ignition JDBC single-result-set convention (no OUTPUT params; mutations return `SELECT Status, Message, NewId`; audit writers silent). Of 10 open items: 3 resolved, 4 pending customer validation, 1 pending internal review (Ben), 2 remain open.
+- **Data model:** v1.5 — 7 schemas, ~61 tables. BIGINT PKs/FKs everywhere, NVARCHAR (no VARCHAR). Location schema uses three-tier polymorphic model. Audit schema has 4 log streams. All enum/status columns are code-table backed with FKs. User attribution via `BIGINT FK → AppUser.Id`. OperationTemplate data collection is configurable via junction (no hardcoded BIT flags). HoldEvent is a single place/release lifecycle table. SortOrder on Location.Location with MoveUp/MoveDown. v1.4 closed the template→event capture gap: `Workorder.ProductionEvent` gained `OperationTemplateId` FK + hot typed columns (`DieIdentifier`, `CavityNumber`, `WeightValue`+`WeightUomId`) and new `Workorder.ProductionEventValue` child table for extensible `DataCollectionField` capture. v1.5 added the Phase 8 Oee reference tables (`DowntimeReasonType` seed-only, `DowntimeReasonCode`, `ShiftSchedule` with `DaysOfWeekBitmask INT`, `Shift` runtime). Tool life tracking remains a gap (OI-10).
+- **FDS:** v0.7 working draft — all 15 sections + appendix placeholders. §11 Audit has 4 log streams with code-string audit proc signatures. FDS-11-011 codifies the Ignition JDBC single-result-set convention. **FDS-03-017a** codifies the data-collection capture contract: operation-template fields drive both screen inputs and `ProductionEvent` + `ProductionEventValue` writes at event time. Of 10 open items: 3 resolved, 4 pending customer validation, 1 pending internal review (Ben), 2 remain open.
 - **User Journeys:** v0.5 — 19 assumptions with decision text and status tags; Config Tool arc updated for Draft/Published/Deprecated versioning (RouteTemplate, OperationTemplate, Bom), OperationTemplate DataCollectionField junction, Location SortOrder + MoveUp/MoveDown, and HoldEvent lifecycle.
 - **Open Issues Register:** Word doc v2.3 with 29 items total. Full FRS/FDS reference crosswalk added.
-- **ERD:** Interactive HTML with 8 tabs, regenerated for data model v1.3.
-- **Phased Development Plan (Configuration Tool):** v0.9 — 8 phases. SP template uses `RAISERROR` (not `THROW`) in CATCH blocks with nested TRY/CATCH for failure logging. No drag-and-drop in any UI — up/down arrow buttons for all sortable lists. All DB references schema-qualified. Separate file: `MPP_MES_PHASED_PLAN_CONFIG_TOOL.md`. Task list derived as `MPP_MES_TASK_LIST_CONFIG_TOOL.csv` (100 tasks, ~470h).
-- **SQL scripts:** Phases 1–7 complete and tested. `/sql/` folder with 8 versioned migrations + 158 repeatable procs. **710 passing tests** across 19 test suites (lower raw count than pre-refactor because INSERT-EXEC assertions collapse prior pairs of Status+RowCount checks into single proc-output assertions). PowerShell reset script (`Reset-DevDatabase.ps1`) auto-discovers and runs all scripts via `sqlcmd.exe`, creates dev-only `ignition` SQL login with `db_owner` on every reset. Tested successfully on SQL Server 2025.
+- **ERD:** Interactive HTML with 8 tabs, regenerated for data model v1.5 (includes ProductionEventValue and Phase 8 Oee tables).
+- **Phased Development Plan (Configuration Tool):** v1.6 — 8 phases, **all 8 built and tested**. SP template uses `RAISERROR` (not `THROW`) in CATCH blocks with nested TRY/CATCH for failure logging. No drag-and-drop in any UI — up/down arrow buttons for all sortable lists. All DB references schema-qualified. Separate file: `MPP_MES_PHASED_PLAN_CONFIG_TOOL.md`. Task list derived as `MPP_MES_TASK_LIST_CONFIG_TOOL.csv`.
+- **SQL scripts:** Phases 1–8 complete and tested. `/sql/` folder with 9 versioned migrations + 171 repeatable procs. **779 passing tests** across 20 test suites. Phase 8 adds 4 Oee tables (`DowntimeReasonType` seed-only, `DowntimeReasonCode` CRUD + JSON bulk-load, `ShiftSchedule` CRUD, `Shift` runtime-only with config-tool `_List`) and 13 new procs. PowerShell reset script (`Reset-DevDatabase.ps1`) auto-discovers and runs all scripts via `sqlcmd.exe`, creates dev-only `ignition` SQL login with `db_owner` on every reset. Tested successfully on SQL Server 2025.
 - **SQL workflow:** `sql_version_control_guide.md` — general-purpose top half + MPP-specific overlay (naming, SP template, schema layout, AI rules). PowerShell reset script replaces the old SQLCMD-mode `.sql` approach.
 - **Word output:** All markdown docs have bordered + alternating-row styled Word versions. Regenerate via `pandoc ... --reference-doc=reference.docx` + `node style_docx_tables.js <file.docx>`.
 - **Seed data:** 876 rows extracted from FRS Appendices B/C/D/E into CSVs in `reference/seed_data/`, plus auto-generated `reference/seed_data.xlsx`. Per-appendix Node.js parsers in `reference/seed_data/parsers/` handle multi-line wrapped descriptions. Source PDF is `reference/MPP_FRS_Draft.pdf`.
-- **NOT started:** Ignition project, Perspective screens, Phase 8 SQL scripts, **seed data loading** (CSVs ready — machines.csv not yet loaded into Location rows; MPP parts list not yet provided; defect_codes.csv not yet loaded), PLC integration.
+- **NOT started:** Ignition project, Perspective screens, **seed data loading** (CSVs ready — machines.csv not yet loaded into Location rows; MPP parts list not yet provided; defect_codes.csv not yet loaded; downtime_reason_codes.csv has a bulk-load proc `Oee.DowntimeReasonCode_BulkLoadFromSeed` but hasn't been invoked against the 353-row CSV), PLC integration.
 
-## Ignition JDBC Compatibility — READ PROCS DONE, MUTATIONS PENDING
+## Ignition JDBC Compatibility — REFACTOR COMPLETE
 
-**Problem discovered 2026-04-14:** Stored procedures with `OUTPUT` parameters AND a `SELECT` result set do not work with Ignition Named Queries. The JDBC driver reads OUTPUT params as the first result set and ignores the actual data.
+**Convention (FDS-11-011):** Stored procedures SHALL NOT use `OUTPUT` parameters. The Ignition JDBC driver reads OUTPUT params as the first result set and ignores subsequent SELECT data.
 
-**Root cause:** SQL Server returns OUTPUT params as a separate result set. Ignition's JDBC driver reads the first result set (the OUTPUT params) and stops, never seeing the SELECT data.
+**Rules:**
+- **Read procs:** No OUTPUT params. Empty result set = not found (no invented 404).
+- **Mutation procs:** `@Status`, `@Message`, `@NewId` are local variables. Every exit path ends with `SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;` (drop `@NewId AS NewId` for Update/Deprecate — those return `SELECT Status, Message` only).
+- **Audit writers (`Audit.Audit_Log*`):** Emit no result set — they run inside mutation-proc transactions; emitting would break INSERT-EXEC + ROLLBACK.
+- **One result set per proc:** If the legacy design returned two, drop the second and have callers use the sibling List proc.
 
-**Solution — SP signature refactor:**
-- **Read procs:** Remove OUTPUT params entirely. Empty result = not found.
-- **Mutation procs:** Convert `@Status/@Message/@NewId OUTPUT` to local variables, add final `SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;`
-- **Audit procs (4):** Remove result set returns — they are internal helpers called by mutation procs and must not emit result sets (causes INSERT-EXEC + ROLLBACK conflicts).
-- **2-result-set procs:** Drop the second result set (Ignition Named Queries only read the first; callers use the sibling List proc instead).
+**Status:** Refactor complete across all 171 procs. Every new proc follows this convention.
 
-### Conversion Progress (as of 2026-04-14 end of session)
-
-**All read procs converted (58 of 58):** Audit (8), Location (15), Lots (12), Oee (2), Workorder (4), Parts (23 — Uom/ItemType/DataCollectionField/Item/ContainerConfig/ItemLocation/OperationTemplate+Field/RouteTemplate+Step/Bom+Line/Bom_WhereUsedByChildItem), Quality (8 code-table + 6 spec) — includes DefectCode and QualitySpec/Version/Attribute read procs.
-
-**Mutation procs converted so far (1):** `Location.AppUser_Create` (pilot). Returns `SELECT Status, Message, NewId` instead of OUTPUT params.
-
-**Audit writer procs (4):** `Audit.Audit_LogConfigChange`, `Audit.Audit_LogFailure`, `Audit.Audit_LogInterfaceCall`, `Audit.Audit_LogOperation` — had their `SELECT @NewLogId` returns stripped (they run inside mutation-proc transactions, so emitting a result set breaks INSERT-EXEC + ROLLBACK).
-
-**Test files rewritten:** All read-proc test sections across 17 test files converted to INSERT-EXEC temp table pattern. Row counts now come from proc output (not base-table queries), which is stricter coverage. NULL-Id assertion blocks dropped per design decision (empty result is the contract).
-
-**Proc-logic bug fixed:** `Audit.ConfigLog_List`, `Audit.FailureLog_List`, `Audit.FailureLog_GetTopReasons` — when passed an invalid `@LogEntityTypeCode`, the filter resolved to NULL and silently became "no filter" (returned all rows). Added a `RETURN;` short-circuit so invalid optional filters correctly return an empty result.
-
-**Remaining mutation procs (~71):** Not started. Requires the `SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;` pattern at every exit point. More complex surgery than read procs: preserve transactional semantics, audit log placement, and RAISERROR re-raise in CATCH. Location (15), Parts (42), Quality (14).
-
-**Remaining test file updates:** ~71 mutation-proc tests will need conversion to INSERT-EXEC pattern when the corresponding procs are converted.
-
-### Test patterns (post-refactor)
+### Test patterns
 
 **Read procs:** INSERT-EXEC into a temp table matching the SELECT shape, assert row count from the temp table.
 ```sql
@@ -134,12 +118,12 @@ DROP TABLE #Result;
 ## Remaining Tasks
 
 See `MPP_MES_SUMMARY.md` "Remaining Tasks" section for the full list. Key items:
-1. **Complete SP refactor for Ignition JDBC compatibility** — all 58 read procs done, 1 mutation proc done (AppUser_Create pilot), ~71 mutation procs remaining (Location 15 + Parts 42 + Quality 14). See "Ignition JDBC Compatibility" section.
-2. Complete FDS appendices (currently placeholder references)
-3. Resolve remaining open items requiring MPP input (see Open Issues Register for current status)
-4. Map scope matrix rows and paper production sheet fields to FDS sections
-5. Validate data model against FDS
-6. Generate Phase 8+ SQL scripts (Phases 1–7 complete and tested)
+1. Complete FDS appendices (currently placeholder references)
+2. Resolve remaining open items requiring MPP input (see Open Issues Register for current status)
+3. Map scope matrix rows and paper production sheet fields to FDS sections
+4. Validate data model against FDS
+5. Begin Arc 2 (Plant Floor) plan — data-collection capture contract (FDS-03-017a, `Workorder.ProductionEvent_Record`) is the key first target once prerequisites are sequenced.
+6. Run `Oee.DowntimeReasonCode_BulkLoadFromSeed` against the 353-row downtime CSV once MPP confirms the three DeptCode→Area mappings (DC, MS, TS) in production.
 7. Load machines.csv seed data into Location rows (209 machines — procs exist, mapping needed)
 8. Load defect_codes.csv seed data into `Quality.DefectCode` (153 codes — procs exist, mapping to Area needed)
 9. Load MPP parts list into `Parts.Item` once MPP supplies the export (bulk-load proc deferred)
