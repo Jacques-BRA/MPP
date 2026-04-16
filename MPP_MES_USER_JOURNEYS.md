@@ -57,6 +57,14 @@ They also create the logical locations: Receiving Dock, Shipping Dock, WIP Stora
 
 Then they set up terminals. Each Ignition client station on the floor gets a `Terminal` record — its IP address, which location it's at, which Zebra printer it talks to, whether it has a barcode scanner. This is how the system knows that when operator Maria scans a LOT at terminal DC-05, that action happened at Die Cast Machine #5, and any label it prints goes to the Zebra on the table next to her.
 
+### Defining How We Make It
+
+Before items can have routes, the engineer needs to define the **Operation Templates** — the reusable data collection profiles that describe what each type of operation requires. The engineer navigates to **Parts › Operation Templates**. The left panel groups templates by area: Die Cast, Trim Shop, Machine Shop, Assembly. Each template in the list shows its name and version badge. Clicking a template loads its detail on the right: **Code** (e.g., DIE-CAST), **Name** (Die Cast Operation), **Area** (Die Cast dropdown), and **Description** (free-text summary, e.g., "Primary die cast operation with die, cavity, weight, and count collection."). Below, the **Data Collection Fields** table lists every field the operation captures — columns are **Field** and **Required**. For Die Cast Operation v2, five fields are configured: CollectsDieInfo ✓, CollectsCavityInfo ✓, CollectsWeight ✓, CollectsGoodCount ✓, CollectsBadCount □ (not required in this version). Each field row has up/down arrows for reordering and a **Remove** button; the **+ Add Field** button in the top right of the table adds a new field to the template. A **New Version** button clones the published template into a draft for editing — published templates are read-only.
+
+![Operation Templates Screen — Die Cast Operation v2 with Data Collection Fields](docs/screenshots/screen-operation-templates.png)
+
+With templates defined, the engineer moves to the item master to create parts and attach routes that reference them.
+
 ### Defining What We Make
 
 Next, the item master. The engineer navigates to the **Parts** category in the left rail and opens the **Item Master** screen. The left panel shows a searchable, filterable list of all items — a **Search items...** bar at the top and an **All Types** dropdown to filter by item type (Finished Good, Component, Pass-Through, etc.). Each item in the list shows its part number, description, and a type badge (FG, COMP, PT).
@@ -73,7 +81,7 @@ The **Container Config** tab defines Honda packing rules for finished goods. For
 
 ![Item Master Screen — 5G0 Front Cover Assembly, Container Config tab](docs/screenshots/screen-item-master.png)
 
-The **Routes tab** shows the active route version for the item. A version dropdown (e.g., "v2 — Effective 2026-01-15") displays the current version alongside its lifecycle badge (**Published**, **Draft**, or **Deprecated**). A **New Version** button clones the published route into a new draft for editing. The route steps table shows: step number, **Step Name**, **Area**, and **Data Collection** — a summary of what data fields are collected at each step. For the 5G0, the published v2 route has 5 steps: Die Cast (Die Cast area — Die, Cavity, Weight, Good, Bad), Trim (Trim Shop — Weight, Good, Bad), CNC Machining (Machine Shop — Good, Bad), Assembly Front (Die Cast — Serial, Material Verify, Good, Bad), and Pack & Ship (Prod Control — Good). A footer note reminds the user that published routes are read-only.
+The **Routes tab** shows the active route version for the item. A version dropdown (e.g., "v2 — Effective 2026-01-15") displays the current version alongside its lifecycle badge (**Published**, **Draft**, or **Deprecated**). A **New Version** button clones the published route into a new draft for editing. The route steps table shows: step number, **Step Name**, **Area**, and **Data Collection** — a summary of what data fields are collected at each step. Each step references an operation template — the Die Cast step pulls from Die Cast Operation v2, which determines the specific fields shown in the Data Collection column. For the 5G0, the published v2 route has 5 steps: Die Cast (Die Cast area — Die, Cavity, Weight, Good, Bad), Trim (Trim Shop — Weight, Good, Bad), CNC Machining (Machine Shop — Good, Bad), Assembly Front (Die Cast — Serial, Material Verify, Good, Bad), and Pack & Ship (Prod Control — Good). A footer note reminds the user that published routes are read-only.
 
 ![Item Routes Tab — 5G0 v2 Published Route](docs/screenshots/screen-item-routes-tab.png)
 
@@ -88,20 +96,6 @@ The **Quality Specs tab** shows all quality specs linked to this item. Rather th
 The **Eligibility tab** defines which machines can run this part. An **Area** dropdown filters the view by area. For the 5G0 in the Die Cast area, the table shows all four Die Cast machines with their codes and tonnage, and an **Eligible** checkbox for each. DC Machine #3 (400t), #7 (400t), and #12 (400t) are checked; DC Machine #15 (250t) is unchecked — the 5G0 requires 400-ton capacity.
 
 ![Item Eligibility Tab — Machine eligibility for 5G0 in Die Cast area](docs/screenshots/screen-item-eligibility-tab.png)
-
-### Defining How We Make It
-
-Before routes can be assigned to items, the engineer needs to define the **Operation Templates** — the reusable data collection profiles that describe what each type of operation requires. The engineer navigates to **Parts › Operation Templates**. The left panel groups templates by area: Die Cast, Trim Shop, Machine Shop, Assembly. Each template in the list shows its name and version badge. Clicking a template loads its detail on the right: **Code** (e.g., DIE-CAST), **Name** (Die Cast Operation), **Area** (Die Cast dropdown), and **Description** (free-text summary, e.g., "Primary die cast operation with die, cavity, weight, and count collection."). Below, the **Data Collection Fields** table lists every field the operation captures — columns are **Field** and **Required**. For Die Cast Operation v2, five fields are configured: CollectsDieInfo ✓, CollectsCavityInfo ✓, CollectsWeight ✓, CollectsGoodCount ✓, CollectsBadCount □ (not required in this version). Each field row has up/down arrows for reordering and a **Remove** button; the **+ Add Field** button in the top right of the table adds a new field to the template. A **New Version** button clones the published template into a draft for editing — published templates are read-only.
-
-![Operation Templates Screen — Die Cast Operation v2 with Data Collection Fields](docs/screenshots/screen-operation-templates.png)
-
-Routes, BOMs, quality specs, and machine eligibility are all managed directly from the Item Master's tab strip — the engineer never needs to leave the item record to configure the full production picture for a part.
-
-Routes define the ordered sequence of operations an item passes through. The 5G0's published v2 route has five steps — Die Cast → Trim → CNC Machining → Assembly Front → Pack & Ship — each mapped to an area and a data collection profile. The data collection profile is driven by the operation template at that step: Die Cast collects die info, cavity, weight, good count, and bad count; Assembly Front collects serial number, material verification, good count, and bad count. These profiles drive the shop floor UI — the screen at an assembly station looks different from the one at a die cast press because the step's data collection tells it what fields to show.
-
-Machine eligibility is managed on the **Eligibility** tab. The engineer selects an area from the dropdown and sees every machine in that area with its code, tonnage, and an **Eligible** checkbox. The 5G0 needs a 400-ton press — machines #3, #7, and #12 are checked; machine #15 (250 tons) is not. This is what lets the MES validate that when an operator starts producing 5G0 parts on machine #7, that's a legal combination.
-
-BOMs are versioned and authored on the **BOMs** tab. The 5G0's v1 BOM requires one Front Cover Casting (5G0-C) and two Mounting Pins (PNA). Version 1 is effective from January 2026. If engineering changes the design in March, they click **New Version** to clone the BOM into a new draft — but every production record from January still references v1, preserving historical accuracy.
 
 ### Defining Quality Standards
 
