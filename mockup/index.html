@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MPP Configuration Tool</title>
+  <style>
+    /* ─── Custom Properties — Light Theme ─────────────────────────────── */
+    :root {
+      --bg-app:         #f0f0f0;
+      --bg-header:      #ffffff;
+      --bg-rail:        #2c2c2c;
+      --bg-nav:         #f7f7f7;
+      --bg-content:     #f0f0f0;
+      --bg-panel:       #ffffff;
+      --bg-row-alt:     #f9f9f9;
+      --bg-row-hover:   #e8f0fb;
+      --bg-row-sel:     #cce0ff;
+      --bg-input:       #ffffff;
+      --bg-modal:       rgba(0,0,0,0.45);
+
+      --text-primary:   #1a1a1a;
+      --text-secondary: #555555;
+      --text-muted:     #888888;
+      --text-rail:      #cccccc;
+      --text-rail-lbl:  #aaaaaa;
+      --text-on-accent: #ffffff;
+
+      --border:         #d4d4d4;
+      --border-input:   #bbbbbb;
+
+      --accent:         #1976d2;
+      --accent-hover:   #1565c0;
+      --danger:         #c62828;
+      --danger-hover:   #b71c1c;
+
+      --status-draft:      #795548;
+      --status-draft-bg:   #efebe9;
+      --status-pub:        #2e7d32;
+      --status-pub-bg:     #e8f5e9;
+      --status-dep:        #757575;
+      --status-dep-bg:     #f5f5f5;
+      --status-type:       #5c35b3;
+      --status-type-bg:    #ede7f6;
+
+      --rail-active-bg:  rgba(255,255,255,0.15);
+      --rail-item-hover: rgba(255,255,255,0.08);
+
+      --shadow-panel: 0 1px 4px rgba(0,0,0,0.12);
+      --shadow-modal: 0 8px 32px rgba(0,0,0,0.28);
+
+      --header-h:    42px;
+      --rail-w:      52px;
+      --nav-w:       200px;
+      --radius:      4px;
+      --radius-lg:   6px;
+    }
+
+    /* ─── Dark Theme Overrides ────────────────────────────────────────── */
+    body.theme-dark {
+      --bg-app:         #1e1e1e;
+      --bg-header:      #252526;
+      --bg-rail:        #1a1a1a;
+      --bg-nav:         #252526;
+      --bg-content:     #1e1e1e;
+      --bg-panel:       #2d2d2d;
+      --bg-row-alt:     #2a2a2a;
+      --bg-row-hover:   #2a3a4a;
+      --bg-row-sel:     #1a3a5a;
+      --bg-input:       #3c3c3c;
+      --bg-modal:       rgba(0,0,0,0.65);
+
+      --text-primary:   #cccccc;
+      --text-secondary: #aaaaaa;
+      --text-muted:     #777777;
+      --text-rail:      #cccccc;
+      --text-rail-lbl:  #888888;
+      --text-on-accent: #ffffff;
+
+      --border:         #3e3e3e;
+      --border-input:   #555555;
+
+      --accent:         #4fc3f7;
+      --accent-hover:   #81d4fa;
+      --danger:         #ef5350;
+      --danger-hover:   #e53935;
+
+      --status-draft:      #bcaaa4;
+      --status-draft-bg:   #3e2723;
+      --status-pub:        #81c784;
+      --status-pub-bg:     #1b5e20;
+      --status-dep:        #9e9e9e;
+      --status-dep-bg:     #2e2e2e;
+      --status-type:       #ce93d8;
+      --status-type-bg:    #2d1b4e;
+
+      --rail-active-bg:  rgba(255,255,255,0.12);
+      --rail-item-hover: rgba(255,255,255,0.06);
+
+      --shadow-panel: 0 1px 4px rgba(0,0,0,0.4);
+      --shadow-modal: 0 8px 32px rgba(0,0,0,0.6);
+    }
+
+    /* ─── Reset ───────────────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: var(--text-primary);
+      background: var(--bg-app);
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: inherit;
+    }
+
+    input, select, textarea {
+      font-family: inherit;
+      font-size: inherit;
+      color: var(--text-primary);
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* ─── Layout ──────────────────────────────────────────────────────── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .header {
+      height: var(--header-h);
+      min-height: var(--header-h);
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 10px;
+      z-index: 100;
+      box-shadow: var(--shadow-panel);
+    }
+
+    .header-logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      white-space: nowrap;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+    }
+
+    .header-title {
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .header-spacer {
+      flex: 1;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ─── Rail ────────────────────────────────────────────────────────── */
+    .rail {
+      width: var(--rail-w);
+      min-width: var(--rail-w);
+      background: var(--bg-rail);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0;
+      gap: 2px;
+      z-index: 90;
+      overflow: hidden;
+    }
+
+    .rail-item {
+      width: 44px;
+      height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-rail);
+      transition: background 0.15s;
+      padding: 4px 2px;
+    }
+
+    .rail-item:hover {
+      background: var(--rail-item-hover);
+    }
+
+    .rail-item.active {
+      background: var(--rail-active-bg);
+      color: #ffffff;
+    }
+
+    .rail-item .rail-icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .rail-item .rail-label {
+      font-size: 10px;
+      color: var(--text-rail-lbl);
+      text-align: center;
+      line-height: 1;
+    }
+
+    .rail-item.active .rail-label {
+      color: #cccccc;
+    }
+
+    /* ─── Nav Panel ───────────────────────────────────────────────────── */
+    .nav-panel {
+      width: 0;
+      overflow: hidden;
+      background: var(--bg-nav);
+      border-right: 1px solid var(--border);
+      transition: width 0.2s ease;
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .nav-panel.open {
+      width: var(--nav-w);
+    }
+
+    .nav-panel-inner {
+      width: var(--nav-w);
+      padding: 8px 0;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .nav-category-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      padding: 8px 12px 4px 12px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      width: 100%;
+      text-align: left;
+      border-left: 3px solid transparent;
+      transition: background 0.1s, color 0.1s;
+      white-space: nowrap;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-row-hover);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--bg-row-sel);
+      color: var(--accent);
+      border-left-color: var(--accent);
+      font-weight: 500;
+    }
+
+    .nav-item .nav-icon {
+      font-size: 14px;
+    }
+
+    /* ─── Content Area ────────────────────────────────────────────────── */
+    .content-area {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      background: var(--bg-content);
+    }
+
+    .screen {
+      display: none;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Landing Screen ──────────────────────────────────────────────── */
+    .landing {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      color: var(--text-muted);
+    }
+
+    .landing-icon {
+      font-size: 56px;
+      opacity: 0.3;
+    }
+
+    .landing-text {
+      font-size: 15px;
+      font-weight: 400;
+    }
+
+    /* ─── Breadcrumb ──────────────────────────────────────────────────── */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .breadcrumb .crumb-sep {
+      color: var(--border);
+    }
+
+    .breadcrumb .crumb-active {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* ─── Title Row ───────────────────────────────────────────────────── */
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px 0 16px;
+    }
+
+    .title-row h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .title-row-spacer {
+      flex: 1;
+    }
+
+    /* ─── Buttons ─────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-input);
+      background: var(--bg-panel);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .btn:hover {
+      background: var(--bg-row-hover);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--text-on-accent);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #ffffff;
+    }
+
+    .btn-danger:hover {
+      background: var(--danger-hover);
+      border-color: var(--danger-hover);
+    }
+
+    .btn-sm {
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+
+    .btn-icon {
+      padding: 4px 8px;
+      min-width: 28px;
+      justify-content: center;
+    }
+
+    /* ─── Badges ──────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-draft {
+      color: var(--status-draft);
+      background: var(--status-draft-bg);
+    }
+
+    .badge-published {
+      color: var(--status-pub);
+      background: var(--status-pub-bg);
+    }
+
+    .badge-deprecated {
+      color: var(--status-dep);
+      background: var(--status-dep-bg);
+    }
+
+    .badge-type {
+      color: var(--status-type);
+      background: var(--status-type-bg);
+    }
+
+    /* ─── Form Controls ───────────────────────────────────────────────── */
+    .search-input {
+      height: 28px;
+      padding: 0 8px;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      min-width: 180px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .select {
+      height: 28px;
+      padding: 0 6px;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .select:focus {
+      border-color: var(--accent);
+    }
+
+    /* ─── Detail Panel ────────────────────────────────────────────────── */
+    .detail-panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-panel);
+      overflow: hidden;
+    }
+
+    .detail-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-panel);
+    }
+
+    .detail-header h2 {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .detail-body {
+      padding: 12px 14px;
+      overflow-y: auto;
+    }
+
+    /* ─── Fields ──────────────────────────────────────────────────────── */
+    .field {
+      margin-bottom: 10px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 3px;
+    }
+
+    .field-value {
+      color: var(--text-primary);
+      font-size: 13px;
+    }
+
+    .field-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .field-row .field {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    /* ─── Data Table ──────────────────────────────────────────────────── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+      background: var(--bg-panel);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .data-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+      background: var(--bg-row-alt);
+    }
+
+    .data-table tbody tr:hover {
+      background: var(--bg-row-hover);
+      cursor: pointer;
+    }
+
+    .data-table tbody tr.selected {
+      background: var(--bg-row-sel);
+    }
+
+    .data-table tbody tr.selected td {
+      color: var(--text-primary);
+    }
+
+    /* ─── Up/Down Arrows ──────────────────────────────────────────────── */
+    .arrows {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .arrow-btn {
+      width: 22px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-input);
+      border-radius: 2px;
+      background: var(--bg-panel);
+      color: var(--text-secondary);
+      font-size: 10px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .arrow-btn:hover:not(.disabled) {
+      background: var(--bg-row-hover);
+    }
+
+    .arrow-btn.disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    /* ─── Tab Strip ───────────────────────────────────────────────────── */
+    .tab-strip {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      gap: 0;
+      padding: 0 14px;
+      background: var(--bg-panel);
+    }
+
+    .tab-item {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab-item:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-item.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-content {
+      display: none;
+      padding: 12px 14px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ─── Tree Panel ──────────────────────────────────────────────────── */
+    .tree-panel {
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      border-left: 3px solid transparent;
+      transition: background 0.1s;
+    }
+
+    .tree-item:hover {
+      background: var(--bg-row-hover);
+    }
+
+    .tree-item.selected {
+      background: var(--bg-row-sel);
+      border-left-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .tree-item.level-1 { padding-left: 20px; }
+    .tree-item.level-2 { padding-left: 32px; }
+    .tree-item.level-3 { padding-left: 44px; }
+
+    /* ─── Filter Panel ────────────────────────────────────────────────── */
+    .filter-panel {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-panel);
+      flex-wrap: wrap;
+    }
+
+    /* ─── Split Layout helpers ────────────────────────────────────────── */
+    .detail-area {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .detail-top {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+    }
+
+    .detail-bottom {
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      background: var(--bg-panel);
+    }
+
+    /* ─── Checkbox ────────────────────────────────────────────────────── */
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .checkbox input[type=checkbox] {
+      accent-color: var(--accent);
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ─── Toast ───────────────────────────────────────────────────────── */
+    .toast-host {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .toast {
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 500;
+      color: #fff;
+      box-shadow: var(--shadow-modal);
+      opacity: 1;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+
+    .toast.toast-success { background: #2e7d32; }
+    .toast.toast-error   { background: #c62828; }
+    .toast.toast-info    { background: #1565c0; }
+    .toast.toast-fade    { opacity: 0; }
+
+    /* ─── Modal ───────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-modal);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-panel);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-modal);
+      width: 440px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 64px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-lg {
+      width: 680px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .modal-body {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-panel);
+    }
+
+    /* ─── Version Selector ────────────────────────────────────────────── */
+    .version-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .version-selector .select {
+      font-size: 12px;
+    }
+
+    /* ─── Eligibility Check Row ───────────────────────────────────────── */
+    .elig-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .elig-check:last-child { border-bottom: none; }
+
+    .elig-icon { font-size: 14px; }
+
+    /* ─── Dashboard Tiles ─────────────────────────────────────────────── */
+    .dashboard-tiles {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+    }
+
+    .dashboard-tile {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      min-width: 140px;
+      box-shadow: var(--shadow-panel);
+    }
+
+    .tile-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+
+    .tile-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .tile-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tile-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .tile-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    /* ─── Expandable Detail Row ───────────────────────────────────────── */
+    .expandable-detail {
+      background: var(--bg-row-alt);
+      border-top: 1px dashed var(--border);
+      padding: 10px 14px;
+    }
+
+    /* ─── JSON Block ──────────────────────────────────────────────────── */
+    .json-block {
+      background: var(--bg-app);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: pre;
+      overflow-x: auto;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    /* ─── Day-of-Week Visual ──────────────────────────────────────────── */
+    .dow-visual {
+      display: flex;
+      gap: 4px;
+    }
+
+    .dow-day {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-input);
+      background: var(--bg-input);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .dow-day.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--text-on-accent);
+    }
+
+    /* ─── User Avatar ─────────────────────────────────────────────────── */
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--text-on-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .user-info {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* ─── Theme Toggle Button ─────────────────────────────────────────── */
+    .theme-toggle {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .theme-toggle:hover {
+      background: var(--bg-row-hover);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     APP SHELL
+     ══════════════════════════════════════════════════════════════════════ -->
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <span class="header-logo">MPP</span>
+    <div class="header-divider"></div>
+    <span class="header-title">Configuration Tool</span>
+    <div class="header-spacer"></div>
+    <div class="header-right">
+      <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">
+        <span id="theme-icon">&#9790;</span>
+      </button>
+      <div class="user-avatar">JP</div>
+      <span class="user-info">J. Potgieter</span>
+    </div>
+  </header>
+
+  <!-- App Body -->
+  <div class="app-body">
+
+    <!-- Rail -->
+    <nav class="rail">
+      <button class="rail-item" data-category="plant" onclick="toggleCategory('plant')" title="Plant">
+        <span class="rail-icon">&#127981;</span>
+        <span class="rail-label">Plant</span>
+      </button>
+      <button class="rail-item" data-category="parts" onclick="toggleCategory('parts')" title="Parts">
+        <span class="rail-icon">&#9881;</span>
+        <span class="rail-label">Parts</span>
+      </button>
+      <button class="rail-item" data-category="quality" onclick="toggleCategory('quality')" title="Quality">
+        <span class="rail-icon">&#9745;</span>
+        <span class="rail-label">Quality</span>
+      </button>
+      <button class="rail-item" data-category="operations" onclick="toggleCategory('operations')" title="Ops">
+        <span class="rail-icon">&#9200;</span>
+        <span class="rail-label">Ops</span>
+      </button>
+      <button class="rail-item" data-category="system" onclick="toggleCategory('system')" title="System">
+        <span class="rail-icon">&#128736;</span>
+        <span class="rail-label">System</span>
+      </button>
+    </nav>
+
+    <!-- Nav Panel -->
+    <div class="nav-panel" id="nav-panel">
+      <div class="nav-panel-inner" id="nav-panel-inner"></div>
+    </div>
+
+    <!-- Content Area -->
+    <main class="content-area" id="content-area">
+
+      <!-- Toast Host -->
+      <div class="toast-host" id="toast-host"></div>
+
+      <!-- Landing Screen -->
+      <div class="screen active" id="screen-landing">
+        <div class="landing">
+          <div class="landing-icon">&#9881;</div>
+          <div class="landing-text">Select a category to begin</div>
+        </div>
+      </div>
+
+      <!-- Additional screens inserted by subsequent tasks -->
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ══════════════════════════════════════════════════════════════════════ -->
+<script>
+  /* ─── Navigation Config ──────────────────────────────────────────── */
+  const NAV_CONFIG = {
+    plant: [
+      { id: 'plant-hierarchy', label: 'Plant Hierarchy', icon: '&#127981;' }
+    ],
+    parts: [
+      { id: 'item-master',           label: 'Item Master',           icon: '&#128230;' },
+      { id: 'operation-templates',   label: 'Operation Templates',   icon: '&#128203;' }
+    ],
+    quality: [
+      { id: 'quality-specs',  label: 'Quality Specs',  icon: '&#128200;' },
+      { id: 'defect-codes',   label: 'Defect Codes',   icon: '&#128683;' }
+    ],
+    operations: [
+      { id: 'downtime-codes',   label: 'Downtime Codes',   icon: '&#9200;'  },
+      { id: 'shift-schedules',  label: 'Shift Schedules',  icon: '&#128197;' }
+    ],
+    system: [
+      { id: 'users',       label: 'Users',       icon: '&#128100;' },
+      { id: 'audit-log',   label: 'Audit Log',   icon: '&#128220;' },
+      { id: 'failure-log', label: 'Failure Log', icon: '&#9888;'   }
+    ]
+  };
+
+  /* ─── Router State ───────────────────────────────────────────────── */
+  let _activeCategory = null;
+  let _activeScreenId = null;
+
+  /* ─── toggleCategory ─────────────────────────────────────────────── */
+  function toggleCategory(category) {
+    const panel     = document.getElementById('nav-panel');
+    const panelInner = document.getElementById('nav-panel-inner');
+
+    // Deactivate all rail items
+    document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
+
+    if (_activeCategory === category && panel.classList.contains('open')) {
+      // Close panel — collapse nav
+      panel.classList.remove('open');
+      _activeCategory = null;
+      // Return to landing only if current screen belongs to this category
+      // (For now, show landing when panel is collapsed)
+      _showScreen('landing');
+      return;
+    }
+
+    // Activate the clicked rail item
+    const railBtn = document.querySelector(`.rail-item[data-category="${category}"]`);
+    if (railBtn) railBtn.classList.add('active');
+
+    _activeCategory = category;
+
+    // Populate nav panel
+    const items = NAV_CONFIG[category] || [];
+    const label = category.charAt(0).toUpperCase() + category.slice(1);
+    panelInner.innerHTML =
+      `<div class="nav-category-label">${label}</div>` +
+      items.map(item =>
+        `<button class="nav-item" data-screen="${item.id}" onclick="navigateTo('${category}', '${item.id}')">
+           <span class="nav-icon">${item.icon}</span>
+           <span>${item.label}</span>
+         </button>`
+      ).join('');
+
+    panel.classList.add('open');
+
+    // Auto-navigate to first screen in category
+    if (items.length > 0) {
+      navigateTo(category, items[0].id);
+    } else {
+      _showScreen('landing');
+    }
+  }
+
+  /* ─── navigateTo ─────────────────────────────────────────────────── */
+  function navigateTo(category, screenId) {
+    _activeScreenId = screenId;
+
+    // Highlight nav item
+    document.querySelectorAll('.nav-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.screen === screenId);
+    });
+
+    // Show target screen (fallback to landing if screen div doesn't exist yet)
+    const target = document.getElementById('screen-' + screenId);
+    if (target) {
+      _showScreen(screenId);
+    } else {
+      // Screen not yet implemented — show landing with placeholder message
+      const landing = document.getElementById('screen-landing');
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      landing.classList.add('active');
+      landing.innerHTML =
+        `<div class="landing">
+           <div class="landing-icon">&#128203;</div>
+           <div class="landing-text" style="color:var(--text-muted)">
+             Screen <strong style="color:var(--text-primary)">${screenId}</strong> not yet implemented
+           </div>
+         </div>`;
+    }
+  }
+
+  /* ─── _showScreen (internal) ─────────────────────────────────────── */
+  function _showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById('screen-' + screenId);
+    if (el) el.classList.add('active');
+  }
+
+  /* ─── toggleTheme ────────────────────────────────────────────────── */
+  function toggleTheme() {
+    const isDark = document.body.classList.toggle('theme-dark');
+    document.getElementById('theme-icon').innerHTML = isDark ? '&#9728;' : '&#9790;';
+  }
+
+  /* ─── switchTab ──────────────────────────────────────────────────── */
+  function switchTab(containerId, tabId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Toggle tab strip items
+    container.querySelectorAll('.tab-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.tab === tabId);
+    });
+
+    // Toggle tab content panes
+    container.querySelectorAll('.tab-content').forEach(el => {
+      el.classList.toggle('active', el.dataset.tab === tabId);
+    });
+  }
+
+  /* ─── openModal ──────────────────────────────────────────────────── */
+  function openModal(modalId) {
+    const overlay = document.getElementById(modalId);
+    if (overlay) overlay.classList.add('open');
+  }
+
+  /* ─── closeModal ─────────────────────────────────────────────────── */
+  function closeModal(modalId) {
+    const overlay = document.getElementById(modalId);
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  /* ─── showToast ──────────────────────────────────────────────────── */
+  function showToast(type, message) {
+    const host = document.getElementById('toast-host');
+    if (!host) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    host.appendChild(toast);
+
+    setTimeout(() => toast.classList.add('toast-fade'), 2600);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  /* ─── Close modal on overlay click ─────────────────────────────── */
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-overlay')) {
+      e.target.classList.remove('open');
+    }
+  });
+
+  /* ─── Close modal on Escape key ────────────────────────────────── */
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.open').forEach(el => el.classList.remove('open'));
+    }
+  });
+</script>
+
+</body>
+</html>
