@@ -2,45 +2,27 @@ $git = "C:\Program Files\Git\cmd\git.exe"
 $repo = "C:\MPP"
 $log = "C:\MPP\pull.log"
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-$changed = $false
 
 Add-Content $log ("[$timestamp] Starting sync...")
 
 # Ensure correct branch
 & $git -C $repo checkout hunter/explore 2>&1 | Out-Null
 
-# Check for local changes (Designer saves, etc.)
-$status = & $git -C $repo status --porcelain 2>&1
-if ($status) {
-    Add-Content $log "Local changes detected - committing..."
-    & $git -C $repo add "ignition/" 2>&1 | Out-Null
-    $commitMsg = "Designer auto-save [" + $timestamp + "]"
-    $commit = & $git -C $repo commit -m $commitMsg 2>&1
-    Add-Content $log ("Commit: " + $commit)
-    $changed = $true
-}
-
-# Capture commit hash before pull
+# Capture commit hash before fetch
 $hashBefore = & $git -C $repo rev-parse HEAD 2>&1
 
-# Pull remote changes and rebase local commits on top
-$pull = & $git -C $repo pull --rebase origin hunter/explore 2>&1
-Add-Content $log ("Pull: " + $pull)
+# Fetch and reset to remote
+$fetch = & $git -C $repo fetch origin hunter/explore 2>&1
+Add-Content $log ("Fetch: " + $fetch)
 
-# Capture commit hash after pull
+$reset = & $git -C $repo reset --hard origin/hunter/explore 2>&1
+Add-Content $log ("Reset: " + $reset)
+
+# Capture commit hash after fetch
 $hashAfter = & $git -C $repo rev-parse HEAD 2>&1
 
-# If hash changed, remote had new commits
+# Trigger Ignition scan only if something changed
 if ($hashBefore -ne $hashAfter) {
-    $changed = $true
-}
-
-# Push everything back up
-$push = & $git -C $repo push origin hunter/explore 2>&1
-Add-Content $log ("Push: " + $push)
-
-# Trigger Ignition gateway scan only if something changed
-if ($changed) {
     Add-Content $log "Changes detected - triggering Ignition file system scan..."
     $token = (Get-Content "C:\Users\admin\Documents\git-sync-api-key.txt" -Raw).Trim()
     $headers = @{ "X-Ignition-API-Token" = $token }
