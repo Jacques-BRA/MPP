@@ -1,5 +1,9 @@
 {
-  "custom": {},
+  "custom": {
+    "activeCategory": "",
+    "activeScreen": "BlueRidge/Views/Landing",
+    "navPanelOpen": false
+  },
   "propConfig": {
     "props.auth": {
       "access": "PRIVATE",
