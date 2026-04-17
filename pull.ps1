@@ -25,14 +25,8 @@ $hashAfter = & $git -C $repo rev-parse HEAD 2>&1
 if ($hashBefore -ne $hashAfter) {
     Add-Content $log "Changes detected - triggering Ignition file system scan..."
     $token = (Get-Content "C:\Users\admin\Documents\git-sync-api-key.txt" -Raw).Trim()
-    $headers = @{ "X-Ignition-API-Token" = $token }
-    try {
-        $scan = Invoke-WebRequest -Uri "http://localhost:8088/data/api/v1/scan/projects" -Method POST -Headers $headers
-        Add-Content $log ("Scan response: " + $scan.StatusCode)
-    } catch {
-        $errMsg = $_.Exception.Message
-        Add-Content $log ("Scan error: " + $errMsg)
-    }
+    $result = curl.exe -s -o NUL -w "%{http_code}" -X POST "http://localhost:8088/data/api/v1/scan/projects" -H "X-Ignition-API-Token: $token"
+    Add-Content $log ("Scan response: " + $result)
 } else {
     Add-Content $log "No changes - skipping scan."
 }
