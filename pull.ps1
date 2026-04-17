@@ -27,7 +27,7 @@ if ($hashBefore -ne $hashAfter) {
     $token = (Get-Content "C:\Users\admin\Documents\git-sync-api-key.txt" -Raw).Trim()
     $headers = @{ "X-Ignition-API-Token" = $token }
     try {
-        $scan = Invoke-WebRequest -Uri "http://localhost:8088/data/api/v1/scan/config" -Method POST -Headers $headers
+        $scan = Invoke-WebRequest -Uri "http://localhost:8088/data/api/v1/scan/projects" -Method POST -Headers $headers
         Add-Content $log ("Scan response: " + $scan.StatusCode)
     } catch {
         $errMsg = $_.Exception.Message
