@@ -28,7 +28,7 @@
             "fontWeight": "bold",
             "textAlign": "center"
           },
-          "text": "MPP Configuration Tool"
+          "text": "MPP Configuration Tool - Scan Test"
         },
         "type": "ia.display.label"
       }
