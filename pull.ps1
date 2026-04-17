@@ -12,7 +12,7 @@ Add-Content $log "[$timestamp] Starting sync..."
 # Check for local changes (Designer saves, etc.)
 $status = & $git -C $repo status --porcelain 2>&1
 if ($status) {
-    Add-Content $log "Local changes detected — committing..."
+    Add-Content $log "Local changes detected - committing..."
     & $git -C $repo add "ignition/" 2>&1 | Out-Null
     $commitMsg = "Designer auto-save [$timestamp]"
     $commit = & $git -C $repo commit -m $commitMsg 2>&1
@@ -41,7 +41,7 @@ Add-Content $log "Push: $push"
 
 # Trigger Ignition gateway scan only if something changed
 if ($changed) {
-    Add-Content $log "Changes detected — triggering Ignition file system scan..."
+    Add-Content $log "Changes detected - triggering Ignition file system scan..."
     $token = Get-Content "C:\Users\admin\Documents\git-sync-api-key.txt" -Raw
     $token = $token.Trim()
     $headers = @{ "X-Ignition-API-Token" = $token }
