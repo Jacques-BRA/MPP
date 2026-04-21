@@ -4,8 +4,8 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.7 — Working Draft
-**Date:** 2026-04-15
+**Version:** 0.8 — Working Draft
+**Date:** 2026-04-21
 
 ---
 
@@ -20,6 +20,7 @@
 | 0.5 | 2026-04-10 | Blue Ridge Automation | §11 Audit & Logging expanded: added fourth log stream `Audit.FailureLog` for attempted-but-rejected operations (new FDS-11-004). High-Fidelity Interface Logging renumbered from FDS-11-004 to FDS-11-005 to make room. Added FDS-11-008 documenting the code-string signatures for the four shared audit procs. Renumbered FDS-11-007 → FDS-11-009 (Retention Policy) and FDS-11-008 → FDS-11-010 (BIGINT Primary Keys) to accommodate. Normalized vocabulary examples in FDS-11-006/007 updated to UpperCamelCase (`Created`/`Updated`/`Deprecated`/`LotCreated` etc. instead of UPPER_SNAKE). |
 | 0.7 | 2026-04-15 | Blue Ridge Automation | **Production data collection capture.** Closed a gap where `OperationTemplate` + `OperationTemplateField` + `DataCollectionField` defined *what* to collect but nothing persisted *what was actually collected* when a LOT passed through. Updated §3.4 (FDS-03-012 operation-template definition — replaced stale `Collects*`/`Requires*` BIT-flag table with the `OperationTemplateField` → `DataCollectionField` junction wording that matches data model rev 0.7+). Updated §6.2 (FDS-06-001 die cast screen — now driven by `OperationTemplateField` rows rather than flags) and FDS-06-003 (die cast production event — now captures `OperationTemplateId`, `DieIdentifier`, `CavityNumber`, `WeightValue`/`WeightUomId` as hot columns plus N `ProductionEventValue` children for any other configured field). Added new FDS-03-017a specifying how the Perspective screen resolves operation-template fields into inputs and writes the header+children transactionally. Data model aligned at v1.4 (new `Workorder.ProductionEventValue` table + `ProductionEvent` extensions). |
 | 0.6 | 2026-04-15 | Blue Ridge Automation | Reflects Phase 5/6 SQL completion and the Ignition JDBC stored-procedure convention change. Data model realigned to v1.3: added HoldEvent place/release lifecycle table, SortOrder + MoveUp/MoveDown pattern on `Location.Location`, OperationTemplate→DataCollectionField junction (replacing hardcoded BIT flags), and seven new code tables backing all former enum/status columns. Versioning pattern for RouteTemplate, OperationTemplate, and Bom standardized on the three-state `Draft / Published / Deprecated` model (PublishedAt + DeprecatedAt). Added FDS-11-011 documenting the Ignition JDBC single-result-set convention: stored procedures SHALL NOT use `OUTPUT` parameters; mutation procs SHALL return `SELECT Status, Message, NewId` as their sole result set, read procs SHALL return a single result set (empty = not found), and the four shared audit writers SHALL emit no result set (they run inside caller transactions and would otherwise break INSERT-EXEC with ROLLBACK). |
+| 0.8 | 2026-04-21 | Blue Ridge Automation | **Security model rewrite (OI-06 closed — Phase C of the 2026-04-20 OI review refactor).** Replaced §4 Authentication & Session Management end-to-end. Operators no longer authenticate — they are identified by **initials** entered at the terminal (no clock number, no PIN), which establish an operator presence context that stamps `AppUserId` on events. Interactive users (Quality, Supervisor, Engineering, Admin) continue to authenticate via Active Directory. All clock-number and PIN terminology removed. Elevated actions are per-action AD re-prompts (no 5-minute-timeout, no session-sticky elevation). Introduced dedicated-vs-shared terminal modes via `LocationAttribute`. Added 30-minute idle re-confirmation overlay. Added pre-populated-and-defeasible initials field on every mutation screen. Operator `AppUser` rows are managed via the Configuration Tool (Admin screen). Updated §1.6 FDS-01-010. New FDS-04-009, FDS-04-010. |
 
 ---
 
@@ -270,7 +271,7 @@ All OPC tags SHALL be organized under a consistent namespace: `[OPCServer]/[Line
 ### 1.6 Security Architecture
 
 #### FDS-01-010 — Authentication
-Users SHALL authenticate via Active Directory. The Ignition Gateway SHALL be configured with an AD User Source. Shop-floor terminal authentication SHALL use clock number + PIN lookup against the `Location.AppUser` table, which maps to an AD account. (FRS 5.3)
+**Interactive users** (Quality, Supervisor, Engineering, Admin) SHALL authenticate via Active Directory. The Ignition Gateway SHALL be configured with an AD User Source. **Operators** SHALL NOT authenticate — they are identified by initials entered at a shop-floor terminal and stamped on events (see §4). Operator `AppUser` rows exist for attribution only and are managed through the Configuration Tool; they carry no AD account. (FRS 5.3)
 
 #### FDS-01-011 — Authorization
 Role-based access control SHALL be managed through Ignition's internal security system. AD groups SHALL map to Ignition security roles. Screen and function-level permissions SHALL be enforced via Ignition security zones. No custom RBAC tables in the MES database. (FRS Spark Dependency B.8)
@@ -525,47 +526,98 @@ The system SHALL close a container automatically when the configured capacity is
 
 ---
 
-## 4. User Authentication & Session Management — `MVP`
+## 4. User Identity, Authentication & Elevation — `MVP`
 
-### 4.1 Authentication Architecture
+> ✅ **RESOLVED — OI-06 / UJ-01 (2026-04-20):** Operators do not authenticate. They are identified on a terminal by their initials, which are stamped onto every event. Elevated actions (holds, overrides, scrap, maintenance WOs, admin edits) require an Active Directory login at the moment of action — no session-sticky elevation, no clock-number/PIN convenience login. The 5-minute-timeout proposal is dropped.
 
-#### FDS-04-001 — Active Directory Integration
-The Ignition Gateway SHALL be configured with an Active Directory User Source. All user authentication SHALL be performed against AD. The MES database SHALL NOT store passwords (except hashed PINs for terminal convenience login). (FRS 5.3)
+### 4.1 Identity Model
 
-#### FDS-04-002 — App User Records
-Each MES user SHALL have an `AppUser` record in the MES database. This record exists for audit attribution (who did what), not for authentication. The `AdAccount` field links to the AD identity. (FRS Spark Dependency B.8)
+#### FDS-04-001 — Two Identity Classes
+The MES SHALL recognise two classes of `Location.AppUser`:
 
-#### FDS-04-003 — Clock Number + PIN Login
-Shop-floor terminals SHALL support a convenience login mode: operator enters their clock number and a numeric PIN. The MES SHALL look up the `AppUser` record by clock number, verify the PIN hash, and establish a Perspective session under the corresponding AD identity. This avoids requiring operators to type AD credentials on a shop-floor keyboard. (FRS 3.6.1)
+| Class | AdAccount | Initials | IgnitionRole | How they identify |
+|---|---|---|---|---|
+| Operator | NULL | NOT NULL | NULL | Initials entered at a shop-floor terminal |
+| Interactive User (Quality, Supervisor, Engineering, Admin) | NOT NULL | NOT NULL | NOT NULL | Active Directory login |
 
-### 4.2 Session Lifecycle
+Every event and mutation SHALL stamp `AppUserId` — never free-text initials or names. Initials are a natural key used at the UI layer only; the database records the resolved `AppUserId`.
 
-> 🔶 **PENDING CUSTOMER VALIDATION — OI-06 / UJ-01:** Blue Ridge recommends login-on-first-action with 5-minute inactivity timeout. High-security actions require re-authentication. Zone-based authentication requirements are under investigation as an alternative. Needs MPP validation before screen design.
+#### FDS-04-002 — Operator Initials Capture
+When an operator approaches a shop-floor terminal to perform their first action, the UI SHALL prompt for initials. The MES SHALL look up the `AppUser` by initials and establish an **operator presence context** on that terminal's Perspective session. No password is verified. The presence context SHALL apply to subsequent events until:
 
-#### FDS-04-004 — Session Model
-Operators SHALL authenticate on their first action at a terminal using clock number + PIN. The session SHALL remain active until the operator explicitly logs out or a configurable inactivity timeout expires (default: 5 minutes). An easy logout button SHALL be visible on all screens to support quick operator handoff at shared terminals.
+- another operator enters different initials, or
+- the terminal has been idle for 30 minutes and the operator answers "No" to the re-confirmation prompt.
 
-#### FDS-04-005 — Elevated Actions
-Actions with quality or financial impact (placing/releasing holds, scrapping LOTs, voiding shipping labels) SHALL require re-authentication regardless of session state. The system SHALL prompt for clock number + PIN before executing these actions, even if the operator has an active session. (FRS 3.3.1, 3.3.4)
+Operator presence is NOT an authenticated session. It is a stamping context. The operator cannot perform elevated actions from within it.
 
-#### FDS-04-006 — Multi-User Terminals
-Since terminals are shared (per FDS-02-008), multiple operators will use the same terminal. The 5-minute timeout and prominent logout button ensure clean handoffs. Each operator authenticates individually via clock number + PIN. No full session restart is required — the system transitions directly from one user to another.
+#### FDS-04-003 — Terminal Mode: Dedicated vs Shared
+Terminals SHALL be classified via a `LocationAttribute` on the Terminal location (`TerminalMode` = `Dedicated` or `Shared`; default `Dedicated`).
 
-### 4.3 Role-Based Access
+- **Dedicated terminals** (approx. 80% of the plant — one-to-one with a Cell). The presence context persists across idle gaps, subject only to the 30-minute re-confirmation prompt. Initials do not clear unless explicitly changed.
+- **Shared terminals** (trim shop and similar multi-station contexts). The presence context SHALL be requested on first action after any idle period longer than the presence-timeout and SHALL also be re-prompted when the operator scans a machine barcode that differs from the previous machine context (per FDS-02-008 machine-barcode-scan pattern).
 
-#### FDS-04-007 — Ignition Role Mapping
-The following roles SHALL be configured in Ignition's identity provider:
+#### FDS-04-004 — Interactive User Authentication
+Interactive users (Quality, Supervisor, Engineering, Admin) SHALL authenticate via Ignition's Active Directory User Source. AD groups SHALL map to the Ignition roles in FDS-04-008. Operators SHALL NOT exist in AD.
 
-| Role | Capabilities |
-|---|---|
-| Operator | LOT creation, production recording, downtime entry, container packing |
-| Quality | All Operator capabilities + hold placement/release, inspection entry, LOT splitting for disposition |
-| Supervisor | All Quality capabilities + LOT merge, shipping label void/reprint, override interlocks |
-| Engineering | Master data management (items, BOMs, routes, operation templates, container configs) |
-| Admin | All capabilities + user management, terminal configuration, system configuration |
+There is no shop-floor-terminal convenience login. An interactive user authorising an elevated action from a shop-floor terminal SHALL enter AD credentials via the elevation prompt described in FDS-04-006. (A badge-scan or RFID-based elevation mechanism is a documented future enhancement aligned with Honda's RFID-on-labels initiative — see OI-08 addenda — but is not in MVP scope.)
 
-#### FDS-04-008 — Screen-Level Security
-Each Perspective view SHALL enforce role-based visibility. Operators SHALL NOT see engineering configuration screens. Quality functions (hold management, Sort Cage) SHALL be visible only to Quality and above. Administrative functions SHALL be visible only to Admin.
+### 4.2 Event Attribution on Mutations
+
+#### FDS-04-005 — Pre-Populated Initials Field
+Every shop-floor mutation screen (LOT creation, production event, downtime, inspection, container close, etc.) SHALL include an **Initials** field pre-populated from the terminal's presence context. The operator MAY override this value before submission — for example, when a pair-working partner is recording on their behalf.
+
+On submission, the MES SHALL resolve the submitted initials to an `AppUserId` via the `Location.AppUser_GetByInitials` proc. If the initials are unknown or resolve to a deprecated user, the MES SHALL block the submission with a clear validation message; it SHALL NOT auto-create users from unknown initials.
+
+#### FDS-04-006 — 30-Minute Presence Re-Confirmation
+After 30 minutes of terminal inactivity, the next operator interaction SHALL trigger a re-confirmation overlay:
+
+> **Operate as [XY]?**
+> [ Yes ] [ No — change ]
+
+- **Yes** continues with the existing presence context. Dedicated terminals retain initials through the shift via repeated Yes answers.
+- **No — change** opens the initials entry screen. The previous context is cleared.
+
+The 30-minute value SHALL be a Configuration Tool setting (not hard-coded) so MPP can tune it.
+
+### 4.3 Elevation Model
+
+#### FDS-04-007 — Elevated Actions Require Active Directory Authentication
+Actions with quality, financial, safety, or master-data impact SHALL require a fresh AD authentication at the moment of action, regardless of operator presence. The action control SHALL open an elevation prompt that accepts AD username and password. On successful authentication the action SHALL be stamped with the authenticating interactive user's `AppUserId`, NOT the operator presence context. On cancel the action SHALL not execute and the UI SHALL return to the prior state.
+
+Elevation is not session-sticky. Each elevated action re-prompts. This removes the 5-minute-timeout concept entirely — elevation is per-action, not per-session.
+
+The initial elevated-action list (the full set will be validated by Tom, MPP's security SME, before Arc 2 screen design freezes):
+
+- Place a LOT on hold
+- Release a LOT from hold
+- Override a vision or interlock failure
+- Scrap a LOT or container
+- Void or reprint a shipping label
+- Merge or split LOTs outside of the normal sort workflow
+- Issue or close a maintenance work order against a tool
+- Deprecate an `AppUser`, `Item`, `Bom`, `RouteTemplate`, `OperationTemplate`, `ContainerConfig`, or `Tool`
+- Adjust inventory via the admin remove-item action (OI-14)
+
+#### FDS-04-008 — Ignition Role Mapping
+Interactive-user roles configured in Ignition's identity provider map to AD groups:
+
+| Role | Backed by AD | Capabilities |
+|---|---|---|
+| Quality | ✅ | Hold placement/release, inspection entry, LOT splitting for disposition, CRT issuance and release |
+| Supervisor | ✅ | All Quality + LOT merge, shipping label void/reprint, interlock/vision override, maintenance WO create/close |
+| Engineering | ✅ | Master data — Items, BOMs, Routes, Operation Templates, Container Configs, Tools, Die Ranks |
+| Admin | ✅ | All capabilities + AppUser management, Terminal configuration, admin remove-item |
+
+**Operator** is not an Ignition role — it is the absence of any interactive authentication. Shop-floor terminal screens accept operator presence and permit non-elevated actions; elevated actions trigger the FDS-04-007 AD prompt regardless.
+
+#### FDS-04-009 — Screen-Level Security
+- Shop-floor terminal screens SHALL be accessible without interactive authentication; operator presence is sufficient.
+- Shop-floor screens SHALL NOT expose Configuration Tool or master-data functions.
+- Configuration Tool, Supervisor dashboards, and Engineering screens SHALL require AD-backed authentication on page entry.
+- Elevated action controls (buttons, menu items) SHALL be visible on shop-floor screens but SHALL trigger the FDS-04-007 prompt on activation. Unauthorised users cancel out.
+
+#### FDS-04-010 — Operator AppUser Lifecycle
+Operator `AppUser` rows SHALL be managed by the Configuration Tool (Admin-only screen). MPP has no AD accounts for operators; their rows carry `AdAccount = NULL`, `Initials = NOT NULL, UNIQUE`, and no Ignition role. When an operator's initials would collide with an existing row, the Admin SHALL enter disambiguating initials (e.g., three- or four-character codes). Deprecation follows the standard `DeprecatedAt` soft-delete pattern; events referencing deprecated operators retain the historical `AppUserId`.
 
 ---
 
@@ -638,13 +690,13 @@ Every time a LOT physically moves to a new location, the system SHALL record an 
 #### FDS-05-008 — Movement Workflow
 A LOT movement is always initiated by an operator at a terminal. The explicit workflow SHALL be:
 
-1. **Login** — Operator authenticates at the terminal with clock number + PIN (per FDS-04-004). The session's `TerminalLocationId` is the `Location` where the operator is standing.
+1. **Presence** — The terminal already has an operator presence context established via initials (per §4). If 30 minutes have elapsed, the operator confirms or changes presence via the re-confirmation overlay. The terminal's `TerminalLocationId` is the `Location` where the operator is standing.
 2. **Scan Location** — Operator scans the machine/location barcode for the destination (the Cell where the LOT is arriving). The system resolves the scanned code to a `Location.Id` and verifies it is a valid production context (Cell-tier, appropriate definition).
 3. **Scan LOT** — Operator scans the LOT's LTT barcode. The system looks up the LOT by `LotName`, validates it is not CLOSED, and reads its current `CurrentLocationId` as the from-location.
-4. **Record Movement** — The system writes a `LotMovement` row (from-location, to-location, user, terminal location, timestamp) and updates the LOT's `CurrentLocationId` to the scanned destination.
+4. **Record Movement** — The system writes a `LotMovement` row (from-location, to-location, resolved `AppUserId` from the pre-populated initials, terminal location, timestamp) and updates the LOT's `CurrentLocationId` to the scanned destination.
 5. **Confirm** — The screen displays the movement confirmation and transitions to the appropriate next action (production recording, inspection, split, etc.) based on the destination's `LocationTypeDefinition`.
 
-The login → scan location → scan lot sequence ensures that every movement has a clear operator, source, and destination — and that audit attribution is unambiguous.
+The presence → scan location → scan lot sequence ensures that every movement has a clear operator, source, and destination — and that audit attribution is unambiguous.
 
 **Implicit movement:** The system SHALL also infer a movement when a LOT is consumed or produced at a machine without a prior explicit scan. For example, if an assembly operator records consumption of a source LOT currently at the WIP staging area, the system SHALL implicitly write a `LotMovement` from WIP → the assembly Cell before writing the `ConsumptionEvent`. This keeps the traceability record complete without requiring redundant scans.
 
@@ -1281,7 +1333,7 @@ For non-serialized lines with MicroLogix1400 PLCs (6B2, 6MA, RPY, 6FB per Append
 On lines with Cognex vision systems, the MES SHALL read `VisionPartNumber` tags for automated part number confirmation. If the vision-confirmed part number conflicts with the operator-entered part number, the system SHALL:
 1. Place the LOT on HOLD automatically (FRS 3.16.10)
 2. Display a popup alerting the operator to the conflict
-3. Offer a supervisor override option — a supervisor authenticates (clock number + PIN) to release the hold and allow operations to continue
+3. Offer a supervisor override option — elevation prompt per FDS-04-007 (AD authentication) allows a Supervisor or Quality user to release the hold and let operations continue
 4. Log the conflict, hold event, and any override to `Audit.OperationLog`
 
 > 🔶 **PENDING CUSTOMER VALIDATION — OI-04:** Blue Ridge recommends auto-hold + supervisor override popup for vision conflicts. The hold blocks production on that LOT until a supervisor intervenes. This ensures traceability of every conflict while not permanently stopping the line. Needs MPP validation of this workflow.

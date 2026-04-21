@@ -16,6 +16,7 @@
 | 0.3 | 2026-04-09 | Blue Ridge Automation | UpperCamelCase naming convention applied to all DB references. Department references updated to Area per ISA-95. |
 | 0.4 | 2026-04-10 | Blue Ridge Automation | Location model references updated for the new three-tier polymorphic model (LocationType → LocationTypeDefinition → LocationAttributeDefinition). See FDS v0.4 for details. |
 | 0.5 | 2026-04-15 | Blue Ridge Automation | Aligned to data model v1.3 and Phase 5/6 SQL delivery. Configuration Tool arc now reflects three-state versioning (Draft / Published / Deprecated) for RouteTemplate, OperationTemplate, and Bom — engineers author across sessions, publish to release for production, and deprecate rather than delete. OperationTemplate data collection described via the DataCollectionField junction (configurable per step) instead of hardcoded flags. Location management references the SortOrder + MoveUp/MoveDown arrow-button pattern (no drag-and-drop, per project convention). Plant Floor arc references HoldEvent as a single place/release lifecycle table consistent with DowntimeEvent. Added note that all Configuration Tool screens bind to Ignition Named Queries over stored procs returning a single result set (see FDS §11 FDS-11-011). |
+| 0.6 | 2026-04-21 | Blue Ridge Automation | **Security model rewrite (OI-06 closed — Phase C of the 2026-04-20 OI review refactor).** Operator identity narrative updated end-to-end. Carlos Die Cast scene now shows the initials-based presence pattern (`CM` pre-populated on the LOT creation screen, defeasible before submit). UJ-§1 "Operator Authentication & Session Model" renamed to "Operator Identity & Elevation Model" and closed as Resolved. 5-minute timeout, clock number, and PIN references removed. 30-minute idle re-confirmation popup described. Elevated actions use per-action AD prompts (no convenience login). See FDS §4 for the full specification. |
 
 ---
 
@@ -80,7 +81,7 @@ It's 6:15am on a Tuesday. First shift has started. The aluminum is already molte
 
 Carlos is running die cast machine #7 today. He's making 5G0 Front Covers — die #42, cavity B. The furnace is hot, the die is locked, and the first shot cycle completes. The casting drops into the trim press, gets trimmed, and falls into the basket beside his station.
 
-Carlos has a stack of pre-printed LOT Tracking Tickets — barcoded labels, each with a unique LOT ID (MPP pre-prints these in batches per FRS 2.2.1). He peels one off — LOT `2026-04-06-0001` — and sticks it on the basket. He turns to the Ignition terminal next to his machine, scans the LTT barcode, and the MES opens the LOT creation screen. The terminal knows he's Carlos (he badged in with his clock number and PIN at shift start), but he must manually enter the production data: Part Number 5G0, Die #42, Cavity B, and the piece count — 48 parts in this basket (per FRS 2.2.2: "operators manually key that data into the MES"). The MES validates: is 48 ≤ max lot size for 5G0? Yes. Is 5G0 eligible to run on machine #7? Yes.
+Carlos has a stack of pre-printed LOT Tracking Tickets — barcoded labels, each with a unique LOT ID (MPP pre-prints these in batches per FRS 2.2.1). He peels one off — LOT `2026-04-06-0001` — and sticks it on the basket. He turns to the Ignition terminal next to his machine, scans the LTT barcode, and the MES opens the LOT creation screen. The terminal is dedicated to Machine #7, so it already has his operator presence set — he tapped his initials **CM** on the keypad when he started his shift, and the LOT creation screen pre-populates the Initials field with `CM` (he can override it before submitting if a pair-working partner is entering data on his behalf). He manually enters the production data: Part Number 5G0, Die #42, Cavity B, and the piece count — 48 parts in this basket (per FRS 2.2.2: "operators manually key that data into the MES"). The MES validates: is 48 ≤ max lot size for 5G0? Yes. Is 5G0 eligible to run on machine #7? Yes.
 
 He also enters shot counts — total shots, good shots, and warm-up shots. The paper production sheets (DCFM-1589/1785/2003) track warm-up shots separately from production shots because they affect yield calculations but aren't part of the good count. The MES captures all three.
 
@@ -164,11 +165,11 @@ These are the places where the narrative filled in gaps that the FRS and data mo
 
 **Status legend:** ✅ Resolved | 🔶 Pending Customer Validation / Pending Internal Review | ⬜ Open
 
-### 1. Operator Authentication & Session Model — 🔶 Pending Customer Validation
+### 1. Operator Identity & Elevation Model — ✅ Resolved
 
-**Assumption made:** Operators badge in once at shift start with clock number + PIN, and stay authenticated for the shift at that terminal. Every action is attributed to them without re-authentication.
+**Assumption made (pre-2026-04-20):** Operators badge in once at shift start with clock number + PIN, and stay authenticated for the shift at that terminal. Every action is attributed to them without re-authentication.
 
-**Decision (2026-04-09):** Login on first action at terminal, 5-minute inactivity timeout with easy logout button for quick handoff at shared terminals. High-security actions (holds, releases, scrap) require re-authentication. Zone-based authentication requirements under investigation as an alternative. *Maps to OI-06.*
+**Decision (2026-04-20, OI-06 closed):** Operators don't authenticate at all. They are identified on a terminal by their **initials** (no clock number, no PIN), which establish an operator presence context and pre-populate an editable Initials field on every mutation screen. Dedicated terminals (approx. 80% of the plant, one-to-one with a Cell) retain the presence through the shift, subject only to a 30-minute idle re-confirmation popup ("Operate as CM? Yes / No — change"). Shared terminals prompt for initials on first action after any idle period. Elevated actions (holds, overrides, scrap, maintenance WOs, admin edits) require a fresh Active Directory login at the moment of action — no session-sticky elevation, no 5-minute-timeout. Operator `AppUser` rows are managed by the Configuration Tool (Admin screen); operators have no AD account. *See FDS §4.*
 
 ### 2. LOT Creation Flow at Die Cast — 🔶 Pending Customer Validation
 
