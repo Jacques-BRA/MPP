@@ -181,8 +181,8 @@
 
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
-    <p>Madison Precision Products — MES Database Schema (7 schemas, ~51 tables)</p>
-    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-10 — includes three-tier location model, UpperCamelCase naming, Area replaces Department, MVP-Lite WO scope, and <strong>Audit.FailureLog</strong> for tracking attempted-but-rejected operations.</p>
+    <p>Madison Precision Products — MES Database Schema (8 schemas, ~70 tables)</p>
+    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-21 — v1.7 Phase B Tool Management schema added (§7 Tools with ToolType, Tool, ToolCavity, ToolAssignment, DieRank compatibility matrix), <code>Workorder.WorkOrder</code> gains <code>WorkOrderType</code> + nullable <code>ToolId</code>, <code>AppUser</code> realigned to initials-based security (OI-06). Master ERD still reflects v1.5 — full regeneration queued for Phase F of the OI refactor.</p>
     <div class="conventions">
         <span>UpperCamelCase</span>
         <span>singular nouns</span>
@@ -203,6 +203,7 @@
     <button data-tab="workorder">Workorder <span class="scope-badge scope-mixed">Mixed</span></button>
     <button data-tab="quality">Quality <span class="scope-badge scope-mixed">Mixed</span></button>
     <button data-tab="oee">OEE <span class="scope-badge scope-mixed">Mixed</span></button>
+    <button data-tab="tools">Tools <span class="scope-badge scope-mixed">Mixed</span></button>
     <button data-tab="audit">Audit <span class="scope-badge scope-mvp">MVP</span></button>
     <button data-tab="master">Master ERD</button>
 </div>
@@ -252,8 +253,8 @@
             <p>Terminals are no longer their own <code>LocationType</code>. <code>Terminal</code> is a <code>LocationTypeDefinition</code> under the <code>Cell</code> tier &mdash; one kind of Cell among many. A <code>DieCastMachine</code> is another kind of Cell. Both are Cell-tier locations but carry completely different attribute schemas. Event tables carry <code>TerminalLocationId</code> (where operator stands) and <code>LocationId</code> (which machine they scanned).</p>
         </div>
         <div class="table-card">
-            <h4>AppUser</h4>
-            <p>MES users backed by Active Directory. The <code>AdAccount</code> is the authentication identity. Clock number and PIN hash support shop-floor identification at terminals. The <code>IgnitionRole</code> field references the role name configured in Ignition's internal identity provider.</p>
+            <h4>AppUser <span class="scope-badge scope-mvp">MVP v1.6</span></h4>
+            <p>Realigned to the initials-based security model (OI-06, Phase C of the 2026-04-20 OI refactor). <code>Initials</code> is now <code>NOT NULL UNIQUE</code> — every user has an initial stamp used as the shop-floor event attribution. <code>AdAccount</code> is nullable (filtered UNIQUE where NOT NULL) so operator-class rows can exist without an AD identity. A <code>CHECK (IgnitionRole IS NULL OR AdAccount IS NOT NULL)</code> constraint binds elevated Ignition roles to AD-backed accounts. <code>ClockNumber</code> and <code>PinHash</code> are flagged <em>legacy</em> and will be dropped in the Phase G migration.</p>
         </div>
     </div>
 
@@ -319,10 +320,11 @@ erDiagram
 
     AppUser {
         bigint Id PK
-        nvarchar AdAccount
+        nvarchar Initials "NOT NULL UNIQUE"
+        nvarchar AdAccount "NULL (filtered UNIQUE)"
         nvarchar DisplayName
-        nvarchar ClockNumber
-        nvarchar PinHash
+        nvarchar ClockNumber "legacy"
+        nvarchar PinHash "legacy"
         nvarchar IgnitionRole
         datetime2 CreatedAt
         datetime2 DeprecatedAt
@@ -764,14 +766,18 @@ erDiagram
     <div class="schema-desc">
         <h2>workorder <span class="scope-badge scope-mixed">Mixed Scope</span></h2>
         <p>Internal work order context that operators never see. Auto-generated when production activity begins, providing bookkeeping for production events, material consumption, and reject tracking. Links LOTs to machines, routes, and operators. Every good count, bad count, and material consumption is recorded as an immutable event.</p>
-        <p class="scope-note">Work order tables (<code>WorkOrder</code>, <code>WorkOrderOperation</code>) are <strong>MVP-LITE</strong> per OI-07 — auto-generated and populated, but invisible to operators (no WO screens). Production/consumption/reject event tables are <strong>MVP</strong>. Events have nullable FKs to <code>WorkOrderOperation</code>, so they function independently.</p>
+        <p class="scope-note">Work order tables (<code>WorkOrder</code>, <code>WorkOrderOperation</code>, <code>WorkOrderType</code>) are <strong>MVP-LITE</strong> per OI-07 — auto-generated and populated, but invisible to operators (no WO screens). Production/consumption/reject event tables are <strong>MVP</strong>. Events have nullable FKs to <code>WorkOrderOperation</code>, so they function independently. v1.7 adds the three-type model (Demand / Maintenance / Recipe) confirmed at the 2026-04-20 meeting — Maintenance WO <em>flow</em> is <strong>FUTURE</strong>, but the schema hook (<code>WorkOrderTypeId</code> + nullable <code>ToolId → Tools.Tool</code>) is MVP.</p>
     </div>
 
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
+            <h4>WorkOrderType <span class="scope-badge scope-mvp">MVP-Lite v1.7</span></h4>
+            <p>Read-only code table seeded at migration: <code>Demand</code> (production, existing MVP-Lite behaviour), <code>Maintenance</code> (targets a Tool; flow is FUTURE, schema hook only in MVP), <code>Recipe</code> (configuration/recipe context, hidden from operator). Added v1.7 as part of the Phase B refactor. Existing WorkOrder rows backfill to Demand.</p>
+        </div>
+        <div class="table-card">
             <h4>WorkOrder <span class="scope-badge scope-mvp">MVP-Lite</span></h4>
-            <p>Auto-generated internal work order. Links an item to a route template. Operators never interact with this &mdash; it provides context for aggregating production data. (OI-07 resolved to MVP-Lite: included but hidden, no WO screens.)</p>
+            <p>Auto-generated internal work order. Links an item to a route template. Operators never interact with this &mdash; it provides context for aggregating production data. (OI-07 resolved to MVP-Lite: included but hidden, no WO screens.) v1.7 adds <code>WorkOrderTypeId</code> (NOT NULL DEFAULT Demand-Id) and nullable <code>ToolId FK → Tools.Tool</code>. <code>ToolId</code> is populated only when <code>WorkOrderType = Maintenance</code>; enforced at proc layer (no CHECK — Recipe WOs legitimately leave it NULL).</p>
         </div>
         <div class="table-card">
             <h4>WorkOrderOperation <span class="scope-badge scope-mvp">MVP-Lite</span></h4>
@@ -806,6 +812,13 @@ erDiagram
         nvarchar Name
     }
 
+    WorkOrderType {
+        bigint Id PK
+        nvarchar Code "Demand / Maintenance / Recipe"
+        nvarchar Name
+        nvarchar Description
+    }
+
     OperationStatus {
         bigint Id PK
         nvarchar Code
@@ -815,9 +828,11 @@ erDiagram
     WorkOrder {
         bigint Id PK
         nvarchar WoNumber
+        bigint WorkOrderTypeId FK
         bigint ItemId FK
         bigint RouteTemplateId FK
         bigint WorkOrderStatusId FK
+        bigint ToolId FK "NULL (Maintenance WOs only)"
         datetime2 CreatedAt
         datetime2 CompletedAt
     }
@@ -893,6 +908,7 @@ erDiagram
     }
 
     WorkOrderStatus ||--o{ WorkOrder : "status of"
+    WorkOrderType ||--o{ WorkOrder : "type of"
     WorkOrder ||--o{ WorkOrderOperation : contains
     OperationStatus ||--o{ WorkOrderOperation : "status of"
     WorkOrderOperation ||--o{ ProductionEvent : produces
@@ -1205,6 +1221,179 @@ erDiagram
     </div>
 </div>
 
+<!-- ═══════════════════ TOOLS ═══════════════════ -->
+<div id="tab-tools" class="tab-content">
+    <div class="schema-desc">
+        <h2>tools <span class="scope-badge scope-mixed">Mixed Scope</span></h2>
+        <p>Added v1.7 (Phase B of the 2026-04-20 OI review refactor). Promotes <strong>Tool</strong> from a <code>LocationAttribute</code> historical-snapshot pattern to a first-class polymorphic subsystem covering dies, cutters, jigs, gauges, assembly fixtures, and trim tools. Mirrors the <code>Location</code> pattern but collapsed to a single header table: <strong>ToolType</strong> is a grouping (not a hierarchy), <strong>ToolAttributeDefinition</strong> is the per-type attribute schema, <strong>Tool</strong> is the concrete row. <strong>ToolCavity</strong> children exist only for tool types with <code>HasCavities = 1</code> (currently only dies). <strong>ToolAssignment</strong> is the append-only check-in/out history against Cells. <strong>DieRank</strong> + <strong>DieRankCompatibility</strong> back the OI-05 cross-die merge rule.</p>
+        <p class="scope-note">All ten tables are <strong>MVP</strong>. Configuration Tool CRUD screens for all entities are MVP (Phase 9). Maintenance WO <em>flow</em> is <strong>FUTURE</strong> — schema hook (<code>Workorder.WorkOrderType = Maintenance</code> + nullable <code>Workorder.WorkOrder.ToolId</code>) is MVP. Tool-life threshold alarms are <strong>FUTURE</strong> (scheduled Gateway Script pattern when MPP asks; shot counts derive from <code>Workorder.ProductionEvent</code>). Cross-plant tool transfer is <strong>FUTURE</strong>.</p>
+    </div>
+
+    <h3>Tables</h3>
+    <div class="table-list">
+        <div class="table-card">
+            <h4>ToolType <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Polymorphic kinds (seeded read-only): <code>Die</code>, <code>Cutter</code>, <code>Jig</code>, <code>Gauge</code>, <code>AssemblyFixture</code>, <code>TrimTool</code>. Carries <code>HasCavities BIT</code> — gates whether <code>ToolCavity</code> children are valid for tools of this type. <code>Icon</code> column for Perspective tree display.</p>
+        </div>
+        <div class="table-card">
+            <h4>ToolAttributeDefinition <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Per-type attribute schema. Mirrors <code>Location.LocationAttributeDefinition</code>. Seeded empty — engineering populates via the Config Tool as real tools arrive (e.g., <code>CycleTimeSec</code> and <code>Tonnage</code> for dies, <code>InsertCount</code> for cutters).</p>
+        </div>
+        <div class="table-card">
+            <h4>Tool <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>System of record for tool identity. Code, name, description, <code>ToolTypeId</code>, <code>StatusCodeId</code>, and nullable <code>DieRankId</code> (Die-type only — application-level validation, no CHECK). <strong>No shot counter</strong>: shot counts derive from <code>Workorder.ProductionEvent</code> group-by to avoid drift. <code>DeprecatedAt</code> soft-delete is separate from the business state <code>StatusCode = Retired</code>.</p>
+        </div>
+        <div class="table-card">
+            <h4>ToolAttribute <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Attribute values, keyed by <code>(ToolId, ToolAttributeDefinitionId)</code>. Stored as <code>NVARCHAR</code>; interpreted per the definition's <code>DataType</code>. Mirrors <code>Location.LocationAttribute</code>.</p>
+        </div>
+        <div class="table-card">
+            <h4>ToolCavity <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Child of <code>Tool</code>. Valid only for types with <code>HasCavities = 1</code>. Three-state status code (<code>Active</code> / <code>Closed</code> / <code>Scrapped</code>) tracks whether the cavity is producing, shut off, or physically destroyed. Cavity numbers are immutable — only <code>StatusCodeId</code> is mutable via the runtime proc surface. Shoot-and-scrap is not a cavity state; it's captured at <code>Workorder.RejectEvent</code>.</p>
+        </div>
+        <div class="table-card">
+            <h4>ToolAssignment <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Append-only check-in/out history against Cells. Filtered UNIQUE on <code>ToolId WHERE ReleasedAt IS NULL</code> enforces one active mount per tool. Mount/release requires the <strong>FDS-04-007 AD elevation prompt</strong> — it's on the supervisor-gated action list.</p>
+        </div>
+        <div class="table-card">
+            <h4>ToolStatusCode &middot; ToolCavityStatusCode <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Read-only code tables. <code>ToolStatusCode</code>: Active / UnderRepair / Scrapped / Retired. <code>ToolCavityStatusCode</code>: Active / Closed / Scrapped. Both seeded at migration time.</p>
+        </div>
+        <div class="table-card">
+            <h4>DieRank <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Code table for die-quality ranks (e.g., A–E). Ships <strong>empty</strong> — MPP Quality owes the authoritative list. Config Tool has a Die Rank admin screen for engineering to populate once received.</p>
+        </div>
+        <div class="table-card">
+            <h4>DieRankCompatibility <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Junction: <code>(RankAId, RankBId, CanMix)</code>. Pairs stored canonicalised (smaller Id first). Ships <strong>empty</strong>. Drives the OI-05 cross-die merge rule in <code>Lots.Lot_Merge</code>: same die → merge proceeds; different dies → merge rejects with an FDS-04-007 supervisor-override path until the matrix is populated, then per-pair <code>CanMix</code> decides.</p>
+        </div>
+    </div>
+
+    <h3>ERD</h3>
+    <p class="zoom-hint">Scroll to zoom, drag to pan. Double-click to reset.</p>
+    <div class="erd-container">
+        <div class="mermaid">
+erDiagram
+    ToolType {
+        bigint Id PK
+        nvarchar Code "Die / Cutter / Jig / Gauge / AssemblyFixture / TrimTool"
+        nvarchar Name
+        nvarchar Description
+        nvarchar Icon
+        bit HasCavities
+        int SortOrder
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    ToolAttributeDefinition {
+        bigint Id PK
+        bigint ToolTypeId FK
+        nvarchar Code
+        nvarchar Name
+        nvarchar DataType
+        bit IsRequired
+        int SortOrder
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    Tool {
+        bigint Id PK
+        bigint ToolTypeId FK
+        nvarchar Code
+        nvarchar Name
+        nvarchar Description
+        bigint DieRankId FK "NULL (Die-type only)"
+        bigint StatusCodeId FK
+        datetime2 CreatedAt
+        datetime2 UpdatedAt
+        bigint CreatedByUserId FK
+        bigint UpdatedByUserId FK
+        datetime2 DeprecatedAt
+    }
+
+    ToolAttribute {
+        bigint Id PK
+        bigint ToolId FK
+        bigint ToolAttributeDefinitionId FK
+        nvarchar Value
+        datetime2 UpdatedAt
+        bigint UpdatedByUserId FK
+    }
+
+    ToolCavity {
+        bigint Id PK
+        bigint ToolId FK
+        int CavityNumber
+        bigint StatusCodeId FK
+        nvarchar Description
+        datetime2 CreatedAt
+        datetime2 UpdatedAt
+        bigint CreatedByUserId FK
+        bigint UpdatedByUserId FK
+        datetime2 DeprecatedAt
+    }
+
+    ToolAssignment {
+        bigint Id PK
+        bigint ToolId FK
+        bigint CellLocationId FK
+        datetime2 AssignedAt
+        datetime2 ReleasedAt
+        bigint AssignedByUserId FK
+        bigint ReleasedByUserId FK
+        nvarchar Notes
+    }
+
+    ToolStatusCode {
+        bigint Id PK
+        nvarchar Code "Active / UnderRepair / Scrapped / Retired"
+        nvarchar Name
+        nvarchar Description
+    }
+
+    ToolCavityStatusCode {
+        bigint Id PK
+        nvarchar Code "Active / Closed / Scrapped"
+        nvarchar Name
+        nvarchar Description
+    }
+
+    DieRank {
+        bigint Id PK
+        nvarchar Code "empty seed - MPP Quality owes"
+        nvarchar Name
+        nvarchar Description
+        int SortOrder
+        datetime2 CreatedAt
+        datetime2 DeprecatedAt
+    }
+
+    DieRankCompatibility {
+        bigint Id PK
+        bigint RankAId FK
+        bigint RankBId FK
+        bit CanMix
+        datetime2 CreatedAt
+        datetime2 UpdatedAt
+    }
+
+    ToolType ||--o{ ToolAttributeDefinition : "defines attrs"
+    ToolType ||--o{ Tool : classifies
+    ToolStatusCode ||--o{ Tool : "status of"
+    DieRank ||--o{ Tool : "ranks (Die-only)"
+    Tool ||--o{ ToolAttribute : "has values"
+    ToolAttributeDefinition ||--o{ ToolAttribute : "typed by"
+    Tool ||--o{ ToolCavity : "has cavities"
+    ToolCavityStatusCode ||--o{ ToolCavity : "status of"
+    Tool ||--o{ ToolAssignment : "mounted as"
+    DieRank ||--o{ DieRankCompatibility : "rank A"
+    DieRank ||--o{ DieRankCompatibility : "rank B"
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════════════ AUDIT ═══════════════════ -->
 <div id="tab-audit" class="tab-content">
     <div class="schema-desc">
@@ -1340,6 +1529,7 @@ erDiagram
     <div class="schema-desc">
         <h2>Master ERD — All Schemas</h2>
         <p>All tables and cross-schema relationships. Table names prefixed with schema abbreviations. Scroll horizontally to explore.</p>
+        <p class="scope-note"><strong>⚠ Stale as of v1.7 (2026-04-21).</strong> This tab still reflects the v1.5 data model — the FK summary below uses pre-v0.3 <code>snake_case</code> column names (e.g., <code>lot.item_id</code>) and the full diagram does not yet include the new <strong>Tools</strong> schema, <code>Workorder.WorkOrderType</code>, or the v1.6 <code>AppUser</code> security realignment. For accurate per-schema information see the dedicated tabs above; full Master ERD regeneration is queued for <strong>Phase F</strong> of the 2026-04-20 OI review refactor.</p>
     </div>
 
     <h3>Cross-Schema Foreign Key Summary</h3>

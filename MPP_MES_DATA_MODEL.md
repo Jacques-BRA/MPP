@@ -1,7 +1,7 @@
 # MPP MES — Data Model Reference
 
-**Version:** Working draft
-**Schemas:** 7 | **Tables:** ~50
+**Version:** v1.7 working draft
+**Schemas:** 8 | **Tables:** ~70
 **Target:** Microsoft SQL Server 2022 Standard Edition
 
 ---
@@ -19,6 +19,7 @@
 | 0.5.1 | 2026-04-13 | Blue Ridge Automation | Added `SortOrder INT NOT NULL DEFAULT 0` column to `Location.Location` table for display ordering among siblings. Auto-incremented on creation, updated via MoveUp/MoveDown operations. |
 | 0.6 | 2026-04-13 | Blue Ridge Automation | **Data type standardization across all ~51 tables.** All primary keys changed from `INT` to `BIGINT IDENTITY`. All foreign keys changed from `INT` to `BIGINT` to match. All `VARCHAR(N)` columns changed to `NVARCHAR(N)` (Unicode support for Honda EDI data). Audit `EntityId` columns (OperationLog, ConfigLog, FailureLog) changed to `BIGINT` to match arbitrary PK references. Non-PK/FK value columns (SortOrder, SequenceNumber, PieceCount, VersionNumber, counts, quantities) remain `INT`. `BIT`, `DECIMAL`, and `DATETIME2(3)` columns unchanged. ERD updated to match. |
 | 1.1 | 2026-04-14 | Blue Ridge Automation | **OperationTemplate versioning — schema change.** Added `VersionNumber INT NOT NULL DEFAULT 1` to `Parts.OperationTemplate`; changed `UNIQUE (Code)` → `UNIQUE (Code, VersionNumber)`. Supports the clone-to-modify workflow: `_CreateNewVersion` inserts a new row sharing the Code with `VersionNumber = MAX(siblings)+1`, copies the parent's `OperationTemplateField` rows, and historical `RouteStep` rows continue pointing at the parent's Id so production traceability is preserved. Mirrors the versioning pattern already used by `RouteTemplate` and (later) `Bom` / `QualitySpec`. Schema plumbing delivered as part of Phase 5 — see Phased Plan v1.3. |
+| 1.7 | 2026-04-21 | Blue Ridge Automation | **Phase B Tool Management schema — Tool promoted to a first-class polymorphic subsystem (OI-10 superseded).** New `Tools` schema with 10 tables: `ToolType` (seeded read-only — Die/Cutter/Jig/Gauge/AssemblyFixture/TrimTool, `HasCavities` flag), `ToolAttributeDefinition` (per-type attribute schema mirroring `Location.LocationAttributeDefinition`), `Tool` (system of record for tool identity, nullable `DieRankId` for Die-type only, no shot counter — derived from `ProductionEvent`), `ToolAttribute` (values), `ToolCavity` (child of Tool for HasCavities types, 3-state Active/Closed/Scrapped status), `ToolAssignment` (append-only check-in/out history against Cells, filtered UNIQUE on active assignment), `ToolStatusCode` + `ToolCavityStatusCode` (read-only code tables), `DieRank` (empty seed — MPP Quality owes the list), `DieRankCompatibility` (empty seed — merge proc rejects cross-die merges until populated, supervisor AD override per FDS-04-007). `Workorder` gains `WorkOrderType` code table (Demand/Maintenance/Recipe, seeded read-only) and two columns on `Workorder.WorkOrder`: `WorkOrderTypeId BIGINT NOT NULL DEFAULT Demand-Id` (existing rows backfill to Demand) and `ToolId BIGINT NULL FK → Tools.Tool` (Maintenance WOs only — enforced at proc layer, not CHECK, because Recipe WOs legitimately have NULL ToolId). `Audit.LogEntityType` gets 8 new seed rows (Tool, ToolAttributeDefinition, ToolAttribute, ToolCavity, ToolAssignment, DieRank, DieRankCompatibility, WorkOrderType). Maintenance WO *flow* is FUTURE — schema hook only in MVP. Tool-life threshold alarms are FUTURE (scheduled Gateway Script pattern). Block concept (from 2026-04-20 meeting) dropped from Tools — handled by ISA-95 hierarchy + `Parts.ItemLocation` per Phase D / OI-08 addenda. Phase G migration `0010_phase9_tools_and_workorder.sql` delivers the SQL (~35 procs, ~60 tests); same migration drops the legacy `Location.AppUser.ClockNumber` + `.PinHash` columns deferred from Phase C. Full design spec: `docs/superpowers/specs/2026-04-21-tool-management-design.md` v0.2. |
 | 1.6 | 2026-04-21 | Blue Ridge Automation | **AppUser schema realigned to the initials-based security model (OI-06 closed — Phase C of the 2026-04-20 OI review refactor).** `AppUser` now carries `Initials NVARCHAR(10) NOT NULL UNIQUE` as its universal shop-floor stamp. `AdAccount` becomes NULL-capable (filtered UNIQUE where NOT NULL) so Operator-class rows can exist without an AD identity. Added CHECK constraint `IgnitionRole IS NULL OR AdAccount IS NOT NULL`. `ClockNumber` and `PinHash` columns marked legacy — they remain in the Phase 1–8 live schema but will be dropped in the Phase G Tool & Security migration, along with the `AppUser_SetPin` and `AppUser_GetByClockNumber` procs. No changes to event tables — user attribution via `AppUserId` FK already resolves transparently from initials at the UI layer. |
 | 1.5 | 2026-04-15 | Blue Ridge Automation | **Phase 8 Oee reference tables built.** Migration `0009_phase8_oee_reference.sql` creates `Oee.DowntimeReasonType` (6 seeded rows, read-only), `Oee.DowntimeReasonCode` (mutable, FK to Area Location + nullable ReasonType + nullable SourceCode), `Oee.ShiftSchedule` (mutable, `DaysOfWeekBitmask INT` with Mon=1…Sun=64 and CHECK 1-127, `TIME(0)` start/end), and `Oee.Shift` (runtime instances). +1 `Audit.LogEntityType` row (ShiftSchedule at Id=30). 13 new procs including a JSON-fed `DowntimeReasonCode_BulkLoadFromSeed` that maps CSV `DeptCode` (DC/MS/TS) to three caller-supplied Area Location Ids and generates unique `Code` as `{DeptCode}-{NNNN}` from zero-padded `ReasonId`. Dev seed updated with Trim Shop Area row. 779/779 tests passing. |
 | 1.4 | 2026-04-15 | Blue Ridge Automation | **Production data collection capture — closing the template→event gap.** `OperationTemplate` + `OperationTemplateField` + `DataCollectionField` define *what* to collect at an operation, but nothing persisted *what was actually collected* when a LOT passed through. Fixed by extending `Workorder.ProductionEvent` and adding a new child table: (1) added `OperationTemplateId BIGINT FK → Parts.OperationTemplate NOT NULL` to tie each event to the template it executed under (previously only inferable via WorkOrderOperation→RouteStep, which is unreliable given OI-07's background-only work orders); (2) added hot typed columns `DieIdentifier NVARCHAR(50) NULL` (die name/number captured from the machine's `LocationAttribute` value at event time — NOT an FK to Location; OI-10 tool life may later add a parallel `DieId BIGINT FK` if a `Die` table is introduced), `CavityNumber INT NULL`, `WeightValue DECIMAL(10,3) NULL`, `WeightUomId BIGINT FK → Parts.Uom NULL`; (3) new `Workorder.ProductionEventValue` child keyed by `(ProductionEventId, DataCollectionFieldId)` with `Value NVARCHAR(255)` + `NumericValue DECIMAL(18,4) NULL` for any field not promoted to a hot column (extensible vocabulary path). UI behavior: the die-cast screen reads `OperationTemplateField` to render the required inputs; submit writes one `ProductionEvent` header + N `ProductionEventValue` children. Phase 8 procs to implement. |
@@ -402,13 +403,11 @@ Honda-specified packing rules per product.
 | UpdatedAt | DATETIME2(3) | NULL | |
 | DeprecatedAt | DATETIME2(3) | NULL | |
 
-### ⚠ Known Gap: Tool Life Tracking
+### ✅ Resolved (v1.7): Tool Life Tracking → §7 Tools Schema
 
-> **Scope Matrix row 26** lists Tool Life as **Included** (FRS 5.6.6), but no dedicated table exists in the current data model. Options to address:
-> 1. **`LocationAttribute`** — track tool shot counts and replacement thresholds as configurable attributes on Machine-type locations (leverages existing infrastructure)
-> 2. **Dedicated `ToolLife` table** — if tool life requires its own event history (install date, shot count, replacement events), a purpose-built table in the `Parts` or `Oee` schema would be cleaner
+> **Scope Matrix row 26** (Tool Life, FRS 5.6.6) is resolved by the dedicated **§7 Tools Schema** added in v1.7 as part of the Phase B Tool Management refactor (see `docs/superpowers/specs/2026-04-21-tool-management-design.md`). Tools are now a first-class polymorphic subsystem — `Tools.Tool` holds tool identity; `Tools.ToolCavity` tracks per-cavity status; `Tools.ToolAssignment` is the append-only check-in/out history against Cells. Shot counts derive from `Workorder.ProductionEvent` (no live counter column). Tool-life threshold alarms remain **FUTURE** — delivered later via a scheduled Gateway Script that reads the derived shot counts.
 >
-> **Recommendation:** Gather requirements from MPP on what Tool Life tracking means operationally before deciding. If it's just "alert when shot count exceeds threshold," option 1 suffices. If it needs history and replacement workflows, option 2 is needed.
+> **Historical context (pre-v1.7):** The gap was originally left open because MPP hadn't confirmed whether tool life needed its own event history or could ride on `LocationAttribute`. The 2026-04-20 MPP review resolved it in favour of a dedicated subsystem so that dies, cutters, jigs, gauges, and trim tools all share a consistent identity and maintenance hook.
 
 ---
 
@@ -652,10 +651,11 @@ Container shipping label print/void history.
 ## 4. Workorder Schema — MIXED SCOPE
 
 > **Scope:**
-> - `WorkOrder`, `WorkOrderStatus`, `WorkOrderOperation`, `OperationStatus` — **MVP-LITE** (auto-generated, invisible to operators, no WO screens — per OI-07 resolution)
-> - `ProductionEvent`, `ConsumptionEvent`, `RejectEvent` — **MVP** (Production Data Acquisition is included and expanded)
+> - `WorkOrder`, `WorkOrderStatus`, `WorkOrderOperation`, `OperationStatus`, `WorkOrderType` — **MVP-LITE** (auto-generated, invisible to operators, no WO screens — per OI-07 resolution)
+> - `ProductionEvent`, `ProductionEventValue`, `ConsumptionEvent`, `RejectEvent` — **MVP** (Production Data Acquisition is included and expanded)
+> - Maintenance WO *flow* (screens, state machine, scheduling) — **FUTURE** (schema hook is MVP — `WorkOrderType` seed + nullable `ToolId` on `WorkOrder`)
 >
-> 🔶 **PENDING CUSTOMER VALIDATION — OI-07:** Work orders are included as invisible bookkeeping (auto-generated behind the scenes). Operators never see or interact with WOs. All WO tables are populated but no WO-specific Perspective screens are built. Production events function independently via nullable `WorkOrderOperationId` FKs.
+> **OI-07 status (2026-04-20 MPP review):** Confirmed revised — three WO types exist: **Demand** (production, existing MVP-LITE behaviour), **Maintenance** (targets a Tool, FUTURE flow but schema hook is MVP), **Recipe** (configuration/recipe context, hidden from operator). Demand WOs remain invisible background bookkeeping. Operators never see or interact with any WO type in the MVP. All WO tables are populated but no WO-specific Perspective screens are built. Production events function independently via nullable `WorkOrderOperationId` FKs.
 >
 > Production events have nullable FKs to `WorkOrderOperation`, allowing them to function independently even if the work order capability is deferred.
 
@@ -666,7 +666,7 @@ Internal work order context, production events, consumption tracking.
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
-| Code | NVARCHAR(20) | NOT NULL, UNIQUE | CREATED, IN_PROGRESS, COMPLETED, CANCELLED |
+| Code | NVARCHAR(20) | NOT NULL, UNIQUE | Created, InProgress, Completed, Cancelled |
 | Name | NVARCHAR(100) | NOT NULL | |
 
 ### OperationStatus
@@ -674,20 +674,41 @@ Internal work order context, production events, consumption tracking.
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
-| Code | NVARCHAR(20) | NOT NULL, UNIQUE | Pending, IN_PROGRESS, COMPLETED, SKIPPED |
+| Code | NVARCHAR(20) | NOT NULL, UNIQUE | Pending, InProgress, Completed, Skipped |
 | Name | NVARCHAR(100) | NOT NULL | |
+
+### WorkOrderType
+
+Read-only code table. Seeded at migration time. Added in v1.7 (Phase B) to support the three-type WO model confirmed at the 2026-04-20 OI-07 review.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK | |
+| Code | NVARCHAR(20) | NOT NULL, UNIQUE | `Demand`, `Maintenance`, `Recipe` |
+| Name | NVARCHAR(100) | NOT NULL | |
+| Description | NVARCHAR(500) | NULL | |
+
+**Seed data (Phase G migration):**
+
+| Code | Name | Description |
+|---|---|---|
+| Demand | Demand Work Order | Production work orders (existing MVP-LITE behaviour; auto-generated, invisible to operators). |
+| Maintenance | Maintenance Work Order | Targets a Tool (via `WorkOrder.ToolId`). **FUTURE** — no flow, screens, or procs in MVP; schema hook only. Ben owes the maintenance-engine scope. |
+| Recipe | Recipe Work Order | Configuration / recipe context. Hidden from operator. |
 
 ### WorkOrder
 
-Auto-generated internal work order. Operators never see this.
+Auto-generated internal work order. Operators never see this. v1.7 adds `WorkOrderTypeId` (discriminator) and `ToolId` (Maintenance-only, nullable).
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
 | WoNumber | NVARCHAR(50) | NOT NULL, UNIQUE | System-generated |
+| WorkOrderTypeId | BIGINT | FK → WorkOrderType.Id, NOT NULL | Added v1.7. Phase G migration backfills existing rows to `Demand`. Existing create procs default to `Demand` so Phase 1–8 callers need no changes. |
 | ItemId | BIGINT | FK → Item.Id, NOT NULL | |
 | RouteTemplateId | BIGINT | FK → RouteTemplate.Id, NOT NULL | The route version active at creation |
 | WorkOrderStatusId | BIGINT | FK → WorkOrderStatus.Id, NOT NULL | |
+| ToolId | BIGINT | FK → Tools.Tool.Id, NULL | Added v1.7. Populated only when `WorkOrderTypeId = Maintenance`. Enforced at the proc layer (no hard CHECK — `Recipe` WOs legitimately have NULL `ToolId`). |
 | CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
 | CompletedAt | DATETIME2(3) | NULL | |
 
@@ -721,7 +742,7 @@ Immutable record of production output and of the data collection required by the
 | ItemId | BIGINT | FK → Item.Id, NOT NULL | |
 | GoodCount | INT | NOT NULL | |
 | NoGoodCount | INT | NOT NULL, DEFAULT 0 | |
-| DieIdentifier | NVARCHAR(50) | NULL | Die name/number captured from the machine's `LocationAttribute` value at event time. Not an FK (dies are currently a location-attribute concept, not a first-class entity). If OI-10 resolves to a dedicated `Die` table, a parallel `DieId BIGINT FK` will be added — this column remains as the historical snapshot. |
+| DieIdentifier | NVARCHAR(50) | NULL | Die name/number captured from the machine's `LocationAttribute` value at event time. Retained as an immutable historical snapshot (survives tool rename/replacement). v1.7 promoted Tool to a first-class entity (§7 Tools Schema) — a parallel `ToolId BIGINT FK → Tools.Tool` may be added in a later phase for query/analytics joins, but this NVARCHAR column stays as the as-captured string. |
 | CavityNumber | INT | NULL | Cavity captured when the operation template requires `CavityInfo` |
 | WeightValue | DECIMAL(10,3) | NULL | Captured when operation template requires `Weight` (e.g., scale-driven container closure, OI-02) |
 | WeightUomId | BIGINT | FK → Parts.Uom.Id, NULL | Required whenever `WeightValue` is set |
@@ -1080,7 +1101,252 @@ Materialized OEE per machine per shift. Derivative, not system of record.
 
 ---
 
-## 7. Audit Schema — `MVP`
+## 7. Tools Schema — MIXED SCOPE
+
+> **Scope:**
+> - `ToolType`, `ToolAttributeDefinition`, `Tool`, `ToolAttribute`, `ToolCavity`, `ToolAssignment`, status code tables, `DieRank`, `DieRankCompatibility` — **MVP**
+> - Configuration Tool CRUD screens for all of the above — **MVP** (Phase 9 of the Config Tool phased plan)
+> - Maintenance WO *flow* (screens / scheduling / state machine) — **FUTURE** (schema hook is the `Workorder.WorkOrderType=Maintenance` seed + nullable `Workorder.WorkOrder.ToolId` — see §4)
+> - Tool-life threshold alarms — **FUTURE** (scheduled Gateway Script pattern when MPP asks; no schema changes required — shot counts derive from `Workorder.ProductionEvent`)
+> - Cross-plant tool transfer history — **FUTURE** (single-plant MVP)
+> - Tool photograph / document attachments — **FUTURE**
+
+Added v1.7 as part of the Phase B Tool Management refactor. Promotes **Tool** from the pre-v1.7 `LocationAttribute` historical-snapshot pattern (where `Workorder.ProductionEvent.DieIdentifier` is just an `NVARCHAR` copy of the machine's current die-attribute value) to a **first-class polymorphic subsystem** covering dies, cutters, jigs, gauges, assembly fixtures, trim tools — any discrete piece of production equipment that has its own identity and lifecycle, can be checked in/out of Cells, carries type-specific attributes, optionally has cavities, and may be the target of a (FUTURE) maintenance work order.
+
+Full design spec: `docs/superpowers/specs/2026-04-21-tool-management-design.md` v0.2.
+
+### Design Overview — polymorphic pattern (mirrors Location)
+
+The Tools model follows the same polymorphism Location uses, but with one layer removed. Location needed two header tables (`LocationType` for the ISA-95 tier + `LocationTypeDefinition` for polymorphic kinds within a tier) because it has both a fixed hierarchy AND polymorphic kinds within the hierarchy. Tools are a **grouping**, not a hierarchy — there is no tier structure — so the equivalent pattern collapses to one `ToolType` header table plus the attribute-definition and value tables:
+
+```
+Tools.ToolType                   -- polymorphic kinds (Die, Cutter, Jig, Gauge, AssemblyFixture, TrimTool)
+Tools.ToolAttributeDefinition    -- attribute schema per kind
+Tools.Tool                       -- concrete tools
+Tools.ToolAttribute              -- attribute values
+Tools.ToolCavity                 -- cavity children (only for HasCavities types)
+Tools.ToolAssignment             -- check-in/out history against Cells
+```
+
+If sub-categories ever become useful (e.g., splitting "Die" into "Single-Cavity Die" vs "Multi-Cavity Die"), that's the point to introduce a `ToolSubType` table — not now.
+
+**Block concept** (raised in the 2026-04-20 meeting, "assign them to blocks" for fast die-cast changeover): deliberately **not** modelled in the Tools schema. Location-eligibility for a part running on a machine is already covered by the ISA-95 hierarchy + `Parts.ItemLocation`. Phase D's OI-08 addenda confirms hierarchical resolution: an Item that's eligible on an Area propagates to every Cell under that Area without explicit rows.
+
+### ToolType
+
+Polymorphic kinds. Read-only in MVP — seeded at migration time, no CRUD procs. Follows the precedent set by `Location.LocationType` / `Location.LocationTypeDefinition`.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| Code | NVARCHAR(50) | NOT NULL, UNIQUE | `Die`, `Cutter`, `Jig`, `Gauge`, `AssemblyFixture`, `TrimTool` |
+| Name | NVARCHAR(100) | NOT NULL | Display name |
+| Description | NVARCHAR(500) | NULL | |
+| Icon | NVARCHAR(100) | NULL | Perspective tree component icon (matches `LocationTypeDefinition.Icon` pattern; NULL at deployment, populated via Config Tool) |
+| HasCavities | BIT | NOT NULL, DEFAULT 0 | `ToolCavity` rows are only valid for Tools whose type has this flag set |
+| SortOrder | INT | NOT NULL, DEFAULT 0 | UI ordering |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+| DeprecatedAt | DATETIME2(3) | NULL | Soft delete |
+
+**Seed data (Phase G migration):**
+
+| Code | Name | HasCavities | Notes |
+|---|---|---|---|
+| Die | Die Cast Die | 1 | Dies used on die cast machines |
+| Cutter | Machining Cutter | 0 | Tool heads / inserts on CNC machines |
+| Jig | Assembly Jig | 0 | Fixtures on assembly stations |
+| Gauge | Inspection Gauge | 0 | Measurement tools |
+| AssemblyFixture | Assembly Fixture | 0 | Trim-shop and assembly fixtures |
+| TrimTool | Trim Shop Tool | 0 | Trim-specific tooling |
+
+### ToolAttributeDefinition
+
+Attribute schema per tool type. Mirrors `Location.LocationAttributeDefinition`.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| ToolTypeId | BIGINT | FK → ToolType.Id, NOT NULL | Which kind this attribute applies to |
+| Code | NVARCHAR(50) | NOT NULL | Attribute code (e.g., `CycleTimeSec`, `Tonnage`, `InsertCount`) |
+| Name | NVARCHAR(100) | NOT NULL | Display label |
+| DataType | NVARCHAR(20) | NOT NULL | `String`, `Integer`, `Decimal`, `Boolean`, `Date` (matches `LocationAttributeDefinition.DataType` values) |
+| IsRequired | BIT | NOT NULL, DEFAULT 0 | |
+| SortOrder | INT | NOT NULL, DEFAULT 0 | Up/down arrow ordering — no drag-and-drop per UI convention |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+| DeprecatedAt | DATETIME2(3) | NULL | Soft delete |
+
+**Unique:** `UQ_ToolAttributeDefinition_ActiveTypeCode` — filtered UNIQUE `(ToolTypeId, Code)` where `DeprecatedAt IS NULL`.
+
+**Seed:** none. Ships empty; engineering adds `CycleTimeSec`, `CavityCount`, `Tonnage`, etc. via the Config Tool as real tools arrive (same empty-at-rollout pattern as `LocationAttributeDefinition`).
+
+### Tool
+
+Concrete tools. System of record for tool identity.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| ToolTypeId | BIGINT | FK → ToolType.Id, NOT NULL | Polymorphic type |
+| Code | NVARCHAR(50) | NOT NULL, UNIQUE | Die number, cutter ID, etc. (e.g., `DC-042`) |
+| Name | NVARCHAR(100) | NOT NULL | Human-friendly name |
+| Description | NVARCHAR(500) | NULL | |
+| DieRankId | BIGINT | FK → DieRank.Id, NULL | Die-type only; NULL for all other types. Application-level validation enforces this — no CHECK because the "die-type only" rule needs a join |
+| StatusCodeId | BIGINT | FK → ToolStatusCode.Id, NOT NULL | Active / UnderRepair / Scrapped / Retired |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+| UpdatedAt | DATETIME2(3) | NULL | |
+| CreatedByUserId | BIGINT | FK → AppUser.Id, NOT NULL | |
+| UpdatedByUserId | BIGINT | FK → AppUser.Id, NULL | |
+| DeprecatedAt | DATETIME2(3) | NULL | Soft delete — separate from `StatusCode = Retired` (Retired is the business state; DeprecatedAt is the row-lifecycle state) |
+
+**No shot counter column.** Shot counts derive from `Workorder.ProductionEvent` group-by `(Tool, Cavity)`. Rationale: avoids the double-write + drift problem between an aggregate column and the event stream; leaves all reset-logic to a future Gateway script rather than embedding it in every write path.
+
+### ToolAttribute
+
+Attribute values. Mirrors `Location.LocationAttribute`.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| ToolId | BIGINT | FK → Tool.Id, NOT NULL | |
+| ToolAttributeDefinitionId | BIGINT | FK → ToolAttributeDefinition.Id, NOT NULL | |
+| Value | NVARCHAR(500) | NOT NULL | Stored as text; interpreted per definition's `DataType` |
+| UpdatedAt | DATETIME2(3) | NULL | |
+| UpdatedByUserId | BIGINT | FK → AppUser.Id, NULL | |
+
+**Unique:** `UQ_ToolAttribute_ToolAttributeDefinition` — UNIQUE `(ToolId, ToolAttributeDefinitionId)`. One value per attribute per tool.
+
+### ToolCavity
+
+Child of Tool. Only valid for Tools whose `ToolType.HasCavities = 1` — application-level validation enforces, no CHECK.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| ToolId | BIGINT | FK → Tool.Id, NOT NULL | Parent die |
+| CavityNumber | INT | NOT NULL | 1, 2, 3, … up to the die's cavity count |
+| StatusCodeId | BIGINT | FK → ToolCavityStatusCode.Id, NOT NULL | Active / Closed / Scrapped |
+| Description | NVARCHAR(500) | NULL | Per-cavity notes (e.g., "small porosity tendency") |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+| UpdatedAt | DATETIME2(3) | NULL | |
+| CreatedByUserId | BIGINT | FK → AppUser.Id, NOT NULL | |
+| UpdatedByUserId | BIGINT | FK → AppUser.Id, NULL | |
+| DeprecatedAt | DATETIME2(3) | NULL | Soft delete |
+
+**Unique:** `UQ_ToolCavity_ActiveToolCavityNumber` — filtered UNIQUE `(ToolId, CavityNumber)` where `DeprecatedAt IS NULL`.
+
+**Status semantics:**
+- **Active** — cavity producing acceptable parts.
+- **Closed** — cavity physically shut off (die still runs on remaining cavities).
+- **Scrapped** — cavity physically destroyed (die may still run on remaining cavities, or die itself may be scrapped — the two are independent state changes).
+
+Shoot-and-scrap behaviour (producing rejected parts each cycle from a degraded cavity) is **not** a cavity state — it's operational behaviour captured at `Workorder.RejectEvent`. Cavity stays Active until someone decides to Close or Scrap it.
+
+Cavity numbers are immutable after creation (only `StatusCodeId` is editable via the runtime proc surface); the spec only exposes `_Create`, `_UpdateStatus`, `_Deprecate` — no general `_Update`.
+
+### ToolAssignment
+
+Append-only check-in / out history. A Tool can be mounted on a Cell; release closes the row by setting `ReleasedAt`.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| ToolId | BIGINT | FK → Tool.Id, NOT NULL | |
+| CellLocationId | BIGINT | FK → Location.Location.Id, NOT NULL | Cell the tool is mounted on (application validates the Location is Cell-tier) |
+| AssignedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+| ReleasedAt | DATETIME2(3) | NULL | NULL = currently mounted |
+| AssignedByUserId | BIGINT | FK → AppUser.Id, NOT NULL | Supervisor who mounted (elevated action per FDS-04-007) |
+| ReleasedByUserId | BIGINT | FK → AppUser.Id, NULL | Supervisor who released (elevated action per FDS-04-007) |
+| Notes | NVARCHAR(500) | NULL | |
+
+**Unique:** `UQ_ToolAssignment_ActiveToolMount` — filtered UNIQUE on `ToolId` where `ReleasedAt IS NULL`. A tool can only be mounted on one Cell at a time; mounting elsewhere requires releasing the previous assignment first.
+
+**Elevated action:** Tool mount / release is in the FDS-04-007 elevated-action list (per-action AD elevation prompt, no session-sticky elevation).
+
+### ToolStatusCode
+
+Read-only code table. Seeded at migration time.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK | |
+| Code | NVARCHAR(20) | NOT NULL, UNIQUE | Active / UnderRepair / Scrapped / Retired |
+| Name | NVARCHAR(100) | NOT NULL | |
+| Description | NVARCHAR(500) | NULL | |
+
+**Seed data:**
+
+| Code | Name | Notes |
+|---|---|---|
+| Active | Active | In service |
+| UnderRepair | Under Repair | Removed from service for repair |
+| Scrapped | Scrapped | Physically destroyed / discarded |
+| Retired | Retired | End-of-life, archived |
+
+### ToolCavityStatusCode
+
+Read-only code table. Seeded at migration time.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK | |
+| Code | NVARCHAR(20) | NOT NULL, UNIQUE | Active / Closed / Scrapped |
+| Name | NVARCHAR(100) | NOT NULL | |
+| Description | NVARCHAR(500) | NULL | |
+
+**Seed data:**
+
+| Code | Name | Notes |
+|---|---|---|
+| Active | Active | Producing acceptable parts |
+| Closed | Closed | Shut off; die runs without this cavity |
+| Scrapped | Scrapped | Physically destroyed |
+
+### DieRank
+
+Code table. Ships **empty** — MPP Quality owes the authoritative ranking scheme (the 2026-04-20 meeting proposed A–E but MPP hasn't confirmed).
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| Code | NVARCHAR(20) | NOT NULL, UNIQUE | Engineering populates via Config Tool once MPP Quality delivers |
+| Name | NVARCHAR(100) | NOT NULL | |
+| Description | NVARCHAR(500) | NULL | |
+| SortOrder | INT | NOT NULL, DEFAULT 0 | Up/down arrow ordering |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+| DeprecatedAt | DATETIME2(3) | NULL | |
+
+**Seed data:** none. The Configuration Tool has a Die Rank admin screen for Engineering to populate.
+
+### DieRankCompatibility
+
+Junction. Ships **empty** — MPP Quality owes the compatibility matrix.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| RankAId | BIGINT | FK → DieRank.Id, NOT NULL | |
+| RankBId | BIGINT | FK → DieRank.Id, NOT NULL | |
+| CanMix | BIT | NOT NULL | |
+| CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+| UpdatedAt | DATETIME2(3) | NULL | |
+
+**Unique:** `UQ_DieRankCompatibility_Pair` — UNIQUE `(RankAId, RankBId)`. Application-level convention: pairs are stored canonicalised (smaller `Id` first) so a single lookup covers both directions.
+
+**Merge validation rule (OI-05):** `Lots.Lot_Merge` consults this table on cross-die merges:
+- Same die on both lots → merge proceeds (no rank involvement).
+- Different dies → merge is **rejected** with message "Cross-die merges require die rank compatibility rules — contact MPP Quality" *until the matrix is populated*.
+- Once populated, merge succeeds when the pair's `CanMix = 1`, else the rejection is specific ("Die rank {A} cannot mix with die rank {B}").
+- **Supervisor override:** the standard FDS-04-007 AD elevation prompt unlocks the merge regardless of the matrix state (same pattern as every other gated action).
+
+### Cross-references
+
+- **Workorder.WorkOrder.ToolId** (§4) — nullable FK into `Tools.Tool`. Populated only for `WorkOrderType = Maintenance` (enforced at proc layer; Recipe WOs legitimately have NULL `ToolId`).
+- **Workorder.ProductionEvent.DieIdentifier** (§4) — historical NVARCHAR snapshot of the die at event time. Not an FK. A parallel `ToolId BIGINT FK` may be added in a later phase for analytics joins; the NVARCHAR stays as the as-captured value (survives tool rename/replacement).
+- **Audit.LogEntityType** (§8) — 8 new seed rows in Phase G for Tool, ToolAttributeDefinition, ToolAttribute, ToolCavity, ToolAssignment, DieRank, DieRankCompatibility, and `Workorder.WorkOrderType`. Every `Tools.*` mutation proc logs to `Audit.ConfigLog` on success and `Audit.FailureLog` on rejection.
+
+---
+
+## 8. Audit Schema — `MVP`
 
 > **Scope:** All tables MVP. Foundational — 20-year retention requirement applies across all scope phases.
 
