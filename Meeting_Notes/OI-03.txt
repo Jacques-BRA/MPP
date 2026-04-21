@@ -1,0 +1,124 @@
+OI-03
+
+Some lines run different amounts of shifts.
+There are times when they work through breaks
+Have ability to say if they run through break or lunch, dropdown
+Be able to determine number of shift hours
+Load and inspector on a line
+Downtime are specific of the process
+Should be able to tell by output how long they worked
+Right now they have to put in minutes
+MES wants to just capture event and duration
+Sometimes they rotate someone in to take a lunch
+Make a way to schedule a plan to figure breaks the week before
+Scheduling is done by 5-6 spreadsheets that filter into one sheet. They do a long term plan of forecasting that gets updated as they go. Tied into inventories. Each line as pretty complex schedule
+shifts are Monday through Friday.
+schedule is built out in a spreadsheet, not standardized.
+shift times are the same but they run different amounts
+some times shifts may come in early. production and availability will increase
+Operator to register breaks
+to be logged at end of shift
+don't give option to log breaks just pick between uptime
+customer to share schedule
+OI-04
+
+lot should not be put on hold
+Issue should not be able to happen
+production stops until issue is rectified
+leader may need to come and verify
+problem escalates if 10 fails in a row
+if failed for wrong part, flag leader, if wrong orientation, no need
+inventory checked in for machining side
+ingots come with barcodes
+maybe scan in raw to machine
+would be nice to have a way to keep held items to be run
+quality to release hold
+CRT to release hold
+Controlled run tag need to have 200% inspect. If not when run, it needs to be run through again.
+die cast has quality checks
+tie csv file to lot
+just has check sheet to say if the quality check has happened
+when tool change happened, machine wouldn't start until it was validated, no longer being done,
+need to check in and check out dies on a machine
+die sheet to track shots, comes from production database
+dies currently done by customer
+depends if dies have cavity numbers
+don't swap cavities anymore, sometimes they get scrapped. Die is done when a cavity is broken, either get fixed or scrapped
+OI-05
+
+times when jigs have to be separated and then maybe combined again later
+lots may possibly be merged from a sort only if finished
+lots should currently be handling merges of lots
+same part but different dies can be in one lot
+dies have different ranks, A can't be mixed, E can
+IPP tag when die comes in
+current MES checks lineside inventory
+trim shop on tracks when done
+machining has FIFO, gets checked in and checked out
+by cavity FIFO
+OI-06
+
+Security has kind of fallen through
+Operator can put in production data
+supervisor to come in and login for things past that
+Operators don't have logins
+operator only uses initials to tie them to event
+holds, errors, IPP tag (may need more later)to be handled by supervisor/leader
+Tom to help figure out security on what level can do what
+OI-07
+
+Ben has more information about work orders
+maintenance engine
+demand work orders, maintenance work orders
+recipe work orders to not be operator visible
+OI-08
+
+Trim shop has one terminal but multiple stations
+when lot scanned in, it doesn't track which station, just that it went through
+terminal should already know which machine its at, should be able to change to force print
+operator should not be able to navigate to a different machine
+need map of what parts can be run through what machines
+Honda want to tie rfid to labels
+planning on putting tablets in casting
+consider to develop for mobile friendly
+OI-09
+
+treated as two lots
+needs to have two lots running at the same time
+each cavity is a different lot
+small baskets get broken down into sub lots
+each sublot has a label, tied to parent lot number
+sublots are kept throughout the process
+OI-10
+
+customer to provide what they want to see
+die cast to count shots, cavity
+when changing tool, need to put tool life, sometimes they just reset
+customer to provide screenshots from database
+Machining lines are set to a part, RPY can change
+
+Die casting can change rapidly. assign them to blocks
+
+when a part goes from casting to trim shop, it becomes a different part,
+
+when a lot doesn't have sublots, the number stays all the way until it is consumed at finished good
+
+Current MES is managing overall inventory, lineside inventory flags when there are not enough parts to continue the part when it tries to finish
+
+new inventory is scanned into an area
+
+operator is putting in a ton of parts to consume so they don't have to scan in more
+
+need a lineside inventory limit
+
+components parts are set, other items can vary
+
+put a max number on amount of part in basket
+
+current shows how many lots and a total amount
+
+components are treated the same as lots
+
+need super user / admin ability to go in a remove items and such
+
+BOMs are on the flexware app on 919
