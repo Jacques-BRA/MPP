@@ -1,7 +1,7 @@
 # MPP MES — Data Model Reference
 
-**Version:** v1.7 working draft
-**Schemas:** 8 | **Tables:** ~70
+**Version:** v1.8 working draft
+**Schemas:** 8 | **Tables:** ~73
 **Target:** Microsoft SQL Server 2022 Standard Edition
 
 ---
@@ -19,6 +19,7 @@
 | 0.5.1 | 2026-04-13 | Blue Ridge Automation | Added `SortOrder INT NOT NULL DEFAULT 0` column to `Location.Location` table for display ordering among siblings. Auto-incremented on creation, updated via MoveUp/MoveDown operations. |
 | 0.6 | 2026-04-13 | Blue Ridge Automation | **Data type standardization across all ~51 tables.** All primary keys changed from `INT` to `BIGINT IDENTITY`. All foreign keys changed from `INT` to `BIGINT` to match. All `VARCHAR(N)` columns changed to `NVARCHAR(N)` (Unicode support for Honda EDI data). Audit `EntityId` columns (OperationLog, ConfigLog, FailureLog) changed to `BIGINT` to match arbitrary PK references. Non-PK/FK value columns (SortOrder, SequenceNumber, PieceCount, VersionNumber, counts, quantities) remain `INT`. `BIT`, `DECIMAL`, and `DATETIME2(3)` columns unchanged. ERD updated to match. |
 | 1.1 | 2026-04-14 | Blue Ridge Automation | **OperationTemplate versioning — schema change.** Added `VersionNumber INT NOT NULL DEFAULT 1` to `Parts.OperationTemplate`; changed `UNIQUE (Code)` → `UNIQUE (Code, VersionNumber)`. Supports the clone-to-modify workflow: `_CreateNewVersion` inserts a new row sharing the Code with `VersionNumber = MAX(siblings)+1`, copies the parent's `OperationTemplateField` rows, and historical `RouteStep` rows continue pointing at the parent's Id so production traceability is preserved. Mirrors the versioning pattern already used by `RouteTemplate` and (later) `Bom` / `QualitySpec`. Schema plumbing delivered as part of Phase 5 — see Phased Plan v1.3. |
+| 1.8 | 2026-04-22 | Blue Ridge Automation | **Phase E Group 1 — schema additions from the 2026-04-22 legacy-screenshot gap analysis.** Five items: (1) **OI-11** — new `Parts.ItemTransform` table for Casting → Trim part-number rename (source item, destination item, event-level traceability via FK to `Workorder.ProductionEvent`), supports Honda genealogy across the Trim Shop boundary where the part changes identity. (2) **OI-12** — `Parts.ContainerConfig.MaxParts INT NULL` (per-container cap — rejects scan-in beyond this limit to stop operators over-scanning). Lineside inventory quantity cap modelled as a new `LocationAttribute` (`LinesideLimit`) attached to Cell definitions via the existing `Location.LocationAttributeDefinition` pattern — no schema change, just a seed entry. (3) **OI-18** — `Parts.ItemLocation` extended with consumption metadata: `MinQuantity INT NULL`, `MaxQuantity INT NULL`, `DefaultQuantity INT NULL`, `IsConsumptionPoint BIT NOT NULL DEFAULT 0`. Drives the runtime Allocations grid at the workstation (quantities the operator is hinted to scan in) and distinguishes consumption points (inputs to the cell) from production points (outputs). (4) **OI-19** — `Parts.Item.CountryOfOrigin NVARCHAR(2) NULL` (ISO 3166-1 alpha-2). Honda compliance field surfaced in the Flexware Material configuration. (5) **OI-20** — new `Workorder.ScrapSource` read-only code table (seeded `Inventory` + `Location` at Phase G) and `Workorder.ProductionEvent.ScrapSourceId BIGINT NULL FK → ScrapSource.Id`. Enforced nullable because only scrap events populate it; captures the Flexware "Scrap from inventory" vs "Scrap from the selected location" distinction on the Lot Details screen. `Audit.LogEntityType` gains 2 rows (ItemTransform, ScrapSource). All five changes are additive — no breaking changes to existing procs or tests. SQL lands in Phase G migration `0010_phase9_tools_and_workorder.sql` alongside the Tools schema. Discovery items (OI-24..30) parked for MPP input. Source: `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` v1.1 §"Additional discovered gaps" + `MPP_MES_Open_Issues_Register.md` v2.5. |
 | 1.7 | 2026-04-21 | Blue Ridge Automation | **Phase B Tool Management schema — Tool promoted to a first-class polymorphic subsystem (OI-10 superseded).** New `Tools` schema with 10 tables: `ToolType` (seeded read-only — Die/Cutter/Jig/Gauge/AssemblyFixture/TrimTool, `HasCavities` flag), `ToolAttributeDefinition` (per-type attribute schema mirroring `Location.LocationAttributeDefinition`), `Tool` (system of record for tool identity, nullable `DieRankId` for Die-type only, no shot counter — derived from `ProductionEvent`), `ToolAttribute` (values), `ToolCavity` (child of Tool for HasCavities types, 3-state Active/Closed/Scrapped status), `ToolAssignment` (append-only check-in/out history against Cells, filtered UNIQUE on active assignment), `ToolStatusCode` + `ToolCavityStatusCode` (read-only code tables), `DieRank` (empty seed — MPP Quality owes the list), `DieRankCompatibility` (empty seed — merge proc rejects cross-die merges until populated, supervisor AD override per FDS-04-007). `Workorder` gains `WorkOrderType` code table (Demand/Maintenance/Recipe, seeded read-only) and two columns on `Workorder.WorkOrder`: `WorkOrderTypeId BIGINT NOT NULL DEFAULT Demand-Id` (existing rows backfill to Demand) and `ToolId BIGINT NULL FK → Tools.Tool` (Maintenance WOs only — enforced at proc layer, not CHECK, because Recipe WOs legitimately have NULL ToolId). `Audit.LogEntityType` gets 8 new seed rows (Tool, ToolAttributeDefinition, ToolAttribute, ToolCavity, ToolAssignment, DieRank, DieRankCompatibility, WorkOrderType). Maintenance WO *flow* is FUTURE — schema hook only in MVP. Tool-life threshold alarms are FUTURE (scheduled Gateway Script pattern). Block concept (from 2026-04-20 meeting) dropped from Tools — handled by ISA-95 hierarchy + `Parts.ItemLocation` per Phase D / OI-08 addenda. Phase G migration `0010_phase9_tools_and_workorder.sql` delivers the SQL (~35 procs, ~60 tests); same migration drops the legacy `Location.AppUser.ClockNumber` + `.PinHash` columns deferred from Phase C. Full design spec: `docs/superpowers/specs/2026-04-21-tool-management-design.md` v0.2. |
 | 1.6 | 2026-04-21 | Blue Ridge Automation | **AppUser schema realigned to the initials-based security model (OI-06 closed — Phase C of the 2026-04-20 OI review refactor).** `AppUser` now carries `Initials NVARCHAR(10) NOT NULL UNIQUE` as its universal shop-floor stamp. `AdAccount` becomes NULL-capable (filtered UNIQUE where NOT NULL) so Operator-class rows can exist without an AD identity. Added CHECK constraint `IgnitionRole IS NULL OR AdAccount IS NOT NULL`. `ClockNumber` and `PinHash` columns marked legacy — they remain in the Phase 1–8 live schema but will be dropped in the Phase G Tool & Security migration, along with the `AppUser_SetPin` and `AppUser_GetByClockNumber` procs. No changes to event tables — user attribution via `AppUserId` FK already resolves transparently from initials at the UI layer. |
 | 1.5 | 2026-04-15 | Blue Ridge Automation | **Phase 8 Oee reference tables built.** Migration `0009_phase8_oee_reference.sql` creates `Oee.DowntimeReasonType` (6 seeded rows, read-only), `Oee.DowntimeReasonCode` (mutable, FK to Area Location + nullable ReasonType + nullable SourceCode), `Oee.ShiftSchedule` (mutable, `DaysOfWeekBitmask INT` with Mon=1…Sun=64 and CHECK 1-127, `TIME(0)` start/end), and `Oee.Shift` (runtime instances). +1 `Audit.LogEntityType` row (ShiftSchedule at Id=30). 13 new procs including a JSON-fed `DowntimeReasonCode_BulkLoadFromSeed` that maps CSV `DeptCode` (DC/MS/TS) to three caller-supplied Area Location Ids and generates unique `Code` as `{DeptCode}-{NNNN}` from zero-padded `ReasonId`. Dev seed updated with Trim Shop Area row. 779/779 tests passing. |
@@ -166,6 +167,7 @@ Attribute schema per `LocationTypeDefinition`. Each definition carries its own s
 | IsPhysical | BIT | Yes | — | Physical location vs. logical bucket |
 | IsLineside | BIT | No | — | Whether this is a lineside staging area |
 | MaxLotCapacity | INT | No | — | Maximum LOTs that can be stored here |
+| LinesideLimit | INT | No | pieces | Maximum total pieces allowed on this lineside location at one time (sum across all open LOTs). Scan-in mutation rejects when cumulative lineside quantity would exceed this. Added v1.8 (OI-12). Complements `Parts.ContainerConfig.MaxParts` which caps per-container; `LinesideLimit` caps per-location. |
 
 ### Location
 
@@ -272,6 +274,7 @@ Item master, bills of material, routes, operation templates, container configura
 | UomId | BIGINT | FK → Uom.Id, NOT NULL | Counting UOM |
 | UnitWeight | DECIMAL(10,4) | NULL | Weight per piece |
 | WeightUomId | BIGINT | FK → Uom.Id, NULL | Weight UOM |
+| CountryOfOrigin | NVARCHAR(2) | NULL | ISO 3166-1 alpha-2 country code (e.g., `US`, `JP`, `MX`). Honda compliance surface — appears on genealogy and shipping output. Added v1.8 (OI-19). |
 | CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
 | UpdatedAt | DATETIME2(3) | NULL | |
 | CreatedByUserId | BIGINT | FK → AppUser.Id, NOT NULL | |
@@ -376,13 +379,19 @@ Junction: which data collection fields an operation template requires. Replaces 
 
 ### ItemLocation
 
-Part-to-location eligibility (which parts can run on which machines).
+Part-to-location eligibility (which parts can run on which machines) **plus consumption metadata** for runtime Allocations (added v1.8, OI-18).
+
+v1.8 extends this junction with four columns surfaced in the legacy Flexware "Compatible work cells" configuration: `MinQuantity`, `MaxQuantity`, `DefaultQuantity`, and `IsConsumptionPoint`. These drive the runtime Allocations grid at the workstation — when a LOT is scanned into a Cell flagged `IsConsumptionPoint = 1`, the UI pre-populates `DefaultQuantity`, validates the scan against `MinQuantity`/`MaxQuantity`, and rejects over-scanning. Output cells (produce-at) carry `IsConsumptionPoint = 0`.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
 | ItemId | BIGINT | FK → Item.Id, NOT NULL | |
 | LocationId | BIGINT | FK → Location.Id, NOT NULL | Machine or work cell |
+| MinQuantity | INT | NULL | Minimum pieces per scan-in at this Cell for this Item. Added v1.8 (OI-18). |
+| MaxQuantity | INT | NULL | Maximum pieces per scan-in — rejects over-scan. Added v1.8 (OI-18). |
+| DefaultQuantity | INT | NULL | Pre-populated quantity on the Allocations scan form. Added v1.8 (OI-18). |
+| IsConsumptionPoint | BIT | NOT NULL, DEFAULT 0 | `1` = this Cell consumes this Item (input); `0` = this Cell produces this Item (output) or is merely eligible. Added v1.8 (OI-18). |
 | CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
 | DeprecatedAt | DATETIME2(3) | NULL | |
 
@@ -396,12 +405,41 @@ Honda-specified packing rules per product.
 | ItemId | BIGINT | FK → Item.Id, NOT NULL | |
 | TraysPerContainer | INT | NOT NULL | |
 | PartsPerTray | INT | NOT NULL | |
+| MaxParts | INT | NULL | Hard cap on pieces per container regardless of trays/parts math. Scan-in mutation rejects when cumulative container quantity would exceed this. Added v1.8 (OI-12) to stop lineside over-scanning. |
 | IsSerialized | BIT | NOT NULL, DEFAULT 0 | |
+| ClosureMethod | NVARCHAR(20) | NULL | `BY_COUNT` or `BY_WEIGHT`. Added in Phase 4 pending OI-02 closure. |
+| TargetWeight | DECIMAL(10,4) | NULL | Target weight for BY_WEIGHT closure. Added in Phase 4 pending OI-02 closure. |
 | DunnageCode | NVARCHAR(50) | NULL | Returnable dunnage identifier |
 | CustomerCode | NVARCHAR(50) | NULL | Honda customer code |
 | CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
 | UpdatedAt | DATETIME2(3) | NULL | |
 | DeprecatedAt | DATETIME2(3) | NULL | |
+
+### ItemTransform
+
+Records a **part-identity change** across a process boundary — most notably the Casting → Trim Shop rename, where the same physical piece carries a different part number on each side of the transform. Genealogy must bridge the two identities so Honda queries resolve from the shipped part number back to the cast part number.
+
+Added v1.8 (OI-11). Append-only event-style table.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK | |
+| SourceItemId | BIGINT | FK → Item.Id, NOT NULL | The part number before the transform (e.g., the Casting part). |
+| DestinationItemId | BIGINT | FK → Item.Id, NOT NULL | The part number after the transform (e.g., the Trim Shop part). |
+| SourceLotId | BIGINT | FK → Lots.Lot.Id, NOT NULL | LOT consumed on the source side. |
+| DestinationLotId | BIGINT | FK → Lots.Lot.Id, NOT NULL | LOT produced on the destination side. |
+| ProductionEventId | BIGINT | FK → Workorder.ProductionEvent.Id, NULL | Event that captured the transform (if any — trim crossing may not always be mediated by a ProductionEvent). |
+| LocationId | BIGINT | FK → Location.Id, NOT NULL | Cell where the transform was recorded (typically the first Trim Shop cell). |
+| Quantity | INT | NOT NULL | Pieces transformed. |
+| OperatorId | BIGINT | FK → AppUser.Id, NOT NULL | Who triggered / stamped the transform (initials). |
+| TerminalLocationId | BIGINT | FK → Location.Id (Terminal), NULL | Terminal from which the action was recorded. |
+| RecordedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
+
+**Index:** `IX_ItemTransform_SourceLotId (SourceLotId)` and `IX_ItemTransform_DestinationLotId (DestinationLotId)` — genealogy walks hit both directions.
+
+**Rule:** `SourceItemId <> DestinationItemId` (CHECK enforced at proc layer).
+
+**Integration with genealogy:** `Lots.LotGenealogy` retains the physical parent/child relationship across the transform; `ItemTransform` layers the *part-identity* change on top. A full Honda trace joins through both tables.
 
 ### ✅ Resolved (v1.7): Tool Life Tracking → §7 Tools Schema
 
@@ -652,7 +690,7 @@ Container shipping label print/void history.
 
 > **Scope:**
 > - `WorkOrder`, `WorkOrderStatus`, `WorkOrderOperation`, `OperationStatus`, `WorkOrderType` — **MVP-LITE** (auto-generated, invisible to operators, no WO screens — per OI-07 resolution)
-> - `ProductionEvent`, `ProductionEventValue`, `ConsumptionEvent`, `RejectEvent` — **MVP** (Production Data Acquisition is included and expanded)
+> - `ProductionEvent`, `ProductionEventValue`, `ConsumptionEvent`, `RejectEvent`, `ScrapSource` — **MVP** (Production Data Acquisition is included and expanded)
 > - Maintenance WO *flow* (screens, state machine, scheduling) — **FUTURE** (schema hook is MVP — `WorkOrderType` seed + nullable `ToolId` on `WorkOrder`)
 >
 > **OI-07 status (2026-04-20 MPP review):** Confirmed revised — three WO types exist: **Demand** (production, existing MVP-LITE behaviour), **Maintenance** (targets a Tool, FUTURE flow but schema hook is MVP), **Recipe** (configuration/recipe context, hidden from operator). Demand WOs remain invisible background bookkeeping. Operators never see or interact with any WO type in the MVP. All WO tables are populated but no WO-specific Perspective screens are built. Production events function independently via nullable `WorkOrderOperationId` FKs.
@@ -668,6 +706,24 @@ Internal work order context, production events, consumption tracking.
 | Id | BIGINT | PK | |
 | Code | NVARCHAR(20) | NOT NULL, UNIQUE | Created, InProgress, Completed, Cancelled |
 | Name | NVARCHAR(100) | NOT NULL | |
+
+### ScrapSource
+
+Read-only code table distinguishing the two scrap entry paths surfaced in the legacy Flexware Lot Details screen: **Inventory** (scrapping unallocated stock on a LOT) vs **Location** (scrapping in-process material at a specific workstation). Added v1.8 (OI-20). Seeded at migration time.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK | |
+| Code | NVARCHAR(20) | NOT NULL, UNIQUE | `Inventory`, `Location` |
+| Name | NVARCHAR(100) | NOT NULL | |
+| Description | NVARCHAR(500) | NULL | |
+
+**Seed data (Phase G migration):**
+
+| Code | Name | Description |
+|---|---|---|
+| Inventory | Scrap From Inventory | Scrap of unallocated pieces on a LOT — no workstation context. Used by the Lot Details "Scrap from inventory" button. |
+| Location | Scrap From Location | Scrap of in-process pieces at a specific Cell — workstation context required. Used by the workstation "Scrap from the selected location" button. |
 
 ### OperationStatus
 
@@ -742,6 +798,7 @@ Immutable record of production output and of the data collection required by the
 | ItemId | BIGINT | FK → Item.Id, NOT NULL | |
 | GoodCount | INT | NOT NULL | |
 | NoGoodCount | INT | NOT NULL, DEFAULT 0 | |
+| ScrapSourceId | BIGINT | FK → ScrapSource.Id, NULL | Populated only when this event represents a scrap action; identifies whether the scrap came from unallocated inventory (`Inventory`) or from in-process material at a workstation (`Location`). NULL for non-scrap events. Added v1.8 (OI-20). |
 | DieIdentifier | NVARCHAR(50) | NULL | Die name/number captured from the machine's `LocationAttribute` value at event time. Retained as an immutable historical snapshot (survives tool rename/replacement). v1.7 promoted Tool to a first-class entity (§7 Tools Schema) — a parallel `ToolId BIGINT FK → Tools.Tool` may be added in a later phase for query/analytics joins, but this NVARCHAR column stays as the as-captured string. |
 | CavityNumber | INT | NULL | Cavity captured when the operation template requires `CavityInfo` |
 | WeightValue | DECIMAL(10,3) | NULL | Captured when operation template requires `Weight` (e.g., scale-driven container closure, OI-02) |
@@ -1343,6 +1400,7 @@ Junction. Ships **empty** — MPP Quality owes the compatibility matrix.
 - **Workorder.WorkOrder.ToolId** (§4) — nullable FK into `Tools.Tool`. Populated only for `WorkOrderType = Maintenance` (enforced at proc layer; Recipe WOs legitimately have NULL `ToolId`).
 - **Workorder.ProductionEvent.DieIdentifier** (§4) — historical NVARCHAR snapshot of the die at event time. Not an FK. A parallel `ToolId BIGINT FK` may be added in a later phase for analytics joins; the NVARCHAR stays as the as-captured value (survives tool rename/replacement).
 - **Audit.LogEntityType** (§8) — 8 new seed rows in Phase G for Tool, ToolAttributeDefinition, ToolAttribute, ToolCavity, ToolAssignment, DieRank, DieRankCompatibility, and `Workorder.WorkOrderType`. Every `Tools.*` mutation proc logs to `Audit.ConfigLog` on success and `Audit.FailureLog` on rejection.
+- **Audit.LogEntityType** (§8) — v1.8 adds 2 further seed rows in Phase G: `ItemTransform` (Parts.ItemTransform, OI-11) and `ScrapSource` (Workorder.ScrapSource, OI-20).
 
 ---
 

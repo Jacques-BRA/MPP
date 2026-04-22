@@ -1,12 +1,12 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.4 — Working Draft
-**Date:** 2026-04-21
+**Version:** 2.5 — Working Draft
+**Date:** 2026-04-22
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
 
-This register consolidates all open items and design decisions that gate Perspective screen design and implementation. Part A holds the FDS-numbered open items (OI-01 through OI-14). Part B holds the 19 User Journey assumptions/decisions (UJ-01 through UJ-19). Cross-references between the two parts are noted per-item.
+This register consolidates all open items and design decisions that gate Perspective screen design and implementation. Part A holds the FDS-numbered open items (OI-01 through OI-30). Part B holds the 19 User Journey assumptions/decisions (UJ-01 through UJ-19). Cross-references between the two parts are noted per-item.
 
 ---
 
@@ -18,20 +18,21 @@ This register consolidates all open items and design decisions that gate Perspec
 | 2.2 | 2026-04-08 | Blue Ridge Automation | FRS reference crosswalk added per-item; priorities normalized |
 | 2.3 | 2026-04-09 | Blue Ridge Automation | First round of MPP review decisions applied — OI-01, UJ-06, UJ-15 closed; 10 items moved to In Review |
 | 2.4 | 2026-04-21 | Blue Ridge Automation | **Phase A of the 2026-04-20 OI review refactor.** Closed OI-03 (shift runtime derived from events) and OI-06 (initials-based operator identity — see Phase C / FDS v0.8). Revised OI-04 (line-stop, not LOT-hold; 10-fail escalation; CRT 200% inspect), OI-05 (die-rank compatibility merge rules), OI-07 (three WO types, Maintenance targets Tools), OI-08 addenda (terminal locked to machine context; part↔machine validity map; mobile consideration), OI-09 addenda (sublot pattern with parent FK), OI-10 (superseded by Phase B Tool Management design). Added four new items: OI-11 (part rename at Casting → Trim), OI-12 (lineside inventory caps), OI-13 (BOM source = Flexware app @ IP .919), OI-14 (admin remove-item). Structural change: each OI and UJ now has its own subsection instead of living inside a giant grid table — easier to read, diff, and update. Source meeting notes at `Meeting_Notes/2026-04-20_OI_Review.md`. Running plan in `memory/project_mpp_oi_refactor.md`. |
+| 2.5 | 2026-04-22 | Blue Ridge Automation | **Legacy MES screenshot review gap analysis.** 36 screenshots of the Flexware Madison MES reviewed against the current FDS / Data Model. 16 new Part A items added (OI-15 through OI-30): 9 concrete design additions (Track screen, auto-finish-on-target WO, tray-divisibility rule, ItemLocation consumption metadata, Country of Origin, scrap source enum, partial start/complete, Hold Management screen, Lot computed fields) and 7 discovery items to confirm with MPP (Automation tile scope, Notifications, per-workstation scripting, Supply Part flag, cast-override cell flag, Workstation Category grouping, Reports tile contents). Source summary at `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Legacy screenshots at `reference/MPP_Current_MES_screenshots.docx`. |
 
 ---
 
 ## Summary
 
-**Part A counts (14 items):**
+**Part A counts (30 items):**
 
 | Priority | ✅ Resolved | 🔶 In Review | ⬜ Open | Superseded | **Total** |
 |---|---|---|---|---|---|
-| HIGH | 1 (OI-01) | 3 (OI-02, OI-05, OI-07) | 1 (OI-13) | 0 | **5** |
-| MEDIUM | 3 (OI-03, OI-06, OI-09) | 3 (OI-04, OI-08, OI-12) | 1 (OI-11) | 0 | **7** |
-| LOW | 0 | 0 | 1 (OI-14) | 0 | **1** |
+| HIGH | 1 (OI-01) | 3 (OI-02, OI-05, OI-07) | 2 (OI-13, OI-15) | 0 | **6** |
+| MEDIUM | 3 (OI-03, OI-06, OI-09) | 3 (OI-04, OI-08, OI-12) | 9 (OI-11, OI-16, OI-17, OI-18, OI-21, OI-22, OI-24, OI-28, OI-30) | 0 | **15** |
+| LOW | 0 | 0 | 8 (OI-14, OI-19, OI-20, OI-23, OI-25, OI-26, OI-27, OI-29) | 0 | **8** |
 | — | 0 | 0 | 0 | 1 (OI-10) | **1** |
-| **Total** | **4** | **6** | **3** | **1** | **14** |
+| **Total** | **4** | **6** | **19** | **1** | **30** |
 
 **Part B counts (19 items):**
 
@@ -42,7 +43,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | LOW | 1 (UJ-06) | 0 | 0 | **1** |
 | **Total** | **4** | **3** | **12** | **19** |
 
-**Grand total:** 33 items (14 Part A + 19 Part B). 8 resolved, 9 in review, 15 open, 1 superseded.
+**Grand total:** 49 items (30 Part A + 19 Part B). 8 resolved, 9 in review, 31 open, 1 superseded.
 
 ---
 
@@ -318,6 +319,219 @@ Exceeding either limit should reject the scan-in.
 
 ---
 
+### OI-15 — Global Trace / Track screen — ⬜ Open (new)
+
+**Priority:** HIGH
+**Owner:** Blue Ridge / MPP Operations
+**FDS §:** TBD (new section in Phase E — likely §5 addendum or new §15 operator tools)
+**References:** Screenshot review 2026-04-22 (`reference/MPP_Current_MES_screenshots.docx` image 1, "Track" top-level tile)
+
+**Description:** Legacy MES has a top-level **Track** tile providing a non-workstation path to look up any LOT, serial number, or container and view its full genealogy. Our current FDS does not call out a global trace operator tool — trace today is implicit through the Lot Details screen but requires a workstation context.
+
+**Options:**
+- (a) Dedicated Perspective screen reachable from the home tile bar: input = LOT / serial / container ID, output = genealogy tree + lot details.
+- (b) Rely on the Configuration Tool's Lot browser for supervisors / quality only.
+- (c) Inline "search" box on the home page that drills into the Lot Details screen.
+
+**Proposed direction:** Option (a). Honda traceability is the core mission of the project; operators, supervisors, and quality all need a zero-context lookup path. Designed in Phase E.
+
+---
+
+### OI-16 — Auto-finish-on-target WO semantics — ⬜ Open (new)
+
+**Priority:** MEDIUM
+**Owner:** Blue Ridge / MPP Engineering
+**FDS §:** 6.10 addendum + data-collection capture contract (FDS-03-017a)
+**References:** Screenshot review 2026-04-22 (image 7, Work Order "Camera system automatic processing" + "Scale system automatic processing"); FRS 3.10
+
+**Description:** Legacy WO configuration exposes **Camera system automatic processing** (tray quantity + part recipe number) and **Scale system automatic processing** (target set quantity) with an explicit "automatically finish when target is reached" semantic. FDS-03-017a covers capturing counts and weights but does not specify the auto-close behaviour at the WO boundary.
+
+**Proposed direction:** Extend §6.10 and `Workorder.ProductionEvent_Record` to fire a WO-close event when cumulative ProductionEvent count (camera) or cumulative weight (scale) reaches the WO target. Configurable per WO.
+
+---
+
+### OI-17 — Tray-divisibility validation on WO close — ⬜ Open (new)
+
+**Priority:** MEDIUM
+**Owner:** Blue Ridge
+**FDS §:** 6.10
+**References:** Screenshot review 2026-04-22 (image 30, "Work order target quantity exceeded. Ensure target quantity is evenly divisible by the tray quantity.")
+
+**Description:** Legacy MES enforces a business rule at container close: target quantity must be evenly divisible by tray quantity, otherwise the container cannot be processed. Rule is not captured in the current FDS or data model.
+
+**Proposed direction:** Validate at WO Create / Edit (target `MOD` tray = 0) and re-validate at Close. Enforced in `Workorder.WorkOrder_*` mutation procs with a specific error code.
+
+---
+
+### OI-18 — Parts.ItemLocation consumption metadata — ⬜ Open (new)
+
+**Priority:** MEDIUM
+**Owner:** Blue Ridge / MPP Engineering
+**FDS §:** 3 (Master Data) + §5/6 consumption flows
+**References:** Screenshot review 2026-04-22 (image 12, Material "Compatible work cells" table with Min Quantity / Max Quantity / Default Quantity / Consumption Point columns)
+
+**Description:** Legacy Material → Compatible Work Cells mapping carries four extra attributes — **Min Quantity**, **Max Quantity**, **Default Quantity**, and **Consumption Point (BIT)**. These feed the runtime Allocations grid at the workstation. Our `Parts.ItemLocation` is a plain boolean eligibility junction.
+
+**Proposed direction:** Extend `Parts.ItemLocation` with `MinQuantity INT NULL`, `MaxQuantity INT NULL`, `DefaultQuantity INT NULL`, `IsConsumptionPoint BIT NOT NULL DEFAULT 0`. Designed in Phase E; SQL in Phase G.
+
+---
+
+### OI-19 — Parts.Item.CountryOfOrigin — ⬜ Open (new)
+
+**Priority:** LOW (effort) / HIGH (compliance)
+**Owner:** Blue Ridge
+**FDS §:** 3 (Master Data)
+**References:** Screenshot review 2026-04-22 (image 13, Material configuration "Country of origin" field)
+
+**Description:** Legacy Item carries a Country of Origin code. Honda compliance may require it on genealogy / shipping output. Not currently modelled.
+
+**Proposed direction:** Add `CountryOfOrigin NVARCHAR(2) NULL` (ISO 3166-1 alpha-2) to `Parts.Item`. Designed in Phase E; SQL in Phase G.
+
+---
+
+### OI-20 — Scrap source enum (Inventory vs Location) — ⬜ Open (new)
+
+**Priority:** LOW
+**Owner:** Blue Ridge
+**FDS §:** 5 + ProductionEvent spec
+**References:** Screenshot review 2026-04-22 (image 31, "Scrap from inventory" vs "Scrap from the selected location" buttons on Lot Details)
+
+**Description:** Legacy Lot Details screen exposes two distinct scrap paths: scrap from *inventory* (unallocated stock on a lot) vs scrap from a *selected location* (in-process at a specific workstation). Our current `Workorder.ProductionEvent.Type = Scrap` does not capture the distinction.
+
+**Proposed direction:** Add a `ScrapSource` code table (Inventory / Location) and `ScrapSourceId BIGINT NULL` on `Workorder.ProductionEvent`. Designed in Phase E; SQL in Phase G.
+
+---
+
+### OI-21 — Partial start / partial complete at a workstation — ⬜ Open (new)
+
+**Priority:** MEDIUM
+**Owner:** Blue Ridge / Ben
+**FDS §:** 5, 6
+**References:** Screenshot review 2026-04-22 (image 33, Tumbling Move Lot with separate "Start lot quantity" and "Complete lot quantity" fields; "0 in inventory available to start, 11 available to complete")
+
+**Description:** Legacy Move Lot UX allows starting N-of-M pieces now and completing the remainder later — start and complete quantities are decoupled per lot per workstation. Our current WIP model needs an explicit verification that this is supported.
+
+**Proposed direction:** Verify and document `Workorder.ProductionEvent_Record` supports independent Start and Complete event emission with partial quantities (and correctly derives WIP via event replay). If not, extend. Designed in Phase E.
+
+---
+
+### OI-22 — Dedicated Hold Management screen — ⬜ Open (new)
+
+**Priority:** MEDIUM
+**Owner:** Blue Ridge / MPP Quality
+**FDS §:** 5.7 (Holds)
+**References:** Screenshot review 2026-04-22 (image 1, top-level "Hold" tile)
+
+**Description:** Legacy MES gives Holds a top-level navigation tile. Our FDS §5.7 specifies the `HoldEvent` place/release lifecycle but does not explicitly mandate a dedicated Hold-management screen — it may currently be implicit via per-lot hold buttons only.
+
+**Proposed direction:** Add a Hold Management Perspective screen: list of all active holds, filterable by area / line / lot / hold reason, with place / release actions (supervisor-elevated). Designed in Phase E.
+
+---
+
+### OI-23 — Lot computed TotalInProcess / InventoryAvailable — ⬜ Open (new)
+
+**Priority:** LOW
+**Owner:** Blue Ridge
+**FDS §:** 5
+**References:** Screenshot review 2026-04-22 (image 31, Lot Details header "Total in-process" and "Inventory available")
+
+**Description:** Legacy Lot Details surfaces two derived figures in the header: **Total in-process** (sum across workstations) and **Inventory available** (unconsumed stock on the lot). Our FDS implies these are derivable from `ProductionEvent` but does not specify the exact derivation or whether they should be materialized for UI performance.
+
+**Proposed direction:** Document the derivation in FDS §5 and decide materialized-column-vs-view. If materialized, update on every ProductionEvent write. Designed in Phase E.
+
+---
+
+### OI-24 — "Automation" top-level tile scope — ⬜ Open (new, discovery)
+
+**Priority:** MEDIUM
+**Owner:** MPP IT / Blue Ridge
+**FDS §:** TBD
+**References:** Screenshot review 2026-04-22 (image 1, top-level "Automation" tile — contents not captured in the provided screenshots)
+
+**Description:** Legacy MES home page has an "Automation" tile. The screenshot set does not include its contents; likely OPC / interface management UI that overlaps with our `Audit.InterfaceLog`. Scope unknown.
+
+**Proposed direction:** Ask MPP for screenshots or a walk-through of the Automation tile. Confirm any in-scope functionality is already covered by our interface-logging / OPC-tag management design. Discovery only — no design commitment until contents known.
+
+---
+
+### OI-25 — Notifications configuration scope — ⬜ Open (new, discovery)
+
+**Priority:** LOW
+**Owner:** MPP Operations / Blue Ridge
+**FDS §:** Out-of-MVP (pending confirmation)
+**References:** Screenshot review 2026-04-22 (image 10, Configuration "Setup > Notifications" tile)
+
+**Description:** Legacy Configuration has a Notifications module for email / alert rules (likely fires on events such as hold placed, line stopped, etc.). Not in our design.
+
+**Proposed direction:** Confirm MPP considers this out-of-MVP and that its absence is not a regression. If in-scope, schema and FDS §12 additions needed. Discovery only.
+
+---
+
+### OI-26 — Per-workstation dashboard scripting hook — ⬜ Open (new, discovery)
+
+**Priority:** LOW
+**Owner:** Blue Ridge
+**FDS §:** Out-of-MVP (design choice)
+**References:** Screenshot review 2026-04-22 (image 26, Lot creation dashboard "Edit Script" button for save-button click)
+
+**Description:** Legacy workstation dashboards allow per-terminal custom scripting attached to button clicks. Ignition Perspective handles scripted behaviour at the project level via views / transforms — a one-to-one port is not idiomatic.
+
+**Proposed direction:** Confirm no current script logic is load-bearing on production flow. If any exists, port the behaviour into Perspective project scripts or view-level event handlers rather than reproducing per-workstation script editing. Discovery only.
+
+---
+
+### OI-27 — Material "Supply part" flag purpose — ⬜ Open (new, discovery)
+
+**Priority:** LOW
+**Owner:** MPP Engineering
+**FDS §:** 3 (Master Data)
+**References:** Screenshot review 2026-04-22 (image 12, Material config "Supply part" BIT)
+
+**Description:** Legacy Material configuration has a "Supply part" BIT. Purpose not obvious from the UI — possibly distinguishes supplier-provided components from in-house produced items. Not in our model.
+
+**Proposed direction:** Ask MPP what a "Supply part" is and whether it drives any workflow (BOM expansion, shipping, etc.). If confirmed, add `IsSupplyPart BIT NOT NULL DEFAULT 0` to `Parts.Item`. Discovery only.
+
+---
+
+### OI-28 — Work Cell "Require override for cast parts" flag — ⬜ Open (new, discovery)
+
+**Priority:** MEDIUM
+**Owner:** MPP Engineering / Blue Ridge
+**FDS §:** 10 (Automation) — relates to OI-04
+**References:** Screenshot review 2026-04-22 (image 19, Work Cell config "Require override for cast parts" checkbox)
+
+**Description:** Legacy Work Cell has a flag requiring supervisor override specifically for cast parts. Likely relates to the OI-04 vision-conflict / line-stop flow but at cell-level granularity — appears to force a supervisor AD prompt for any cast-part mutation at that cell.
+
+**Proposed direction:** Confirm with MPP whether this is still needed and how it interacts with OI-04's line-stop / escalation model. If retained, add `RequiresCastOverride BIT` as a `LocationAttribute` on the Cell type. Discovery only.
+
+---
+
+### OI-29 — Workstation Category grouping orthogonal to Area/Line — ⬜ Open (new, discovery)
+
+**Priority:** LOW
+**Owner:** MPP Operations / Blue Ridge
+**FDS §:** 2 (Physical Plant)
+**References:** Screenshot review 2026-04-22 (image 22, Category configuration with Casting / Tumbling / 5A2 Line 1 / Sort / Shipping / Astemo / etc. two-level grouping independent of Area / Line)
+
+**Description:** Legacy MES groups workstations by Category + Sub-category independently of the Area / Line / Cell physical hierarchy. Examples: "Sort", "Shipping", "Tumbling" appear as Categories alongside line-specific entries like "5A2 Line 1". Appears to be a UI navigation convenience.
+
+**Proposed direction:** Confirm MPP operators rely on this grouping for floor navigation. Our Area / Line / Cell ISA-95 hierarchy should cover it — if not, add a `WorkstationCategory` attribute via `LocationAttribute`. Discovery only.
+
+---
+
+### OI-30 — "Reports" tile contents enumeration — ⬜ Open (new)
+
+**Priority:** MEDIUM
+**Owner:** MPP Production Control / Blue Ridge
+**FDS §:** 15 (Reports) + UJ-19
+**References:** Screenshot review 2026-04-22 (image 1, top-level "Reports" tile — contents not captured); UJ-19 (Productivity DB replacement)
+
+**Description:** Legacy home page has a Reports tile. UJ-19 flags the four Productivity DB reports as a known requirement but the full Reports menu has not been enumerated — there may be additional reports MPP considers baseline.
+
+**Proposed direction:** Walk through the legacy Reports tile with MPP and list every report, then match against our MVP reporting scope. Couples directly to UJ-19 closure.
+
+---
+
 # Part B — User Journey Assumptions & Decisions
 
 These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or more Perspective screens. Cross-references to Part A items are noted per entry.
@@ -528,6 +742,7 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 ## Notes
 
-- The 2026-04-20 MPP review driving this revision's changes is captured in `Meeting_Notes/2026-04-20_OI_Review.md`.
-- Execution plan for Phases A–G is held in `memory/project_mpp_oi_refactor.md` (session-durable memory).
-- Phase A (this register refresh) is the first deliverable in the multi-session refactor. Phase B (Tool Management design spec) is the next substantive piece; see `memory/project_mpp_tool_mgmt_design.md` for the open design questions.
+- The 2026-04-20 MPP review driving v2.4's changes is captured in `Meeting_Notes/2026-04-20_OI_Review.md`.
+- The 2026-04-22 legacy screenshot review driving v2.5's additions (OI-15 through OI-30) is captured in `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Source screenshots at `reference/MPP_Current_MES_screenshots.docx`.
+- Execution plan for Phases A–G is held in `memory/project_mpp_oi_refactor.md` (session-durable memory). Gap-analysis items (OI-15..30) fold into Phase E (design + doc) and Phase G (SQL) except where noted.
+- Phase A (this register) was the first deliverable in the multi-session refactor. Phase B (Tool Management design spec) is complete; Phases C + D (security + FDS rewrites) are complete. Phase E now incorporates the 16 newly-discovered items alongside OI-11..14.

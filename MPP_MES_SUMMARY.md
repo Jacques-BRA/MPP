@@ -17,6 +17,7 @@
 | 0.3 | 2026-04-09 | Blue Ridge Automation | Added 2026-04-09 session notes with OI/UJ decision table and status roll-up. Added 4 design decisions (terminal as location type, no outbox, WO MVP-lite, warm-up as downtime). Updated FDS status to v0.2. |
 | 0.4 | 2026-04-09 | Blue Ridge Automation | UpperCamelCase naming convention applied to all DB references. Merged Department into Area per ISA-95 hierarchy. Added Enterprise level. |
 | 0.5 | 2026-04-10 | Blue Ridge Automation | Location model restructured — see FDS v0.4 and Data Model v0.4. `LocationType` reduced to 5 ISA-95 tiers; `LocationTypeDefinition` repurposed as polymorphic kinds; new `LocationAttributeDefinition` for per-kind attribute schemas. |
+| 0.6 | 2026-04-22 | Blue Ridge Automation | **Phase E of the 2026-04-20 OI review refactor — design + doc additions for OI-11..23.** 13 items closed as designed: 4 from the 2026-04-20 MPP meeting (OI-11 Casting→Trim rename, OI-12 lineside caps, OI-13 Flexware BOM import, OI-14 admin remove-item) + 9 from the 2026-04-22 legacy-screenshot review (OI-15 Global Track screen, OI-16 auto-finish-on-target WO, OI-17 tray divisibility, OI-18 ItemLocation consumption metadata, OI-19 Country of Origin, OI-20 Scrap Source enum, OI-21 partial start/complete, OI-22 Hold Management screen, OI-23 Lot computed quantities). Data Model v1.7 → v1.8 (5 additive schema changes), FDS v0.9 → v0.10 (new §5.10 Part Identity Change, §12.5 Global Trace Tool, plus requirements across §§1.4/3.1/3.5/3.6/4.3/5.1/5.3/6.8/6.10/8.2/14), User Journeys v0.6 → v0.7 (Casting→Trim identity-change scene + Track tile usage at Sort Cage). 7 discovery items (OI-24..30) parked for MPP input. Phase F (regenerate derived artifacts) and Phase G (SQL migration) queued. |
 
 ---
 
@@ -481,14 +482,16 @@ MES alarms identified: Low Inventory Level, Invalid PartSN, Duplicate PartSN.
 
 ### Open Items Status Summary
 
+As of 2026-04-22 the Open Issues Register is at v2.5 with 49 items total (30 Part A + 19 Part B). See `MPP_MES_Open_Issues_Register.md` for the authoritative status.
+
 | Status | Count |
 |---|---|
-| ✅ Resolved | 5 (OI-01, OI-06, OI-08, OI-09, UJ-06, UJ-15 — OI-06 closed 2026-04-20 via initials-based identity model) |
-| 🔶 Pending Customer Validation | 7 (OI-02, OI-04, OI-05, OI-07, UJ-02, UJ-09, UJ-12 — UJ-01 resolved with OI-06) |
-| 🔶 Pending Internal Review (Ben) | 6 (UJ-03, UJ-14, UJ-16, UJ-17, OI-10) |
-| ⬜ Open | 10 (OI-03, UJ-04, UJ-05, UJ-07, UJ-08, UJ-10, UJ-11, UJ-13, UJ-18, UJ-19 — OI-03 closing in Phase D of the 2026-04-20 refactor) |
+| ✅ Resolved | 8 (OI-01, OI-03, OI-06; UJ-01, UJ-06, UJ-12, UJ-15, + partial-addenda closes) |
+| 🔶 In Review | 9 (OI-02, OI-04, OI-05, OI-07, OI-08, OI-09, OI-12; UJ-02, UJ-03, UJ-14) |
+| ⬜ Open | 31 (includes OI-11, OI-13, OI-14, OI-15..OI-30, and 12 Part B UJ items) |
+| Superseded | 1 (OI-10 rolled into Phase B Tools schema) |
 
-> **Note (2026-04-21):** The 2026-04-20 MPP review produced a multi-session refactor that will re-shape these counts further over the coming sessions. See `memory/project_mpp_oi_refactor.md` for the full plan: OI-03 and OI-06 close; OI-04/05/07/08/09/10 revise; four new items (OI-11..14) will be added in Phase A. Phase C (this session) delivered the OI-06 / UJ-01 close and the FDS §4 / Data Model v1.6 / User Journeys v0.6 / Config Tool plan v1.7 updates.
+> **Note (2026-04-22):** The 2026-04-20 MPP review and the 2026-04-22 legacy-MES screenshot review together reshaped Part A from 10 items to 30. Phase E (this session) closed OI-11..23 as *designed* — 13 items moved from "open" to "designed, pending Phase G SQL". OI-24..30 (7 items) remain parked for MPP input and will be brought to the next MPP review as a consolidated question set. The phased execution plan is in `memory/project_mpp_oi_refactor.md`.
 
 ---
 
