@@ -421,6 +421,8 @@ Records a **part-identity change** across a process boundary — most notably th
 
 Added v1.8 (OI-11). Append-only event-style table.
 
+> **⚠ Implementation deferred to Arc 2 Phase 1** (discovered 2026-04-22 during Phase G scoping). This table has FKs into `Lots.Lot` (`SourceLotId`, `DestinationLotId`) and `Workorder.ProductionEvent` (`ProductionEventId`) — neither of those parent tables exists yet (Phases 1–8 built only the Config Tool side; runtime Lot / ProductionEvent tables are Arc 2 Phase 1). `ItemTransform` will be CREATED by Arc 2 Phase 1's migration alongside its parent tables, not ALTERed in later. The schema spec here is final; the SQL DDL and procs (`ItemTransform_Record`, `_GetBySourceLot`, `_GetByDestinationLot`) land in Arc 2 Phase 1. `Audit.LogEntityType` seed row for ItemTransform is reserved in the Phase G migration (Id=39) so Arc 2 doesn't need to touch the audit seed.
+
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
@@ -756,6 +758,8 @@ Read-only code table. Seeded at migration time. Added in v1.7 (Phase B) to suppo
 
 Auto-generated internal work order. Operators never see this. v1.7 adds `WorkOrderTypeId` (discriminator) and `ToolId` (Maintenance-only, nullable).
 
+> **⚠ Implementation deferred to Arc 2 Phase 1** (discovered 2026-04-22 during Phase G scoping). The `Workorder.WorkOrder` table itself does not yet exist — Phases 1–8 built only the `WorkOrderStatus` + `OperationStatus` code tables. The v1.7 Phase B spec wrote these as *ALTER ADD COLUMN*, but there's no table to ALTER. Arc 2 Phase 1 CREATEs `Workorder.WorkOrder` with `WorkOrderTypeId` (FK → `Workorder.WorkOrderType`, created in Phase G) and `ToolId` (FK → `Tools.Tool`, created in Phase G) baked in from day one. The column contract described below is authoritative — it's just the DDL verb that changes from ALTER to CREATE.
+
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
@@ -787,6 +791,8 @@ Individual operation execution — the actual step that happened.
 ### ProductionEvent
 
 Immutable record of production output and of the data collection required by the operation template. One row per LOT-passes-through-operation. Hot data collection fields (die, cavity, weight, counts) are typed columns on this table; any additional `DataCollectionField` configured on the operation template is captured in child `ProductionEventValue` rows.
+
+> **⚠ Implementation deferred to Arc 2 Phase 1** (discovered 2026-04-22). Like `Workorder.WorkOrder`, this table does not yet exist in the codebase. Arc 2 Phase 1 CREATEs it with the full column list below, including the v1.8 `ScrapSourceId` (FK → `Workorder.ScrapSource`, created in Phase G). The column contract is authoritative; the DDL verb is CREATE, not ALTER.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|

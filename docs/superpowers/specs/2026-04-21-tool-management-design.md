@@ -345,17 +345,28 @@ All screens follow the existing Config Tool conventions — Ignition Named Query
 
 One migration file: `sql/migrations/0010_phase9_tools_and_workorder.sql`. Runs after Phase 8.
 
+> **⚠ Scope re-discovery 2026-04-22 — `Workorder.WorkOrder` doesn't exist yet.** Phases 1–8 built only the Config Tool SQL side; `Workorder.WorkOrder` and related runtime tables (WorkOrderOperation, ProductionEvent, ConsumptionEvent, RejectEvent) are Arc 2 Plant Floor deliverables (Arc 2 Phase 1 per `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md`). The original step 7 "ALTER `Workorder.WorkOrder`" therefore has no table to target. **Phase G re-scopes to Path 3** (narrow + design-note deferrals). The column contract (`WorkOrderTypeId`, `ToolId`) stands unchanged — Arc 2 Phase 1 simply bakes it into `CREATE TABLE Workorder.WorkOrder` instead of an ALTER.
+
+Phase G delivers (revised):
+
 1. Create `Tools` schema if not exists.
 2. Create code tables: `ToolStatusCode`, `ToolCavityStatusCode`, `DieRank` (empty), `DieRankCompatibility` (empty).
 3. Create `ToolType` with seed rows (Die / Cutter / Jig / Gauge / AssemblyFixture / TrimTool).
 4. Create `ToolAttributeDefinition` (empty).
 5. Create `Tool`, `ToolAttribute`, `ToolCavity`, `ToolAssignment` with FKs + filtered unique indexes.
-6. Create `Workorder.WorkOrderType` with seed (Demand / Maintenance / Recipe).
-7. ALTER `Workorder.WorkOrder` to add `WorkOrderTypeId` (default to Demand-Id) and `ToolId` (nullable).
-8. Backfill existing `Workorder.WorkOrder` rows to `WorkOrderTypeId = Demand-Id`.
-9. Add `Audit.LogEntityType` seed rows for Tool, ToolAttributeDefinition, ToolAttribute, ToolCavity, ToolAssignment, DieRank, DieRankCompatibility, WorkOrderType (8 new entity types for audit logging).
+6. Create `Workorder.WorkOrderType` with seed (Demand / Maintenance / Recipe) — **standalone code table, no FK back into WorkOrder at this stage** (WorkOrder doesn't exist; Arc 2 adds the reverse FK when it creates WorkOrder).
+7. Create `Workorder.ScrapSource` with seed (Inventory / Location) — same pattern, standalone code table ready for Arc 2 to FK into.
+8. ALTER Phase E additive columns (all land on existing tables): `Parts.Item.CountryOfOrigin`, `Parts.ContainerConfig.MaxParts`, `Parts.ItemLocation` consumption cols (Min/Max/DefaultQuantity + IsConsumptionPoint).
+9. DROP legacy `Location.AppUser.ClockNumber` + `PinHash` columns (Phase C deferred cleanup).
+10. Add `Audit.LogEntityType` seed rows: Tool, ToolAttributeDefinition, ToolAttribute, ToolCavity, ToolAssignment, DieRank, DieRankCompatibility, WorkOrderType, **ItemTransform (reserved for Arc 2)**, **ScrapSource** — 10 new rows total (Ids 31–40). Reserving the ItemTransform row here means Arc 2 doesn't need to touch the audit seed when it CREATEs the table.
 
-Procs are deployed via the repeatable procs pipeline after the migration runs — ~35 new proc files.
+**Deferred to Arc 2 Phase 1** (all three have FK dependencies on tables Arc 2 creates):
+
+- `Parts.ItemTransform` — FKs into `Lots.Lot` (×2) + `Workorder.ProductionEvent`. Arc 2 CREATEs the table alongside its parent tables; the column contract in the Data Model v1.8 is final.
+- `Workorder.WorkOrder.WorkOrderTypeId BIGINT NOT NULL FK → WorkOrderType` + `ToolId BIGINT NULL FK → Tools.Tool` — Arc 2 bakes into CREATE TABLE.
+- `Workorder.ProductionEvent.ScrapSourceId BIGINT NULL FK → ScrapSource` — Arc 2 bakes into CREATE TABLE.
+
+Procs are deployed via the repeatable procs pipeline after the migration runs — **~30 new proc files in Phase G** (down from ~35 — `ItemTransform_Record` and its siblings land in Arc 2).
 
 **AppUser legacy column cleanup** (deferred from Phase C): same migration drops `Location.AppUser.ClockNumber` and `Location.AppUser.PinHash` columns, and drops the `Location.AppUser_SetPin` and `Location.AppUser_GetByClockNumber` procs (via repeatable-proc removal).
 
@@ -400,3 +411,4 @@ Target: ~60 new assertions. Full-suite target after Phase G: ~840 passing.
 |---|---|---|---|
 | 0.1 | 2026-04-21 | Blue Ridge Automation | Initial Phase B design spec. All six 2026-04-21 Q&A decisions incorporated. Block concept dropped (lives in ISA-95 hierarchy + `Parts.ItemLocation`, not Tools). Cavity status retained as 3-state (Active / Closed / Scrapped) per Jacques's final call. |
 | 0.2 | 2026-04-21 | Blue Ridge Automation | Renamed `ToolTypeDefinition` → `ToolType` per Jacques's push-back: Tools are a grouping, not a hierarchy, so there's no need for the two-table pattern Location uses. `ToolAttributeDefinition.ToolTypeDefinitionId` FK renamed to `ToolTypeId`; `Tool.ToolTypeDefinitionId` FK renamed to `ToolTypeId`. If sub-categories are ever needed the pattern has room to grow. |
+| 0.3 | 2026-04-22 | Blue Ridge Automation | **Scope re-discovery during Phase G implementation kick-off.** Original spec said "ALTER `Workorder.WorkOrder`" to add `WorkOrderTypeId` + `ToolId`; grep of the codebase confirms `Workorder.WorkOrder`, `WorkOrderOperation`, and `ProductionEvent` don't yet exist — they're Arc 2 Plant Floor deliverables (Arc 2 Phase 1 per the Arc 2 phased plan). Phase G re-scoped to **Path 3** (narrow + design-note): the Tools schema and the two standalone code tables (`WorkOrderType`, `ScrapSource`) still land in Phase G; the three dependent schema changes (`ItemTransform` table, WorkOrder.WorkOrderTypeId/ToolId columns, ProductionEvent.ScrapSourceId column) defer to Arc 2 Phase 1 where they bake into `CREATE TABLE` statements rather than `ALTER`. Column contracts unchanged — only the DDL verb moves. `Audit.LogEntityType` ItemTransform seed row (Id=39) still added in Phase G so Arc 2 doesn't have to touch the audit seed. See the updated "Migration plan (Phase G)" section above for the revised step list. |
