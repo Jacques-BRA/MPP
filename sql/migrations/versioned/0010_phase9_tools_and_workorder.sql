@@ -28,16 +28,22 @@
 --                  DefaultQuantity INT NULL + IsConsumptionPoint BIT   (OI-18)
 --
 --              AUDIT SCHEMA:
---                - Audit.LogEntityType + 10 seed rows (Ids 31–40)
+--                - Audit.LogEntityType + 9 seed rows (Ids 31–39)
 --
 --              DEFERRED TO ARC 2 PHASE 1 (tables don't exist yet):
---                - Parts.ItemTransform                   (FKs Lots.Lot + Workorder.ProductionEvent)
 --                - Workorder.WorkOrder + WorkOrderTypeId  (WorkOrder table doesn't exist)
 --                - Workorder.WorkOrder + ToolId           (same)
 --                - Workorder.ProductionEvent + ScrapSourceId (ProductionEvent doesn't exist)
 --              Arc 2 Phase 1 CREATEs these with the columns baked in
 --              — see memory/project_mpp_oi_refactor.md for the
 --              full hand-off list.
+--
+--              OI-11 RESOLUTION (2026-04-22, post G.1 review):
+--                Casting → Trim part rename modelled as a normal
+--                1-line BOM consumption (Trim part has Cast part as
+--                its sole component). No dedicated `Parts.ItemTransform`
+--                table — ConsumptionEvent + LotGenealogy already
+--                capture the flow.
 --
 --              ALSO DEFERRED (coordinated proc updates required):
 --                - DROP Location.AppUser.ClockNumber + PinHash
@@ -412,7 +418,7 @@ ALTER TABLE Parts.ItemLocation
 
 
 -- ============================================================
--- == Audit.LogEntityType — 10 new seed rows (Ids 31–40) ====
+-- == Audit.LogEntityType — 9 new seed rows (Ids 31–39) =====
 -- ============================================================
 -- Phase 8 ended at Id=30 (ShiftSchedule). Phase G adds:
 --   31–37 — Tools schema mutable entities (ToolStatusCode /
@@ -420,9 +426,13 @@ ALTER TABLE Parts.ItemLocation
 --           ConfigLog entries expected, so no LogEntityType rows)
 --   38    — WorkOrderType (read-only but included for visibility
 --           per Phase B spec — future Maintenance WO CRUD will log)
---   39    — ItemTransform (table deferred to Arc 2 Phase 1 — row
---           reserved here so Arc 2 doesn't touch the audit seed)
---   40    — ScrapSource (read-only code table; row for visibility)
+--   39    — ScrapSource (read-only code table; row for visibility)
+--
+-- OI-11 (Casting → Trim part rename) is resolved via normal BOM
+-- consumption — no dedicated `Parts.ItemTransform` table. The 1-line
+-- BOM (Trim part has Cast part as a component) + existing
+-- ConsumptionEvent + LotGenealogy carries the full genealogy. No
+-- audit seed row is needed.
 
 INSERT INTO Audit.LogEntityType (Id, Code, Name, Description) VALUES
     (31, N'Tool',                  N'Tool',                    N'Tools.Tool — system of record for tool identity (dies, cutters, jigs, gauges, fixtures, trim tools).'),
@@ -433,8 +443,7 @@ INSERT INTO Audit.LogEntityType (Id, Code, Name, Description) VALUES
     (36, N'DieRank',               N'Die Rank',                 N'Tools.DieRank — MPP Quality die ranking (e.g., A–E). Empty at deployment.'),
     (37, N'DieRankCompatibility',  N'Die Rank Compatibility',   N'Tools.DieRankCompatibility — cross-rank merge compatibility matrix. Empty at deployment.'),
     (38, N'WorkOrderType',         N'Work Order Type',          N'Workorder.WorkOrderType — Demand / Maintenance / Recipe discriminator. Read-only seed.'),
-    (39, N'ItemTransform',         N'Item Transform',           N'Parts.ItemTransform — part-identity bridge across Casting → Trim (OI-11). Table created by Arc 2 Phase 1; row reserved in Phase G.'),
-    (40, N'ScrapSource',           N'Scrap Source',             N'Workorder.ScrapSource — Inventory / Location discriminator for scrap events (OI-20). Read-only seed.');
+    (39, N'ScrapSource',           N'Scrap Source',             N'Workorder.ScrapSource — Inventory / Location discriminator for scrap events (OI-20). Read-only seed.');
 
 
 -- ============================================================
@@ -443,8 +452,8 @@ INSERT INTO Audit.LogEntityType (Id, Code, Name, Description) VALUES
 INSERT INTO dbo.SchemaVersion (MigrationId, Description)
 VALUES (
     '0010_phase9_tools_and_workorder',
-    'Phase G: Tools schema (10 tables), Workorder.WorkOrderType + ScrapSource code tables, Parts ALTERs (Item.CountryOfOrigin, ContainerConfig.MaxParts, ItemLocation +4 cols), +10 LogEntityType rows. Deferred to Arc 2 P1: Parts.ItemTransform, Workorder.WorkOrder/ProductionEvent column adds. AppUser legacy drop deferred to coordinated follow-up.'
+    'Phase G: Tools schema (10 tables), Workorder.WorkOrderType + ScrapSource code tables, Parts ALTERs (Item.CountryOfOrigin, ContainerConfig.MaxParts, ItemLocation +4 cols), +9 LogEntityType rows. Deferred to Arc 2 P1: Workorder.WorkOrder/ProductionEvent column adds. OI-11 resolved via 1-line BOM (no ItemTransform table). AppUser legacy drop deferred to coordinated follow-up.'
 );
 
 COMMIT TRANSACTION;
-PRINT 'Migration 0010 completed: Tools schema (10 tables), 2 Workorder code tables (WorkOrderType seed 3, ScrapSource seed 2), 3 Parts ALTERs (Item.CountryOfOrigin, ContainerConfig.MaxParts, ItemLocation +4 cols), 10 LogEntityType seed rows. Arc 2 Phase 1 will CREATE the deferred tables with dependent columns baked in.';
+PRINT 'Migration 0010 completed: Tools schema (10 tables), 2 Workorder code tables (WorkOrderType seed 3, ScrapSource seed 2), 3 Parts ALTERs (Item.CountryOfOrigin, ContainerConfig.MaxParts, ItemLocation +4 cols), 9 LogEntityType seed rows. Arc 2 Phase 1 will CREATE the deferred tables with dependent columns baked in.';

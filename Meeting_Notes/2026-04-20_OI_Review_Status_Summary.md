@@ -16,6 +16,7 @@ Summary of changes from the 2026-04-20 MPP customer review, framed in terms of c
 |---|---|---|---|
 | 1.0 | 2026-04-22 | Blue Ridge Automation | Initial internal status summary following 2026-04-20 MPP OI Review meeting. Captures scope shifts, new items, phase progress, blockers, and risks. |
 | 1.1 | 2026-04-22 | Blue Ridge Automation | Added "Additional discovered gaps" section following 2026-04-22 review of `reference/MPP_Current_MES_screenshots.docx` (36 screenshots). Enumerates 9 concrete design additions + 7 discovery items now logged as OI-15 through OI-30 in the Open Issues Register v2.5. |
+| 1.2 | 2026-04-22 | Blue Ridge Automation | OI-11 entry updated: resolved via 1-line BOM (not a new `Parts.ItemTransform` table as the v1.1 row suggested). See Open Issues Register v2.6 for the reversal. |
 
 ---
 
@@ -82,7 +83,7 @@ The 2026-04-20 customer review closed 2 items, revised 6, reopened 2 with addend
 
 | OI | Priority | Complexity | Notes |
 |---|---|---|---|
-| OI-11 — Part rename Casting → Trim | MEDIUM | Medium — needs new `Parts.ItemTransform` table | Genealogy bridge across the rename boundary |
+| OI-11 — Part rename Casting → Trim | MEDIUM | ✅ Resolved — no new schema | Modelled as 1-line BOM (trim part has cast part as sole component at QtyPer=1); existing `ConsumptionEvent` + `LotGenealogy` carries it. Initial v1.8 draft added a `Parts.ItemTransform` table but it was fully redundant with `ConsumptionEvent` — reverted 2026-04-22. |
 | OI-12 — Lineside inventory caps | MEDIUM | Small — `MaxParts` on ContainerConfig + `LinesideLimit` LocationAttribute | Prevents scan-in gaming |
 | OI-13 — BOM source system | HIGH | Medium — one-shot export from Flexware (IP .919) at cutover | Need export format from MPP IT |
 | OI-14 — Admin remove-item | LOW | Small — already in FDS-04-007 elevated actions list | Design + proc only |

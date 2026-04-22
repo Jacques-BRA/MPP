@@ -482,16 +482,16 @@ MES alarms identified: Low Inventory Level, Invalid PartSN, Duplicate PartSN.
 
 ### Open Items Status Summary
 
-As of 2026-04-22 the Open Issues Register is at v2.5 with 49 items total (30 Part A + 19 Part B). See `MPP_MES_Open_Issues_Register.md` for the authoritative status.
+As of 2026-04-22 the Open Issues Register is at v2.6 with 49 items total (30 Part A + 19 Part B). See `MPP_MES_Open_Issues_Register.md` for the authoritative status.
 
 | Status | Count |
 |---|---|
-| ✅ Resolved | 8 (OI-01, OI-03, OI-06; UJ-01, UJ-06, UJ-12, UJ-15, + partial-addenda closes) |
+| ✅ Resolved | 9 (OI-01, OI-03, OI-06, OI-11; UJ-01, UJ-06, UJ-12, UJ-15, + partial-addenda closes) |
 | 🔶 In Review | 9 (OI-02, OI-04, OI-05, OI-07, OI-08, OI-09, OI-12; UJ-02, UJ-03, UJ-14) |
-| ⬜ Open | 31 (includes OI-11, OI-13, OI-14, OI-15..OI-30, and 12 Part B UJ items) |
+| ⬜ Open | 30 (includes OI-13, OI-14, OI-15..OI-30, and 12 Part B UJ items) |
 | Superseded | 1 (OI-10 rolled into Phase B Tools schema) |
 
-> **Note (2026-04-22):** The 2026-04-20 MPP review and the 2026-04-22 legacy-MES screenshot review together reshaped Part A from 10 items to 30. Phase E (this session) closed OI-11..23 as *designed* — 13 items moved from "open" to "designed, pending Phase G SQL". OI-24..30 (7 items) remain parked for MPP input and will be brought to the next MPP review as a consolidated question set. The phased execution plan is in `memory/project_mpp_oi_refactor.md`.
+> **Note (2026-04-22):** The 2026-04-20 MPP review and the 2026-04-22 legacy-MES screenshot review together reshaped Part A from 10 items to 30. Phase E closed OI-11..23 as *designed* — then a design review moved OI-11 fully to ✅ Resolved (no schema needed: Casting → Trim rename is a 1-line BOM consumption, not a new table). OI-24..30 (7 discovery items) remain parked for MPP input and will be brought to the next MPP review as a consolidated question set. Phase G SQL migration 0010 landed 2026-04-22 (Tools schema + 2 code tables + 3 Parts ALTERs; 779/779 tests still pass). The phased execution plan is in `memory/project_mpp_oi_refactor.md`.
 
 ---
 

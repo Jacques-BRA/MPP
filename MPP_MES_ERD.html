@@ -181,8 +181,8 @@
 
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
-    <p>Madison Precision Products — MES Database Schema (8 schemas, ~73 tables)</p>
-    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-22 — v1.8 Phase E additions: <code>Parts.ItemTransform</code> (Casting → Trim part-identity bridge, OI-11), <code>Parts.Item.CountryOfOrigin</code> (OI-19), <code>Parts.ItemLocation</code> + consumption metadata (MinQuantity / MaxQuantity / DefaultQuantity / IsConsumptionPoint, OI-18), <code>Parts.ContainerConfig.MaxParts</code> (OI-12), new <code>Workorder.ScrapSource</code> code table + <code>Workorder.ProductionEvent.ScrapSourceId</code> FK (OI-20). Earlier v1.7: Phase B Tool Management (§7 Tools with ToolType, Tool, ToolCavity, ToolAssignment, DieRank compatibility), <code>Workorder.WorkOrder</code> + <code>WorkOrderType</code> + nullable <code>ToolId</code>, <code>AppUser</code> initials-based security (OI-06). Master ERD tab still reflects v1.5 — full regeneration queued.</p>
+    <p>Madison Precision Products — MES Database Schema (8 schemas, ~72 tables)</p>
+    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-22 — v1.8 Phase E additions: <code>Parts.Item.CountryOfOrigin</code> (OI-19), <code>Parts.ItemLocation</code> + consumption metadata (MinQuantity / MaxQuantity / DefaultQuantity / IsConsumptionPoint, OI-18), <code>Parts.ContainerConfig.MaxParts</code> (OI-12), new <code>Workorder.ScrapSource</code> code table + <code>Workorder.ProductionEvent.ScrapSourceId</code> FK (OI-20). OI-11 (Casting → Trim rename) resolved via 1-line BOM — no new table (an earlier draft added <code>Parts.ItemTransform</code>, reverted as redundant with <code>ConsumptionEvent</code>). Earlier v1.7: Phase B Tool Management (§7 Tools with ToolType, Tool, ToolCavity, ToolAssignment, DieRank compatibility), <code>Workorder.WorkOrder</code> + <code>WorkOrderType</code> + nullable <code>ToolId</code>, <code>AppUser</code> initials-based security (OI-06). Master ERD tab still reflects v1.5 — full regeneration queued.</p>
     <div class="conventions">
         <span>UpperCamelCase</span>
         <span>singular nouns</span>
@@ -381,10 +381,6 @@ erDiagram
             <h4>ContainerConfig</h4>
             <p>Honda-specified packing rules per product: trays per container, parts per tray, serialized flag, returnable dunnage code, customer code. v1.8 adds <code>MaxParts</code> hard cap (OI-12) and surfaces the existing <code>ClosureMethod</code> / <code>TargetWeight</code> columns (OI-02 pending).</p>
         </div>
-        <div class="table-card">
-            <h4>ItemTransform <span style="opacity:0.7;">(v1.8)</span></h4>
-            <p>Part-identity bridge across the Casting → Trim boundary. Same physical piece, different part number on each side. Event-style append-only row per rename: source / destination items, source / destination LOTs, optional ProductionEvent, Cell, quantity, operator, terminal, timestamp. Complements <code>Lots.LotGenealogy</code> so Honda trace resolves across the rename. (OI-11)</p>
-        </div>
     </div>
 
     <h3>ERD</h3>
@@ -519,20 +515,6 @@ erDiagram
         datetime2 DeprecatedAt
     }
 
-    ItemTransform {
-        bigint Id PK
-        bigint SourceItemId FK
-        bigint DestinationItemId FK
-        bigint SourceLotId FK
-        bigint DestinationLotId FK
-        bigint ProductionEventId FK
-        bigint LocationId FK
-        int Quantity
-        bigint OperatorId FK
-        bigint TerminalLocationId FK
-        datetime2 RecordedAt
-    }
-
     ItemType ||--o{ Item : classifies
     Uom ||--o{ Item : measures
     Item ||--o{ Bom : "parent in"
@@ -543,8 +525,6 @@ erDiagram
     OperationTemplate ||--o{ RouteStep : "performed at"
     Item ||--o{ ItemLocation : "runs on"
     Item ||--o{ ContainerConfig : "packed per"
-    Item ||--o{ ItemTransform : "source of"
-    Item ||--o{ ItemTransform : "destination of"
     OperationTemplate ||--o{ OperationTemplateField : "fields"
     DataCollectionField ||--o{ OperationTemplateField : "used_in"
         </div>

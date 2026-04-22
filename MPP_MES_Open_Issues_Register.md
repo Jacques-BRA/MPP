@@ -1,7 +1,7 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.5 — Working Draft
+**Version:** 2.6 — Working Draft
 **Date:** 2026-04-22
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
@@ -19,6 +19,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | 2.3 | 2026-04-09 | Blue Ridge Automation | First round of MPP review decisions applied — OI-01, UJ-06, UJ-15 closed; 10 items moved to In Review |
 | 2.4 | 2026-04-21 | Blue Ridge Automation | **Phase A of the 2026-04-20 OI review refactor.** Closed OI-03 (shift runtime derived from events) and OI-06 (initials-based operator identity — see Phase C / FDS v0.8). Revised OI-04 (line-stop, not LOT-hold; 10-fail escalation; CRT 200% inspect), OI-05 (die-rank compatibility merge rules), OI-07 (three WO types, Maintenance targets Tools), OI-08 addenda (terminal locked to machine context; part↔machine validity map; mobile consideration), OI-09 addenda (sublot pattern with parent FK), OI-10 (superseded by Phase B Tool Management design). Added four new items: OI-11 (part rename at Casting → Trim), OI-12 (lineside inventory caps), OI-13 (BOM source = Flexware app @ IP .919), OI-14 (admin remove-item). Structural change: each OI and UJ now has its own subsection instead of living inside a giant grid table — easier to read, diff, and update. Source meeting notes at `Meeting_Notes/2026-04-20_OI_Review.md`. Running plan in `memory/project_mpp_oi_refactor.md`. |
 | 2.5 | 2026-04-22 | Blue Ridge Automation | **Legacy MES screenshot review gap analysis.** 36 screenshots of the Flexware Madison MES reviewed against the current FDS / Data Model. 16 new Part A items added (OI-15 through OI-30): 9 concrete design additions (Track screen, auto-finish-on-target WO, tray-divisibility rule, ItemLocation consumption metadata, Country of Origin, scrap source enum, partial start/complete, Hold Management screen, Lot computed fields) and 7 discovery items to confirm with MPP (Automation tile scope, Notifications, per-workstation scripting, Supply Part flag, cast-override cell flag, Workstation Category grouping, Reports tile contents). Source summary at `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Legacy screenshots at `reference/MPP_Current_MES_screenshots.docx`. |
+| 2.6 | 2026-04-22 | Blue Ridge Automation | **OI-11 resolved — Casting → Trim rename modelled via 1-line BOM, not `Parts.ItemTransform`.** Review of the v2.5 design surfaced that the proposed `Parts.ItemTransform` table duplicated every column of `Workorder.ConsumptionEvent`. The rename is a degenerate 1-line BOM consumption: trim part has cast part as its sole component at QtyPer=1; existing ConsumptionEvent + LotGenealogy machinery handles the flow and the Honda backward trace. OI-11 moves ⬜ Open → ✅ Resolved. Downstream corrections: Data Model v1.8-rev (ItemTransform table section replaced with a ✅ Resolved callout; `Audit.LogEntityType` seed shrinks from 10 to 9 rows; table count "~73" → "~72"), FDS v0.10-rev (§5.10 retained, rewritten around FDS-05-033 BOM-driven scan-in; FDS-05-034/-035 retired), User Journeys v0.7-rev (Trim Shop narrative simplified to normal consumption), Phase G migration `0010_phase9_tools_and_workorder.sql` (ItemTransform LogEntityType row dropped; ScrapSource shifted from Id=40 to Id=39; re-run green, 779/779 tests still pass). |
 
 ---
 
@@ -29,10 +30,10 @@ This register consolidates all open items and design decisions that gate Perspec
 | Priority | ✅ Resolved | 🔶 In Review | ⬜ Open | Superseded | **Total** |
 |---|---|---|---|---|---|
 | HIGH | 1 (OI-01) | 3 (OI-02, OI-05, OI-07) | 2 (OI-13, OI-15) | 0 | **6** |
-| MEDIUM | 3 (OI-03, OI-06, OI-09) | 3 (OI-04, OI-08, OI-12) | 9 (OI-11, OI-16, OI-17, OI-18, OI-21, OI-22, OI-24, OI-28, OI-30) | 0 | **15** |
+| MEDIUM | 4 (OI-03, OI-06, OI-09, OI-11) | 3 (OI-04, OI-08, OI-12) | 8 (OI-16, OI-17, OI-18, OI-21, OI-22, OI-24, OI-28, OI-30) | 0 | **15** |
 | LOW | 0 | 0 | 8 (OI-14, OI-19, OI-20, OI-23, OI-25, OI-26, OI-27, OI-29) | 0 | **8** |
 | — | 0 | 0 | 0 | 1 (OI-10) | **1** |
-| **Total** | **4** | **6** | **19** | **1** | **30** |
+| **Total** | **5** | **6** | **18** | **1** | **30** |
 
 **Part B counts (19 items):**
 
@@ -43,7 +44,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | LOW | 1 (UJ-06) | 0 | 0 | **1** |
 | **Total** | **4** | **3** | **12** | **19** |
 
-**Grand total:** 49 items (30 Part A + 19 Part B). 8 resolved, 9 in review, 31 open, 1 superseded.
+**Grand total:** 49 items (30 Part A + 19 Part B). 9 resolved, 9 in review, 30 open, 1 superseded.
 
 ---
 
@@ -253,21 +254,28 @@ This item remains in the register for traceability but is no longer a stand-alon
 
 ---
 
-### OI-11 — Part identity change at Casting → Trim Shop — ⬜ Open (new)
+### OI-11 — Part identity change at Casting → Trim Shop — ✅ Resolved (2026-04-22)
 
 **Priority:** MEDIUM
 **Owner:** MPP Engineering / Blue Ridge
-**FDS §:** TBD (new section in Phase E)
+**FDS §:** 5.10 (reframed around BOM-driven resolution)
 **References:** Meeting notes 2026-04-20; derived from OI-05 / OI-10 context
 
 **Description:** Per MPP, a part **changes its identity** as it moves from Casting to the Trim Shop — the part number is different on the two sides of that boundary, even though genealogy must tie them together.
 
-**Options:**
-- (a) Dedicated `Parts.ItemTransform` table (source Item + destination Item, with an `EventAt` and genealogy FKs) — cleanest from a data-model perspective.
+**Options considered:**
+- (a) Dedicated `Parts.ItemTransform` table (source Item + destination Item, with an `EventAt` and genealogy FKs).
 - (b) Treat Trim as a renaming operation — add an attribute to the existing `LotGenealogy` flow.
 - (c) Require BOM-driven resolution — the Trim part is a "produced from" of the Casting part.
 
-**Proposed direction (pending confirmation):** Option (a) — explicit transform table. Keeps genealogy clean and supports querying "which Casting lot produced this Trim lot" in one join. Will be designed in Phase E.
+**Decision (2026-04-22):** Option (c). Option (a) was initially chosen and drafted into Data Model v1.8 / FDS v0.10 / User Journeys v0.7; on review the `Parts.ItemTransform` table was fully redundant with `Workorder.ConsumptionEvent` — every column duplicated. The Casting → Trim boundary is a **degenerate 1-line BOM consumption**:
+
+- Trim part's `Parts.Bom` has a single `BomLine` referencing the cast part at `QtyPer = 1`.
+- At the first Trim Shop Cell, the MES uses `Parts.ItemLocation` + BOM lookup to find the destination trim part; prompts the operator to confirm receive-as; on confirm writes a normal `Workorder.ConsumptionEvent` (consumed cast / produced trim) + `Lots.LotGenealogy` row.
+- Honda backward trace: same walk as any assembly consumption — shipped trim LOT → LotGenealogy → cast LOT → die / cavity / operator / timestamp.
+- Yield loss (if any) handled normally via `Workorder.RejectEvent` on the source side.
+
+**No new schema** — `Parts.ItemTransform` was removed from the v1.8 draft before any SQL landed. Affected docs updated to v1.8-rev / v0.10-rev / v0.7-rev; Phase G migration dropped the ItemTransform `Audit.LogEntityType` seed row (9 rows instead of 10; re-run green, 779/779 tests still pass).
 
 ---
 
