@@ -181,8 +181,8 @@
 
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
-    <p>Madison Precision Products — MES Database Schema (8 schemas, ~70 tables)</p>
-    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-21 — v1.7 Phase B Tool Management schema added (§7 Tools with ToolType, Tool, ToolCavity, ToolAssignment, DieRank compatibility matrix), <code>Workorder.WorkOrder</code> gains <code>WorkOrderType</code> + nullable <code>ToolId</code>, <code>AppUser</code> realigned to initials-based security (OI-06). Master ERD still reflects v1.5 — full regeneration queued for Phase F of the OI refactor.</p>
+    <p>Madison Precision Products — MES Database Schema (8 schemas, ~73 tables)</p>
+    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-22 — v1.8 Phase E additions: <code>Parts.ItemTransform</code> (Casting → Trim part-identity bridge, OI-11), <code>Parts.Item.CountryOfOrigin</code> (OI-19), <code>Parts.ItemLocation</code> + consumption metadata (MinQuantity / MaxQuantity / DefaultQuantity / IsConsumptionPoint, OI-18), <code>Parts.ContainerConfig.MaxParts</code> (OI-12), new <code>Workorder.ScrapSource</code> code table + <code>Workorder.ProductionEvent.ScrapSourceId</code> FK (OI-20). Earlier v1.7: Phase B Tool Management (§7 Tools with ToolType, Tool, ToolCavity, ToolAssignment, DieRank compatibility), <code>Workorder.WorkOrder</code> + <code>WorkOrderType</code> + nullable <code>ToolId</code>, <code>AppUser</code> initials-based security (OI-06). Master ERD tab still reflects v1.5 — full regeneration queued.</p>
     <div class="conventions">
         <span>UpperCamelCase</span>
         <span>singular nouns</span>
@@ -351,7 +351,7 @@ erDiagram
     <div class="table-list">
         <div class="table-card">
             <h4>Item</h4>
-            <p>The part/product master. Every raw material, component, sub-assembly, and finished good. Carries MPP part number, optional Macola ERP number, default sub-lot quantity, max lot size, and unit weight.</p>
+            <p>The part/product master. Every raw material, component, sub-assembly, and finished good. Carries MPP part number, optional Macola ERP number, default sub-lot quantity, max lot size, unit weight, and (v1.8) Country of Origin (ISO 3166-1 alpha-2, OI-19).</p>
         </div>
         <div class="table-card">
             <h4>ItemType</h4>
@@ -375,11 +375,15 @@ erDiagram
         </div>
         <div class="table-card">
             <h4>ItemLocation</h4>
-            <p>Part-to-machine eligibility mapping. Certain parts can only run on certain machines. MES uses this to prevent operators from entering LOTs on incompatible equipment. References the <code>location</code> table.</p>
+            <p>Part-to-machine eligibility mapping. Certain parts can only run on certain machines. MES uses this to prevent operators from entering LOTs on incompatible equipment. v1.8 extends with consumption metadata: <code>MinQuantity</code> / <code>MaxQuantity</code> / <code>DefaultQuantity</code> / <code>IsConsumptionPoint</code> — drives the runtime Allocations grid at the workstation (OI-18).</p>
         </div>
         <div class="table-card">
             <h4>ContainerConfig</h4>
-            <p>Honda-specified packing rules per product: trays per container, parts per tray, serialized flag, returnable dunnage code, customer code.</p>
+            <p>Honda-specified packing rules per product: trays per container, parts per tray, serialized flag, returnable dunnage code, customer code. v1.8 adds <code>MaxParts</code> hard cap (OI-12) and surfaces the existing <code>ClosureMethod</code> / <code>TargetWeight</code> columns (OI-02 pending).</p>
+        </div>
+        <div class="table-card">
+            <h4>ItemTransform <span style="opacity:0.7;">(v1.8)</span></h4>
+            <p>Part-identity bridge across the Casting → Trim boundary. Same physical piece, different part number on each side. Event-style append-only row per rename: source / destination items, source / destination LOTs, optional ProductionEvent, Cell, quantity, operator, terminal, timestamp. Complements <code>Lots.LotGenealogy</code> so Honda trace resolves across the rename. (OI-11)</p>
         </div>
     </div>
 
@@ -411,6 +415,7 @@ erDiagram
         bigint UomId FK
         decimal UnitWeight
         bigint WeightUomId FK
+        nvarchar CountryOfOrigin "v1.8"
         datetime2 CreatedAt
         datetime2 UpdatedAt
         bigint CreatedByUserId FK
@@ -490,6 +495,10 @@ erDiagram
         bigint Id PK
         bigint ItemId FK
         bigint LocationId FK
+        int MinQuantity "v1.8"
+        int MaxQuantity "v1.8"
+        int DefaultQuantity "v1.8"
+        bit IsConsumptionPoint "v1.8"
         datetime2 CreatedAt
         datetime2 DeprecatedAt
     }
@@ -499,12 +508,29 @@ erDiagram
         bigint ItemId FK
         int TraysPerContainer
         int PartsPerTray
+        int MaxParts "v1.8"
         bit IsSerialized
+        nvarchar ClosureMethod
+        decimal TargetWeight
         nvarchar DunnageCode
         nvarchar CustomerCode
         datetime2 CreatedAt
         datetime2 UpdatedAt
         datetime2 DeprecatedAt
+    }
+
+    ItemTransform {
+        bigint Id PK
+        bigint SourceItemId FK
+        bigint DestinationItemId FK
+        bigint SourceLotId FK
+        bigint DestinationLotId FK
+        bigint ProductionEventId FK
+        bigint LocationId FK
+        int Quantity
+        bigint OperatorId FK
+        bigint TerminalLocationId FK
+        datetime2 RecordedAt
     }
 
     ItemType ||--o{ Item : classifies
@@ -517,6 +543,8 @@ erDiagram
     OperationTemplate ||--o{ RouteStep : "performed at"
     Item ||--o{ ItemLocation : "runs on"
     Item ||--o{ ContainerConfig : "packed per"
+    Item ||--o{ ItemTransform : "source of"
+    Item ||--o{ ItemTransform : "destination of"
     OperationTemplate ||--o{ OperationTemplateField : "fields"
     DataCollectionField ||--o{ OperationTemplateField : "used_in"
         </div>
@@ -785,7 +813,11 @@ erDiagram
         </div>
         <div class="table-card">
             <h4>ProductionEvent <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>Immutable record of a LOT passing through an operation. Header carries <code>OperationTemplateId</code> plus hot typed columns: good/no-good counts, <code>DieIdentifier</code> (snapshot of the machine's current die), <code>CavityNumber</code>, <code>WeightValue</code>/<code>WeightUomId</code>, operator, terminal location, timestamp. Additional <code>DataCollectionField</code> values configured on the template land in <code>ProductionEventValue</code> children.</p>
+            <p>Immutable record of a LOT passing through an operation. Header carries <code>OperationTemplateId</code> plus hot typed columns: good/no-good counts, <code>DieIdentifier</code> (snapshot of the machine's current die), <code>CavityNumber</code>, <code>WeightValue</code>/<code>WeightUomId</code>, operator, terminal location, timestamp. v1.8 adds nullable <code>ScrapSourceId FK → ScrapSource</code> populated only when the event represents a scrap action (Inventory vs Location, OI-20). Additional <code>DataCollectionField</code> values configured on the template land in <code>ProductionEventValue</code> children.</p>
+        </div>
+        <div class="table-card">
+            <h4>ScrapSource <span class="scope-badge scope-mvp">MVP v1.8</span></h4>
+            <p>Read-only code table distinguishing the two scrap paths: <code>Inventory</code> (scrap from unallocated LOT stock, no workstation context) and <code>Location</code> (scrap from in-process material at a specific Cell). Mirrors the legacy Flexware "Scrap from inventory" vs "Scrap from the selected location" buttons on the Lot Details screen (OI-20).</p>
         </div>
         <div class="table-card">
             <h4>ProductionEventValue <span class="scope-badge scope-mvp">MVP</span></h4>
@@ -815,6 +847,13 @@ erDiagram
     WorkOrderType {
         bigint Id PK
         nvarchar Code "Demand / Maintenance / Recipe"
+        nvarchar Name
+        nvarchar Description
+    }
+
+    ScrapSource {
+        bigint Id PK
+        nvarchar Code "Inventory / Location"
         nvarchar Name
         nvarchar Description
     }
@@ -858,6 +897,7 @@ erDiagram
         bigint ItemId FK
         int GoodCount
         int NoGoodCount
+        bigint ScrapSourceId FK "NULL - v1.8 scrap only"
         nvarchar DieIdentifier
         int CavityNumber
         decimal WeightValue
@@ -915,6 +955,7 @@ erDiagram
     WorkOrderOperation ||--o{ ConsumptionEvent : consumes
     ProductionEvent ||--o{ RejectEvent : "rejected in"
     ProductionEvent ||--o{ ProductionEventValue : captures
+    ScrapSource ||--o{ ProductionEvent : "scrap source of"
         </div>
     </div>
 </div>
