@@ -21,6 +21,7 @@
 -- Change Log:
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-14 - 2.0 - Removed OUTPUT params for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.3: CountryOfOrigin exposed (OI-19)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.Item_GetByPartNumber
     @PartNumber NVARCHAR(50)
@@ -42,6 +43,7 @@ BEGIN
         i.UnitWeight,
         i.WeightUomId,
         wu.Code               AS WeightUomCode,
+        i.CountryOfOrigin,
         i.CreatedAt,
         i.UpdatedAt,
         i.CreatedByUserId,

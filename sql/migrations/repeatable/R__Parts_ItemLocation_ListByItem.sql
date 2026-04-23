@@ -24,6 +24,7 @@
 -- Change Log:
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-14 - 2.0 - Removed OUTPUT params for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.3: consumption metadata exposed (OI-18)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.ItemLocation_ListByItem
     @ItemId BIGINT
@@ -38,6 +39,10 @@ BEGIN
         l.Name                  AS LocationName,
         l.Code                  AS LocationCode,
         ltd.Name                AS DefinitionName,
+        il.MinQuantity,
+        il.MaxQuantity,
+        il.DefaultQuantity,
+        il.IsConsumptionPoint,
         il.CreatedAt,
         il.DeprecatedAt
     FROM Parts.ItemLocation il

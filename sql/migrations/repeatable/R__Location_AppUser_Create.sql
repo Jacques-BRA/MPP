@@ -2,19 +2,20 @@
 -- Procedure:   Location.AppUser_Create
 -- Author:      Blue Ridge Automation
 -- Created:     2026-04-13
--- Version:     2.0
+-- Version:     3.0
 --
 -- Description:
---   Creates a new AppUser row. Validates required fields and AdAccount
---   uniqueness (active or deprecated — column has a UNIQUE constraint).
---   Logs success to Audit.ConfigLog or failure to Audit.FailureLog.
+--   Creates a new AppUser row. Initials are the primary accountability
+--   stamp — required, unique. AdAccount is optional (operators have no
+--   AD login); IgnitionRole requires AdAccount to be set (enforced by
+--   both a proc-level check and the CK_AppUser_IgnitionRole_Requires_AdAccount
+--   constraint).
 --
 -- Parameters:
---   @AdAccount NVARCHAR(100)          - AD identity. Required. Must be unique.
+--   @Initials NVARCHAR(10)            - Operator/user initials. Required. Unique.
 --   @DisplayName NVARCHAR(200)        - Display name. Required.
---   @ClockNumber NVARCHAR(20) NULL    - Optional clock number for shop-floor auth.
---   @PinHash NVARCHAR(255) NULL       - Optional hashed PIN.
---   @IgnitionRole NVARCHAR(100) NULL  - Optional Ignition security role.
+--   @AdAccount NVARCHAR(100) NULL     - AD identity. Optional. Unique among non-NULL values.
+--   @IgnitionRole NVARCHAR(100) NULL  - Optional role. Requires @AdAccount to be set.
 --   @AppUserId BIGINT                 - User performing the action. Required for audit.
 --
 -- Result set:
@@ -32,12 +33,14 @@
 -- Change Log:
 --   2026-04-13 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-14 - 2.0 - Changed to SELECT result for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.4: dropped @ClockNumber + @PinHash (legacy auth)
+--   2026-04-23 - 3.0 - Initials realignment: @Initials NOT NULL required,
+--                      @AdAccount now optional, IgnitionRole/AdAccount pairing enforced
 -- =============================================
 CREATE OR ALTER PROCEDURE Location.AppUser_Create
-    @AdAccount    NVARCHAR(100),
+    @Initials     NVARCHAR(10),
     @DisplayName  NVARCHAR(200),
-    @ClockNumber  NVARCHAR(20)   = NULL,
-    @PinHash      NVARCHAR(255)  = NULL,
+    @AdAccount    NVARCHAR(100)  = NULL,
     @IgnitionRole NVARCHAR(100)  = NULL,
     @AppUserId    BIGINT
 AS
@@ -45,17 +48,15 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    -- Result variables (returned via SELECT instead of OUTPUT)
     DECLARE @Status  BIT           = 0;
     DECLARE @Message NVARCHAR(500) = N'Unknown error';
     DECLARE @NewId   BIGINT        = NULL;
 
-    -- Capture input for failure-log snapshots
     DECLARE @ProcName NVARCHAR(200) = N'Location.AppUser_Create';
     DECLARE @Params   NVARCHAR(MAX) =
-        (SELECT @AdAccount    AS AdAccount,
+        (SELECT @Initials     AS Initials,
                 @DisplayName  AS DisplayName,
-                @ClockNumber  AS ClockNumber,
+                @AdAccount    AS AdAccount,
                 @IgnitionRole AS IgnitionRole
          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
@@ -63,9 +64,24 @@ BEGIN
         -- ====================
         -- Parameter validation
         -- ====================
-        IF @AdAccount IS NULL OR @DisplayName IS NULL OR @AppUserId IS NULL
+        IF @Initials IS NULL OR @DisplayName IS NULL OR @AppUserId IS NULL
         BEGIN
             SET @Message = N'Required parameter missing.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'AppUser',
+                @EntityId            = NULL,
+                @LogEventTypeCode    = N'Created',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+            RETURN;
+        END
+
+        IF LEN(@Initials) = 0
+        BEGIN
+            SET @Message = N'Initials cannot be empty.';
             EXEC Audit.Audit_LogFailure
                 @AppUserId           = @AppUserId,
                 @LogEntityTypeCode   = N'AppUser',
@@ -81,10 +97,45 @@ BEGIN
         -- ====================
         -- Business rule checks
         -- ====================
-        -- AdAccount has a UNIQUE constraint (active or deprecated), so check both
-        IF EXISTS (SELECT 1 FROM Location.AppUser WHERE AdAccount = @AdAccount)
+        -- Initials unique across ALL rows (active + deprecated) because the
+        -- constraint is a plain UNIQUE, not a filtered index.
+        IF EXISTS (SELECT 1 FROM Location.AppUser WHERE Initials = @Initials)
+        BEGIN
+            SET @Message = N'An AppUser with these Initials already exists.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'AppUser',
+                @EntityId            = NULL,
+                @LogEventTypeCode    = N'Created',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+            RETURN;
+        END
+
+        -- AdAccount uniqueness — only enforced when supplied (filtered UNIQUE)
+        IF @AdAccount IS NOT NULL AND EXISTS
+            (SELECT 1 FROM Location.AppUser WHERE AdAccount = @AdAccount)
         BEGIN
             SET @Message = N'An AppUser with this AdAccount already exists.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId           = @AppUserId,
+                @LogEntityTypeCode   = N'AppUser',
+                @EntityId            = NULL,
+                @LogEventTypeCode    = N'Created',
+                @FailureReason       = @Message,
+                @ProcedureName       = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+            RETURN;
+        END
+
+        -- IgnitionRole requires AdAccount (enforced at DB via CHECK constraint,
+        -- but caught here for a friendly message before the INSERT fires)
+        IF @IgnitionRole IS NOT NULL AND @AdAccount IS NULL
+        BEGIN
+            SET @Message = N'IgnitionRole cannot be set without an AdAccount.';
             EXEC Audit.Audit_LogFailure
                 @AppUserId           = @AppUserId,
                 @LogEntityTypeCode   = N'AppUser',
@@ -103,13 +154,12 @@ BEGIN
         BEGIN TRANSACTION;
 
         INSERT INTO Location.AppUser
-            (AdAccount, DisplayName, ClockNumber, PinHash, IgnitionRole, CreatedAt)
+            (Initials, DisplayName, AdAccount, IgnitionRole, CreatedAt)
         VALUES
-            (@AdAccount, @DisplayName, @ClockNumber, @PinHash, @IgnitionRole, SYSUTCDATETIME());
+            (@Initials, @DisplayName, @AdAccount, @IgnitionRole, SYSUTCDATETIME());
 
         SET @NewId = CAST(SCOPE_IDENTITY() AS BIGINT);
 
-        -- Success audit INSIDE the transaction
         EXEC Audit.Audit_LogConfigChange
             @AppUserId         = @AppUserId,
             @LogEntityTypeCode = N'AppUser',
@@ -130,7 +180,6 @@ BEGIN
         IF @@TRANCOUNT > 0
             ROLLBACK TRANSACTION;
 
-        -- Capture error details BEFORE the nested TRY/CATCH clears the error context
         DECLARE @ErrMsg   NVARCHAR(4000) = ERROR_MESSAGE();
         DECLARE @ErrSev   INT            = ERROR_SEVERITY();
         DECLARE @ErrState INT            = ERROR_STATE();
@@ -139,7 +188,6 @@ BEGIN
         SET @Message = N'Unexpected error: ' + LEFT(@ErrMsg, 400);
         SET @NewId   = NULL;
 
-        -- Failure log OUTSIDE the rolled-back transaction
         BEGIN TRY
             EXEC Audit.Audit_LogFailure
                 @AppUserId           = @AppUserId,
@@ -154,10 +202,7 @@ BEGIN
             -- Swallow; don't mask the original exception
         END CATCH
 
-        -- Return result before re-raising
         SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
-
-        -- Re-raise so Ignition logs it as a critical exception
         RAISERROR(@ErrMsg, @ErrSev, @ErrState);
     END CATCH
 END;

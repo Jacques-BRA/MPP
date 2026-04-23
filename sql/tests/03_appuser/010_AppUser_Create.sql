@@ -29,10 +29,9 @@ GO
 CREATE TABLE #Result1 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #Result1
 EXEC Location.AppUser_Create
-    @AdAccount    = N'DOMAIN\jdoe',
+    @Initials     = N'JD',
     @DisplayName  = N'John Doe',
-    @ClockNumber  = N'C00123',
-    @PinHash      = N'$2b$10$hashedvalue',
+    @AdAccount    = N'DOMAIN\jdoe',
     @IgnitionRole = N'Operator',
     @AppUserId    = 1;
 
@@ -63,20 +62,25 @@ EXEC test.Assert_RowCount
     @ActualCount   = @RowCount;
 
 -- Verify column values stored correctly
-DECLARE @StoredAdAccount    NVARCHAR(100),
+DECLARE @StoredInitials     NVARCHAR(10),
+        @StoredAdAccount    NVARCHAR(100),
         @StoredDisplayName  NVARCHAR(200),
-        @StoredClockNumber  NVARCHAR(20),
         @StoredIgnitionRole NVARCHAR(100),
         @StoredDeprecatedAt DATETIME2(3);
 
 SELECT
+    @StoredInitials     = Initials,
     @StoredAdAccount    = AdAccount,
     @StoredDisplayName  = DisplayName,
-    @StoredClockNumber  = ClockNumber,
     @StoredIgnitionRole = IgnitionRole,
     @StoredDeprecatedAt = DeprecatedAt
 FROM Location.AppUser
 WHERE Id = @NewId;
+
+EXEC test.Assert_IsEqual
+    @TestName = N'[HappyPath] Initials stored correctly',
+    @Expected = N'JD',
+    @Actual   = @StoredInitials;
 
 EXEC test.Assert_IsEqual
     @TestName = N'[HappyPath] AdAccount stored correctly',
@@ -87,11 +91,6 @@ EXEC test.Assert_IsEqual
     @TestName = N'[HappyPath] DisplayName stored correctly',
     @Expected = N'John Doe',
     @Actual   = @StoredDisplayName;
-
-EXEC test.Assert_IsEqual
-    @TestName = N'[HappyPath] ClockNumber stored correctly',
-    @Expected = N'C00123',
-    @Actual   = @StoredClockNumber;
 
 EXEC test.Assert_IsEqual
     @TestName = N'[HappyPath] IgnitionRole stored correctly',
@@ -119,14 +118,14 @@ EXEC test.Assert_RowCount
 GO
 
 -- =============================================
--- Test 2: NULL AdAccount - rejected
+-- Test 2: NULL Initials - rejected
 --   Status=0, NewId is NULL, message set.
 -- =============================================
 CREATE TABLE #Result2 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #Result2
 EXEC Location.AppUser_Create
-    @AdAccount   = NULL,
-    @DisplayName = N'No Account User',
+    @Initials    = NULL,
+    @DisplayName = N'No Initials User',
     @AppUserId   = 1;
 
 DECLARE @S2    BIT         = (SELECT Status FROM #Result2);
@@ -135,13 +134,13 @@ DECLARE @NewId2 BIGINT     = (SELECT NewId FROM #Result2);
 DROP TABLE #Result2;
 
 EXEC test.Assert_IsEqual
-    @TestName = N'[NullAdAccount] Status is 0',
+    @TestName = N'[NullInitials] Status is 0',
     @Expected = N'0',
     @Actual   = @SStr2;
 
 DECLARE @NewIdStr2 NVARCHAR(20) = CAST(@NewId2 AS NVARCHAR(20));
 EXEC test.Assert_IsNull
-    @TestName = N'[NullAdAccount] NewId is NULL',
+    @TestName = N'[NullInitials] NewId is NULL',
     @Value    = @NewIdStr2;
 GO
 
@@ -152,7 +151,7 @@ GO
 CREATE TABLE #Result3 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #Result3
 EXEC Location.AppUser_Create
-    @AdAccount   = N'DOMAIN\nodisplay',
+    @Initials    = N'ND',
     @DisplayName = NULL,
     @AppUserId   = 1;
 
@@ -169,7 +168,7 @@ EXEC test.Assert_IsEqual
 DECLARE @RowCount3 INT;
 SELECT @RowCount3 = COUNT(*)
 FROM Location.AppUser
-WHERE AdAccount = N'DOMAIN\nodisplay';
+WHERE Initials = N'ND';
 
 EXEC test.Assert_RowCount
     @TestName      = N'[NullDisplayName] No row inserted',
@@ -178,8 +177,8 @@ EXEC test.Assert_RowCount
 GO
 
 -- =============================================
--- Test 4: Duplicate AdAccount - second call rejected
---   Create same AdAccount twice.
+-- Test 4: Duplicate Initials - second call rejected
+--   Create same Initials twice.
 --   Second call: Status=0, NewId NULL.
 --   Verify FailureLog entry written for the duplicate attempt.
 -- =============================================
@@ -188,7 +187,7 @@ GO
 CREATE TABLE #Result4a (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #Result4a
 EXEC Location.AppUser_Create
-    @AdAccount   = N'DOMAIN\dupuser',
+    @Initials    = N'DP',
     @DisplayName = N'Duplicate User',
     @AppUserId   = 1;
 
@@ -197,7 +196,7 @@ DECLARE @SStr4a NVARCHAR(1) = CAST(@S4a AS NVARCHAR(1));
 DROP TABLE #Result4a;
 
 EXEC test.Assert_IsEqual
-    @TestName = N'[DuplicateAdAccount] First create: Status is 1',
+    @TestName = N'[DuplicateInitials] First create: Status is 1',
     @Expected = N'1',
     @Actual   = @SStr4a;
 
@@ -209,11 +208,11 @@ INNER JOIN Audit.LogEntityType let ON let.Id = fl.LogEntityTypeId
 WHERE let.Code = N'AppUser'
   AND fl.ProcedureName = N'Location.AppUser_Create';
 
--- Second call with the same AdAccount - should be rejected
+-- Second call with the same Initials - should be rejected
 CREATE TABLE #Result4b (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #Result4b
 EXEC Location.AppUser_Create
-    @AdAccount   = N'DOMAIN\dupuser',
+    @Initials    = N'DP',
     @DisplayName = N'Duplicate User Again',
     @AppUserId   = 1;
 
@@ -223,13 +222,13 @@ DECLARE @NewId4b BIGINT     = (SELECT NewId FROM #Result4b);
 DROP TABLE #Result4b;
 
 EXEC test.Assert_IsEqual
-    @TestName = N'[DuplicateAdAccount] Second create: Status is 0',
+    @TestName = N'[DuplicateInitials] Second create: Status is 0',
     @Expected = N'0',
     @Actual   = @SStr4b;
 
 DECLARE @NewId4bStr NVARCHAR(20) = CAST(@NewId4b AS NVARCHAR(20));
 EXEC test.Assert_IsNull
-    @TestName = N'[DuplicateAdAccount] Second create: NewId is NULL',
+    @TestName = N'[DuplicateInitials] Second create: NewId is NULL',
     @Value    = @NewId4bStr;
 
 -- Verify FailureLog entry was written for the duplicate attempt
@@ -242,21 +241,22 @@ WHERE let.Code = N'AppUser'
 
 DECLARE @FailDiff INT = @FailCountAfter - @FailCountBefore;
 EXEC test.Assert_RowCount
-    @TestName      = N'[DuplicateAdAccount] FailureLog entry written for duplicate',
+    @TestName      = N'[DuplicateInitials] FailureLog entry written for duplicate',
     @ExpectedCount = 1,
     @ActualCount   = @FailDiff;
 GO
 
 -- =============================================
--- Test 5: Minimal params - only required params, optional all NULL
---   ClockNumber, PinHash, IgnitionRole all NULL.
+-- Test 5: Minimal params - operator without AD account
+--   Only @Initials + @DisplayName + @AppUserId.
+--   AdAccount and IgnitionRole default to NULL.
 --   Status=1. Verify NULLs stored.
 -- =============================================
 CREATE TABLE #Result5 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #Result5
 EXEC Location.AppUser_Create
-    @AdAccount   = N'DOMAIN\minimaluser',
-    @DisplayName = N'Minimal User',
+    @Initials    = N'MIN',
+    @DisplayName = N'Minimal Operator',
     @AppUserId   = 1;
 
 DECLARE @S5    BIT         = (SELECT Status FROM #Result5);
@@ -275,28 +275,60 @@ EXEC test.Assert_IsNotNull
     @Value    = @NewId5Str;
 
 -- Verify optional columns are NULL
-DECLARE @StoredClock5     NVARCHAR(20),
-        @StoredPin5       NVARCHAR(255),
-        @StoredRole5      NVARCHAR(100);
+DECLARE @StoredAd5   NVARCHAR(100),
+        @StoredRole5 NVARCHAR(100);
 
-SELECT
-    @StoredClock5 = ClockNumber,
-    @StoredPin5   = PinHash,
-    @StoredRole5  = IgnitionRole
+SELECT @StoredAd5   = AdAccount,
+       @StoredRole5 = IgnitionRole
 FROM Location.AppUser
 WHERE Id = @NewId5;
 
 EXEC test.Assert_IsNull
-    @TestName = N'[MinimalParams] ClockNumber is NULL',
-    @Value    = @StoredClock5;
-
-EXEC test.Assert_IsNull
-    @TestName = N'[MinimalParams] PinHash is NULL',
-    @Value    = @StoredPin5;
+    @TestName = N'[MinimalParams] AdAccount is NULL',
+    @Value    = @StoredAd5;
 
 EXEC test.Assert_IsNull
     @TestName = N'[MinimalParams] IgnitionRole is NULL',
     @Value    = @StoredRole5;
+GO
+
+-- =============================================
+-- Test 6: IgnitionRole without AdAccount - rejected
+--   Shop-floor operator pattern: Initials + DisplayName fine,
+--   but IgnitionRole requires AdAccount. Proc must reject before
+--   the CHECK constraint fires.
+-- =============================================
+CREATE TABLE #Result6 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Result6
+EXEC Location.AppUser_Create
+    @Initials     = N'IR6',
+    @DisplayName  = N'Role Without AD',
+    @AdAccount    = NULL,
+    @IgnitionRole = N'Supervisor',
+    @AppUserId    = 1;
+
+DECLARE @S6     BIT          = (SELECT Status FROM #Result6);
+DECLARE @SStr6  NVARCHAR(1)  = CAST(@S6 AS NVARCHAR(1));
+DECLARE @NewId6 BIGINT       = (SELECT NewId FROM #Result6);
+DROP TABLE #Result6;
+
+EXEC test.Assert_IsEqual
+    @TestName = N'[IgnitionRoleWithoutAd] Status is 0',
+    @Expected = N'0',
+    @Actual   = @SStr6;
+
+DECLARE @NewId6Str NVARCHAR(20) = CAST(@NewId6 AS NVARCHAR(20));
+EXEC test.Assert_IsNull
+    @TestName = N'[IgnitionRoleWithoutAd] NewId is NULL',
+    @Value    = @NewId6Str;
+
+-- No row was inserted
+DECLARE @RowCount6 INT;
+SELECT @RowCount6 = COUNT(*) FROM Location.AppUser WHERE Initials = N'IR6';
+EXEC test.Assert_RowCount
+    @TestName      = N'[IgnitionRoleWithoutAd] No row inserted',
+    @ExpectedCount = 0,
+    @ActualCount   = @RowCount6;
 GO
 
 -- =============================================

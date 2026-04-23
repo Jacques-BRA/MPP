@@ -26,6 +26,7 @@
 -- Change Log:
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-14 - 2.0 - Removed OUTPUT params for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.3: MaxParts exposed (OI-12)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.ContainerConfig_GetByItem
     @ItemId BIGINT
@@ -37,6 +38,7 @@ BEGIN
         Id, ItemId, TraysPerContainer, PartsPerTray, IsSerialized,
         DunnageCode, CustomerCode,
         ClosureMethod, TargetWeight,
+        MaxParts,
         CreatedAt, UpdatedAt, DeprecatedAt
     FROM Parts.ContainerConfig
     WHERE ItemId = @ItemId

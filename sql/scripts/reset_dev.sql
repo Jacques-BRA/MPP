@@ -63,10 +63,9 @@ GO
 :r ..\migrations\repeatable\R__Location_AppUser_List.sql
 :r ..\migrations\repeatable\R__Location_AppUser_Get.sql
 :r ..\migrations\repeatable\R__Location_AppUser_GetByAdAccount.sql
-:r ..\migrations\repeatable\R__Location_AppUser_GetByClockNumber.sql
+:r ..\migrations\repeatable\R__Location_AppUser_GetByInitials.sql
 :r ..\migrations\repeatable\R__Location_AppUser_Create.sql
 :r ..\migrations\repeatable\R__Location_AppUser_Update.sql
-:r ..\migrations\repeatable\R__Location_AppUser_SetPin.sql
 :r ..\migrations\repeatable\R__Location_AppUser_Deprecate.sql
 
 -- Add each new repeatable here

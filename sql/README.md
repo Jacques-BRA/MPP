@@ -49,7 +49,7 @@ sql/
 | Shared audit procs (4) | Repeatables ready |
 | Audit lookup list procs (3) | Repeatables ready |
 | Audit log read procs — ConfigLog (2) + FailureLog (4) | Repeatables ready |
-| AppUser CRUD (8 procs — List, Get, GetByAdAccount, GetByClockNumber, Create, Update, SetPin, Deprecate) | Repeatables ready |
+| AppUser CRUD (7 procs — List, Get, GetByAdAccount, GetByInitials, Create, Update, Deprecate) | Repeatables ready |
 | SP template | Script ready |
 | Dev reset script (PowerShell) | Script ready |
 | **Phase 1 total: 1 migration + 21 repeatables** | **Complete** |

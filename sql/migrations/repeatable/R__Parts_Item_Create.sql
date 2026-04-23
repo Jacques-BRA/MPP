@@ -22,6 +22,7 @@
 --   @UomId BIGINT                  - FK → Parts.Uom. Required.
 --   @UnitWeight DECIMAL(10,4) NULL
 --   @WeightUomId BIGINT NULL       - FK → Parts.Uom. Required if UnitWeight provided.
+--   @CountryOfOrigin NVARCHAR(2) NULL - ISO 3166-1 alpha-2. OI-19 (Phase E).
 --   @AppUserId BIGINT              - User performing action. Required.
 --
 -- Result set:
@@ -38,6 +39,7 @@
 -- Change Log:
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.3: @CountryOfOrigin added (OI-19)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.Item_Create
     @PartNumber       NVARCHAR(50),
@@ -49,6 +51,7 @@ CREATE OR ALTER PROCEDURE Parts.Item_Create
     @UomId            BIGINT,
     @UnitWeight       DECIMAL(10,4)  = NULL,
     @WeightUomId      BIGINT         = NULL,
+    @CountryOfOrigin  NVARCHAR(2)    = NULL,
     @AppUserId        BIGINT
 AS
 BEGIN
@@ -69,7 +72,8 @@ BEGIN
                 @MaxLotSize       AS MaxLotSize,
                 @UomId            AS UomId,
                 @UnitWeight       AS UnitWeight,
-                @WeightUomId      AS WeightUomId
+                @WeightUomId      AS WeightUomId,
+                @CountryOfOrigin  AS CountryOfOrigin
          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
     BEGIN TRY
@@ -158,11 +162,11 @@ BEGIN
         INSERT INTO Parts.Item
             (ItemTypeId, PartNumber, Description, MacolaPartNumber,
              DefaultSubLotQty, MaxLotSize, UomId, UnitWeight, WeightUomId,
-             CreatedAt, CreatedByUserId)
+             CountryOfOrigin, CreatedAt, CreatedByUserId)
         VALUES
             (@ItemTypeId, @PartNumber, @Description, @MacolaPartNumber,
              @DefaultSubLotQty, @MaxLotSize, @UomId, @UnitWeight, @WeightUomId,
-             SYSUTCDATETIME(), @AppUserId);
+             @CountryOfOrigin, SYSUTCDATETIME(), @AppUserId);
 
         SET @NewId = CAST(SCOPE_IDENTITY() AS BIGINT);
 
