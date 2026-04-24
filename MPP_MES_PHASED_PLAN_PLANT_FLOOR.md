@@ -245,7 +245,7 @@ Deferred to Phase 0 decision on UJ-05. Once resolved (void-and-recreate **or** u
 
 On Perspective session startup, the client IP resolves to a Terminal-type `Location` row by querying its existing `IpAddress` `LocationAttribute`. The Terminal's zone (parent Area in the `Location` hierarchy) plus a new `DefaultScreen` `LocationAttributeDefinition` on the `Terminal` `LocationTypeDefinition` drives the initial Perspective view shown to any operator who logs in at that station.
 
-A Trim Shop terminal opens to the Trim Station Screen; a Shipping Dock terminal opens to the Shipping Screen; a Die Cast terminal opens to the Die Cast LOT Entry Screen. Login itself (clock# + PIN) is orthogonal — the default-screen lookup happens on session start, before or alongside auth, per Phase 0's auth model outcome.
+A Trim Shop terminal opens to the Trim Station Screen; a Shipping Dock terminal opens to the Shipping Screen; a Die Cast terminal opens to the Die Cast LOT Entry Screen. Operator presence (initials) is orthogonal — the default-screen lookup happens on session start, before any initials entry or per-action elevation.
 
 No DDL change is required. The `DefaultScreen` attribute is seeded as a new `LocationAttributeDefinition` row on the `Terminal` `LocationTypeDefinition` (via migration or via the existing Arc 1 Config Tool). Phase 1 delivers `Location.Terminal_GetByIpAddress` and the `Terminal_ResolveFromSession` Gateway script that stashes Zone + DefaultScreen in session props for the Home router view to consume.
 
@@ -323,24 +323,43 @@ None directly — Phase 0 produces decisions, not DDL. Any DDL deltas flowing fr
 
 This phase **is** the open items phase. Its goal is to resolve:
 
-**Gating (must resolve — wrong answer rebuilds a phase):**
+**Already closed — do NOT re-litigate in the Phase 0 workshop:**
+
+- **OI-01** Event outbox pattern — direct-call-with-logging, no outbox (v0.9 resolution).
+- **OI-03** Shift runtime adjustments — availability derived from events, no minute adjustments (2026-04-20).
+- **OI-06 / UJ-01** Operator identity & elevation — initials-only presence + per-action AD elevation (Phase C, 2026-04-21). Clock# + PIN are dead; do not raise them in the workshop.
+- **OI-09** Multi-cavity / cavity-parallel LOTs — N cavities produce N parallel peer LOTs with `Lot.ToolCavityId` set (Data Model v1.9). Machining sub-LOT split remains a separate pattern.
+- **OI-10** Tool life tracking — superseded by Phase B Tool Management; shot counts derive from `Workorder.ProductionEvent` group-by Tool/Cavity (Phase G).
+- **OI-11** Casting → Trim part identity — 1-line BOM consumption (Bom + ConsumptionEvent + LotGenealogy); no new schema.
+- **OI-26** UserInterfaceScript — deleted; DB-stored-runtime-code pattern explicitly not reproduced.
+
+**Gating (must resolve at Phase 0 — wrong answer rebuilds a phase):**
 
 | Item | Question | Why it gates |
 |---|---|---|
-| OI-06 / UJ-01 | Terminal session model — first-action vs shift-start login; inactivity timeout value; re-auth triggers; is zone-based auth substituted for clock# + PIN in some zones? | Phase 1 Login + Home router depend on the answer. Wrong answer forces Phase 1 rebuild. |
-| UJ-10 | Shift boundary rules — how are open downtime events carried across? Partial containers? In-progress LOTs? Are `Shift.ActualStart`/`ActualEnd` adjusted for mid-shift breaks/lunch/overtime like the paper forms are? | Phase 1 (`Shift_Start`/`_End`) and Phase 8 (boundary ticker) cannot be built without this. |
-| UJ-16 | `HardwareInterlockBypassed` flag location — on `ContainerSerial`, on `ProductionEvent`, or on both? What traceability do we need for a bypass? | Phase 6 Assembly depends on where the column lives. A late answer forces a Phase 6 schema + proc rewrite. |
-| UJ-05 | Sort Cage serial migration pattern — void-and-recreate (new `SerializedPart` + new `ContainerSerial`) or update-in-place (mutate `ContainerSerial` with a new `Lots.ContainerSerialHistory` audit table)? | Phase 7 Sort Cage walk depends on the write shape. Update-in-place requires a new table (migration 0011 or similar). |
+| **OI-31** (new 2026-04-23) | `Lots.IdentifierSequence` cutover seed values + format carry-forward. Keep `MESL{0:D7}` / `MESI{0:D7}`, or mint new prefixes? Additional counters in use (container barcodes, shipping print sequences) that we haven't seen? Reset policy? Rollover policy at 9,999,999? | Phase 1 migration seeds `LastValue`; wrong seed = LTT collisions with live Flexware LOTs at cutover. |
+| **FDS-06-030 WorkOrder BIT-flag enumeration** | Which Flexware WorkOrder flags are live in production (`IsCameraProcessingEnabled`, `IsScaleProcessingEnabled`, `GroupTargetWeight` + tolerance + UOM, `RecipeNumber`, `TrayQuantity`, `ReturnableDunnageCode`, `Customer`)? | Phase 1 `Workorder.WorkOrder` CREATE column list. Dead flags don't ship. |
+| **Historical data migration** | Cutover approach — which entities migrate (LOTs, SerializedItems, ProductionOrders, Containers, Genealogy). Discrepancy review for unmatched rows (e.g., Flexware `LotAttribute.DIE NAME` with no matching `Tools.Tool.Code`). | Phase 1 migration-script + pre-flight validation design. |
+| **OI-02 / UJ-13** Weight vs count container closure | Is scale-driven closure the design? | Phase 6 non-serialized container lifecycle; most Flexware WorkOrder BIT flags are subsumed by this decision. |
+| **OI-05 / UJ-08** Die-rank compatibility matrix | Full compatibility matrix owed by MPP Quality. | Phase 7 `Lot_Merge` rejects cross-die merges until matrix loaded; supervisor override is the only path otherwise. |
+| **OI-07 / UJ-07** Maintenance WO engine scope | Ben owes lifecycle, scheduling, integration with MPP maintenance team's tooling. | Phase G delivered the schema hook (FUTURE flow); Maintenance WO Perspective work doesn't start until Ben closes this. |
+| **OI-08 / UJ-12 addenda** | Final `TrackingMode` enumeration on Cell (values?) + Part ↔ Machine validity model confirmation. | Phase 3 / 4 terminal UX + scan-in guard depends on these. |
+| **ShotCount semantics** | `Workorder.ProductionEvent.ShotCount` = cumulative counter OR derived from aggregated LOT quantities? | Phase 3 operator-screen design + reporting path. |
+| **Workstation `DefaultScreen` seeding** | List of terminal-function Perspective views + which terminal routes to which. | Phase 1 seed data for B11 routing. |
+| **UJ-10** Shift boundary carryover rules | Open downtime events carried across? Partial containers? In-progress LOTs? | Phase 1 (`Shift_Start`/`_End`) and Phase 8 (boundary ticker) cannot be built without this. |
+| **UJ-16** `HardwareInterlockBypassed` flag location | `ContainerSerial`, `ProductionEvent`, or both? | Phase 6 Assembly schema + procs. |
+| **UJ-05** Sort Cage serial migration | Void-and-recreate OR update-in-place with new `Lots.ContainerSerialHistory` audit table? | Phase 7 Sort Cage walk; update-in-place requires a new table. |
+| **Honda AIM integration contract** | Confirm `GetNextNumber` format, `PlaceOnHold` / `ReleaseFromHold` / `UpdateAim` signatures, error recovery expectations. | Phase 7 shipping Gateway scripts. |
+| **Label template scope** | Flexware has 3 templates (CONTAINER, LOT, CONTAINER_HOLD). Confirm ours matches + any new needed (Sort Cage, Hold, Void). | Phase 6 / 7 label print procs + ZPL templates. |
 
 **Opportunistic (resolve if MPP available — fallbacks exist):**
 
 | Item | Current fallback if unresolved |
 |---|---|
-| OI-02 / UJ-13 container closure | Count-based closure unless `Parts.ContainerConfig.ClosureMethod = 'Weight'` (NULL → count). |
-| UJ-17 vision vs barcode confirmation | Barcode canonical; vision mismatch auto-holds LOT, supervisor override (per OI-04). |
-| UJ-11 / UJ-19 paper-vs-real-time | Assume real-time at each station; if MPP chooses phased rollout, this is a deployment-order decision, not a design decision. |
-| UJ-08 LOT merge rules | Deliver minimal `Lot_Merge` proc with hard-coded rules (same part, same die) in Phase 2; refactor to a configurable rule table post-MVP if required. |
-| OI-10 tool life tracking | Track shot counts as `LocationAttribute` values on DieCastMachine-type locations. If MPP escalates, add a dedicated `Parts.Die` + `Parts.DieLifeEvent` table post-MVP. |
+| UJ-04 non-serialized container lifecycle | Auto-create on LOT arrival; AIM shipper ID at last route step pre-closure. Subsumed by OI-02 resolution. |
+| UJ-09 material verification | BOM-based verification; reject substitutes. |
+| UJ-11 / UJ-19 paper-vs-real-time | Assume real-time at each station; if MPP chooses phased rollout, deployment-order decision only. |
+| UJ-17 vision vs barcode confirmation | Barcode canonical; vision mismatch triggers line-stop + 10-fail escalation (per OI-04 revised). |
 
 ## State & Workflow
 
@@ -371,9 +390,9 @@ No test suite additions.
 ## Phase 0 complete when
 
 - [ ] Workshop held with MPP representatives.
-- [ ] Decision log for OI-06, UJ-10, UJ-16, UJ-05 appended to Open Issues Register with signed-off dates.
-- [ ] B10 convention rewritten with the chosen serial-migration pattern.
-- [ ] Any DDL deltas captured in `sql/migrations/versioned/0010_phase1_shop_floor_foundation.sql` (or a dedicated Phase 0 DDL migration if substantive).
+- [ ] Decision log for OI-31 (identifier sequences), FDS-06-030 (WO BIT flags), historical data migration, OI-02, OI-05 matrix, OI-07 Maintenance scope, OI-08 addenda, ShotCount semantics, DefaultScreen seeding, UJ-10, UJ-16, UJ-05, AIM contract, and label templates appended to Open Issues Register with signed-off dates.
+- [ ] B10 convention rewritten with the chosen serial-migration pattern (UJ-05).
+- [ ] Any DDL deltas captured in the Arc 2 Phase 1 migration (note: `0010_phase9_tools_and_workorder.sql` is already consumed by Phase G; Arc 2 Phase 1 lands as `0013_arc2_phase1_shop_floor_foundation.sql` or equivalent next-unclaimed number).
 - [ ] Opportunistic items resolved or explicitly deferred with a documented fallback.
 
 ---
@@ -388,27 +407,50 @@ No test suite additions.
 
 ## Data Model Changes
 
-**Migration `sql/migrations/versioned/0010_phase1_shop_floor_foundation.sql`:**
+**Migration `sql/migrations/versioned/0013_arc2_phase1_shop_floor_foundation.sql`** (next unclaimed number — Phase G consumed `0010`–`0012`):
 
-- Seed new `Location.LocationAttributeDefinition` rows on the `Terminal` `LocationTypeDefinition`:
-  - `DefaultScreen` (NVARCHAR — Perspective route path, e.g., `'/shop-floor/trim-station'`)
-  - `IdleTimeoutSeconds` (INT — inactivity timeout, default 300)
-  - `RequiresReauthForSensitive` (BIT — default 1 — used by Perspective layer)
-- Seed any DDL deltas captured in Phase 0. If UJ-10 resolves to a rule-coded approach, add a small `Oee.ShiftBoundaryCarryoverRuleCode` code table (3 seeded rows: `CloseAtEnd`, `CarryOpen`, `AssociateWithStartShift`) and reference it from `Oee.ShiftSchedule` as a nullable FK. If UJ-10 resolves to a single project-wide rule, skip the code table and hard-code the behavior in `Shift_End`.
+**New tables (Arc 2 — introduced here, per Data Model v1.9):**
+
+- `Workorder.WorkOrder` — CREATE with v1.7 / v1.9 column contract: `Id`, `WoNumber`, `WorkOrderTypeId` (FK → `Workorder.WorkOrderType`), `ItemId`, `RouteTemplateId`, `WorkOrderStatusId`, `ToolId` (FK → `Tools.Tool`, NULL — Maintenance only), `CreatedAt`, `CompletedAt`. Plus the FDS-06-030 Phase-0-confirmed BIT-flag columns (live flags only).
+- `Workorder.WorkOrderOperation` — CREATE per Data Model §4.
+- `Workorder.ProductionEvent` — CREATE per Data Model v1.9 checkpoint shape: `Id`, `LotId`, `OperationTemplateId`, `WorkOrderOperationId` (NULL), `EventAt`, `ShotCount` (NULL, cumulative — open per Decision 5), `ScrapCount` (NULL, cumulative), `ScrapSourceId` (NULL), `WeightValue`, `WeightUomId`, `AppUserId`, `TerminalLocationId`, `Remarks`. Required index `(LotId, EventAt DESC)`. No `LocationId`, no `ItemId`, no `DieIdentifier`, no `CavityNumber`, no `GoodCount` / `NoGoodCount`, no `StartedAt` / `EndedAt`.
+- `Workorder.ProductionEventValue` — CREATE per Data Model §4 (child of ProductionEvent, extensible `DataCollectionField` capture).
+- `Workorder.ConsumptionEvent` — CREATE per Data Model §4.
+- `Workorder.RejectEvent` — CREATE per Data Model §4.
+- `Lots.IdentifierSequence` — CREATE per Data Model v1.9 §3 (OI-31). Seed `Lot` (`MESL{0:D7}`) + `SerializedItem` (`MESI{0:D7}`) rows with `LastValue` set from the cutover-day Flexware snapshot (Phase 0 delivers the values).
+
+**ALTERs (Arc 2 Phase 1):**
+
+- `Lots.Lot` ADD `ToolId BIGINT NULL FK → Tools.Tool(Id)` and `ToolCavityId BIGINT NULL FK → Tools.ToolCavity(Id)`. Required at `Lot_Create` for die-cast-origin LOTs; NULL elsewhere; NULL after `Lot_Merge`. Pre-v1.9 `DieNumber` / `CavityNumber` NVARCHAR columns remain for cutover transition but are populated only for legacy-imported rows — new rows write to the FKs.
+
+**LocationAttributeDefinition seeds on the `Terminal` `LocationTypeDefinition`:**
+
+- `DefaultScreen` (NVARCHAR — Perspective route path, e.g., `'/shop-floor/die-cast-entry'`).
+- `TerminalMode` (NVARCHAR — `'Dedicated'` or `'Shared'`; default per Phase 0 decision, ~80% Dedicated / 20% Shared per OI-08).
+
+**What is NOT seeded (per Phase C security rewrite):**
+
+- No `IdleTimeoutSeconds` attribute — there is no shift-start login to time out. Operator presence is persistent on Dedicated terminals; Shared terminals prompt on first action or machine change. The 30-minute idle re-confirmation overlay on Dedicated terminals is Perspective-layer behaviour, not a DB attribute.
+- No `RequiresReauthForSensitive` attribute — elevation is per-action AD prompt (FDS-04-007) for every elevated action, everywhere. No per-terminal opt-out.
+
+**Other migration tasks:**
+
 - Add `Location.Location.IpAddress`-attribute-index if missing (read-heavy lookup in `Terminal_GetByIpAddress`).
 - Seed a fallback `Terminal` `Location` row representing the global default (used when an unregistered IP connects).
+- If UJ-10 resolves to a rule-coded approach at Phase 0, add a small `Oee.ShiftBoundaryCarryoverRuleCode` code table (3 seeded rows: `CloseAtEnd`, `CarryOpen`, `AssociateWithStartShift`) and reference it from `Oee.ShiftSchedule` as a nullable FK. If UJ-10 resolves to a single project-wide rule, skip the code table and hard-code the behavior in `Shift_End`.
 
-**Tables used (all exist from Arc 1):**
+**Tables used (existing from Arc 1 / Phase G):**
 
 | Table | Role |
 |---|---|
 | `Location.Location` | Terminal location lookup by IP |
-| `Location.LocationAttribute` | `IpAddress`, `DefaultScreen`, `IdleTimeoutSeconds` values per Terminal |
-| `Location.LocationAttributeDefinition` | Definition of new Terminal attributes |
-| `Location.AppUser` | Authenticated user identity |
+| `Location.LocationAttribute` | `IpAddress`, `DefaultScreen`, `TerminalMode` values per Terminal |
+| `Location.LocationAttributeDefinition` | Definition of Terminal attributes |
+| `Location.AppUser` | Initials-based operator presence resolver; interactive users carry AD account |
+| `Tools.Tool`, `Tools.ToolCavity`, `Tools.ToolAssignment` | System of record for Tool identity; Lot.ToolId / Lot.ToolCavityId FK to these |
 | `Oee.ShiftSchedule` | Active-shift resolver input |
 | `Oee.Shift` | Runtime shift instances (append-only) |
-| `Lots.Lot` | LOT header — minimal CRUD only in this phase |
+| `Lots.Lot` | LOT header — minimal CRUD in this phase (Phase 2 expands) |
 | `Lots.LotStatusHistory` | Append on status change |
 | `Lots.LotMovement` | Append on move |
 | `Lots.LotStatusCode` | `BlocksProduction` flag source |
@@ -419,9 +461,12 @@ No test suite additions.
 
 | Item | Assumption used |
 |---|---|
-| OI-06 auth model | Resolved in Phase 0 — the exact values (timeout seconds, re-auth triggers, zone override) feed `LocationAttribute` seed rows. |
-| UJ-10 shift boundary | Resolved in Phase 0 — carryover rule drives the `Shift_End`/`Shift_Start` implementation. |
-| UJ-01 zone-based auth | If Phase 0 confirms zone-based auth, a `Terminal.RequiresAuth` attribute overrides clock# + PIN prompting. Fallback: always require auth. |
+| OI-31 identifier sequences | Resolved in Phase 0 — cutover-day `LastValue` for Lot + SerializedItem; format carry-forward confirmed; any additional counters added to the seed. |
+| OI-06 / UJ-01 operator identity | **Closed (Phase C, 2026-04-21).** Initials-based presence + per-action AD elevation. No clock# + PIN, no 5-minute timeout, no session-sticky elevation. Phase 1 delivers `AppUser_GetByInitials`. Do not re-open. |
+| UJ-10 shift boundary | Resolved in Phase 0 — carryover rule drives the `Shift_End` / `Shift_Start` implementation. |
+| FDS-06-030 WorkOrder BIT flags | Resolved in Phase 0 — live flag column list on `Workorder.WorkOrder` CREATE. |
+| Historical data migration | Resolved in Phase 0 — entity list, pre-flight validation, discrepancy review process. |
+| OI-08 addenda | `TerminalMode` seeded per Cell per Phase 0 direction (Dedicated / Shared default). |
 
 ## State & Workflow
 
@@ -435,36 +480,45 @@ An Ignition Perspective session starts when a Perspective client connects to the
    - `TerminalName` (Location.Name — e.g., `'DC-TERM-05'`)
    - `ZoneLocationId` + `ZoneName` (the Terminal's parent Area — e.g., `'Die Cast'`)
    - `DefaultScreen` (from `LocationAttribute`, e.g., `'/shop-floor/die-cast-entry'`)
-   - `IdleTimeoutSeconds` (from `LocationAttribute`, e.g., `300`)
-   - `RequiresReauthForSensitive` (from `LocationAttribute`, default `1`)
-3. If no Terminal matches the IP, proc returns the fallback Terminal's attributes (seeded in migration 0010). The Gateway script flags the session as "unregistered terminal" and routes to a generic Login screen.
+   - `TerminalMode` (from `LocationAttribute`, `'Dedicated'` or `'Shared'`, default `'Dedicated'`)
+3. If no Terminal matches the IP, proc returns the fallback Terminal's attributes. The Gateway script flags the session as "unregistered terminal" and routes to a generic Terminal Selector screen.
 4. Gateway stashes these values in Perspective session props: `session.custom.terminal.*`.
 5. Perspective's Home router view reads `session.custom.terminal.defaultScreen` and navigates to that path.
 
 No DB mutation during session establishment. No audit log — this is a read-only lookup.
 
-### Operator login (clock# + PIN)
+### Operator presence (initials-based — per Phase C / FDS §4)
 
-Phase 0 decides whether login happens on first-action or at shift-start, and whether some zones bypass login. Assume for this narrative: first-action login, per OI-06's 2026-04-09 decision.
+**There is no login, no clock number, no PIN.** Operators are identified on a terminal by their **initials**, which establish a persistent operator presence context that pre-populates a defeasible Initials field on every mutation screen.
 
-1. Operator touches the Perspective screen's first action (e.g., "Scan LTT").
-2. If `session.custom.user.appUserId` is NULL, Perspective navigates to the Login modal.
-3. Operator enters clock# on the numeric pad, then PIN.
-4. Perspective calls the `AppUser_AuthenticateByClockAndPin` Named Query.
-5. Proc `Location.AppUser_AuthenticateByClockAndPin` validates:
-   - Clock# exists on an active (non-deprecated) `AppUser`.
-   - PIN matches (Phase 0 may select AD-managed vs MES-managed PIN storage; assume hashed local storage as fallback).
-6. On success, proc returns `AppUserId`, `FullName`, and the user's role list. No audit log — authentication events are logged by Ignition's own audit system.
-7. On failure, proc returns `Status=0, Message='Invalid clock number or PIN'` and logs to `Audit.FailureLog` with `LogEventType = 'LoginRejected'`.
-8. Perspective stashes `session.custom.user.*` and resumes the originally-attempted action.
+**Dedicated terminals (~80% of the plant, 1:1 with a Cell):**
 
-### Session inactivity timeout
+1. Operator scans or types their initials (e.g., `CM`) on the shift-start handoff screen or on first touch after the machine sits idle.
+2. Perspective calls `Location.AppUser_GetByInitials @Initials='CM'`.
+3. Proc returns the `AppUser` row (Id, Initials, DisplayName, UserClass). Empty result set = initials unknown — Perspective shows an inline error ("Initials CM not recognised — ask Admin to add this operator in the Configuration Tool") and does not proceed.
+4. On success, Perspective stashes `session.custom.user.*` with `{appUserId, initials, displayName, userClass}`. Presence persists through the shift.
+5. **30-minute idle re-confirmation.** A Perspective view-side timer resets on every interaction. At 30 minutes idle, the next touch shows a modal: *"Operate as CM? Yes / No — change."* On `Yes`, presence continues. On `No — change`, Perspective clears the session's initials and the operator scans/types fresh initials. The timer is a Perspective concern — no DB state.
 
-Every Perspective action (touch, scan, key) resets a session-level timer. If the timer exceeds `session.custom.terminal.idleTimeoutSeconds` without activity, Perspective clears `session.custom.user.*` and routes back to the Home router (which may or may not immediately prompt login, depending on the screen and Phase 0 decisions).
+**Shared terminals (~20% of the plant — multi-station trim terminals, supervisor kiosks, etc.):**
 
-### Re-auth for high-security actions
+1. Presence is prompted **on first action and on every machine-context change**. The Initials field at the top of every mutation screen is never pre-populated.
+2. Operator enters initials inline on the screen being submitted. Each mutation carries its own `@AppUserId` resolved by `AppUser_GetByInitials` at submit time.
+3. No persistent `session.custom.user.*` on shared terminals — every action is standalone.
 
-Actions marked high-security in Perspective (place hold, release hold, scrap LOT, void shipping label) trigger a modal re-authentication before the action proceeds. On success, the action continues with the same `AppUserId`; the session is not "re-opened," it's a per-action authentication confirmation. No DB state change from re-auth — the Perspective layer enforces it.
+**Machine-context lock (both terminal modes — per FDS-02-011):** The terminal's machine context is locked to the Cell resolved from the scan. Operators cannot navigate off-machine via a dropdown — changing context requires a fresh scan at the terminal (force-print / re-scan workflow).
+
+**Pre-populated defeasible Initials field:** Every mutation screen shows an Initials field pre-populated from `session.custom.user.initials` (Dedicated) or empty (Shared). Operator can override before submit — e.g., when a pair-working colleague enters data on behalf of the primary operator. The value at submit time is what stamps the event.
+
+### Elevated actions (per FDS-04-007)
+
+Elevated actions (place hold, release hold, scrap LOT, void shipping label, Tool mount / release, admin remove-item, override a BOM-driven destination, supervisor merge override) require a **per-action Active Directory authentication**. On invocation:
+
+1. Perspective shows the AD credential modal (AD username + password, integrated auth where available).
+2. Perspective calls `Location.AppUser_AuthenticateAd @AdAccount='jdoe', @Password='...'` (proc delegates to Ignition's AD binding; returns the matching `AppUser.Id` + role list; NULL if invalid or role not permitted).
+3. On success, the elevated action proceeds with the authenticated user's `@AppUserId` — this value stamps the mutation; the original operator-presence `@AppUserId` stays for non-elevated events. The elevation does NOT open a sticky session — next elevated action re-prompts.
+4. Every elevation attempt (success and failure) writes to `Audit.OperationLog` with `LogEventType='ElevationGranted'` or `Audit.FailureLog` with `LogEventType='ElevationDenied'`.
+
+No "re-auth" flag on Terminal, no 5-minute-window session stickiness, no PIN fallback. Elevation is always per-action.
 
 ### Shift runtime
 
@@ -481,19 +535,28 @@ Shift boundaries are driven by a Gateway script tick (`ShiftBoundaryTicker`, run
 
 Phase 1 delivers minimal LOT procs — enough to let Phase 3 (Die Cast) create its first LOT. Full LOT lifecycle (`Lot_Update`, `Lot_UpdateAttribute`, genealogy) is Phase 2.
 
-`Lot_Create` flow (narrated from Phase 3's perspective — the proc is delivered here):
+`Lot_Create` flow (narrated from Phase 3's perspective — the proc is delivered here). Aligned to Data Model v1.9 + FDS-05-034 / FDS-05-035:
 
-1. Operator scans a fresh LTT barcode. Perspective builds the parameter set: `@LotName` (barcode), `@ItemId`, `@LotOriginTypeId` (Manufactured), `@CurrentLocationId` (machine), `@PieceCount`, `@AppUserId`, `@TerminalLocationId`.
-2. Proc validates parameters (no NULLs, FKs resolve).
-3. Proc validates business rules: `@LotName` is unique across all `Lot` rows; `@Item` is eligible at `@CurrentLocationId` (joins to `Parts.ItemLocation` with `DeprecatedAt IS NULL`); piece count within `Parts.Item.MaxLotSize`.
+1. Operator takes a basket from a machine's active cavity and scans a fresh pre-printed LTT barcode at the terminal. Perspective builds the parameter set: `@LotName = NULL` (proc mints via `IdentifierSequence_Next @Code='Lot'`), `@ItemId`, `@LotOriginTypeId`, `@CurrentLocationId` (Cell), `@PieceCount`, `@ToolId` (NULL for non-die-cast origins; required for Die Cast — Perspective auto-populates from `ToolAssignment_ListActiveByCell` and operator confirms), `@ToolCavityId` (same rule), `@Weight`, `@WeightUomId`, `@VendorLotNumber` (Received only), `@AppUserId`, `@TerminalLocationId`.
+2. Proc validates parameters (no NULLs on required, FKs resolve).
+3. Proc validates business rules:
+   - `@Item` eligible at `@CurrentLocationId` via `Parts.ItemLocation` (`DeprecatedAt IS NULL`).
+   - Piece count within `Parts.Item.MaxLotSize` (now labeled `PartsPerBasket` in UX copy; see Data Model v1.9).
+   - If `@LotOriginTypeCode = 'Manufactured'` and the Cell has an active `Tools.ToolAssignment` (die-cast-origin check):
+     - `@ToolId` and `@ToolCavityId` are required (per FDS-05-034).
+     - `Tools.ToolAssignment` exists for `@ToolId` on `@CurrentLocationId` with `ReleasedAt IS NULL`.
+     - `@ToolCavityId` belongs to `@ToolId`.
+     - `ToolCavity.StatusCode = 'Active'`.
+   - Non-die-cast origins (Received, Trim / Machining intermediate, Assembly, Serialized) SHALL pass NULL Tool/Cavity — proc does not require them.
 4. `BEGIN TRANSACTION`.
-5. Proc inserts `Lots.Lot` row with `LotStatusId` = 'Good' and returns the new `Id` as `@NewId`.
-6. Proc inserts `Lots.LotStatusHistory` row: `OldStatusId = NULL`, `NewStatusId = 'Good'`, `ChangedByUserId = @AppUserId`, `TerminalLocationId = @TerminalLocationId`.
-7. Proc calls `Audit.Audit_LogOperation` with `LogEntityTypeCode='Lot'`, `LogEventTypeCode='LotCreated'`, `EntityId=@NewId`, `Description='Created LOT <LotName> at <LocationName>'`.
-8. `COMMIT`.
-9. Final `SELECT @Status, @Message, @NewId`.
+5. Proc calls `Lots.IdentifierSequence_Next @Code='Lot'` which atomically increments `LastValue` and returns the formatted string (e.g., `MESL1710935`). This is `@MintedLotName`.
+6. Proc inserts `Lots.Lot` row with `LotName = @MintedLotName`, `LotStatusId = 'Good'`, `ToolId`, `ToolCavityId`. Returns new `Id` as `@NewId`.
+7. Proc inserts `Lots.LotStatusHistory` row: `OldStatusId = NULL`, `NewStatusId = 'Good'`, `ChangedByUserId = @AppUserId`, `TerminalLocationId = @TerminalLocationId`.
+8. Proc calls `Audit.Audit_LogOperation` with `LogEntityTypeCode='Lot'`, `LogEventTypeCode='LotCreated'`, `EntityId=@NewId`, `Description='Created LOT <LotName> at <LocationName>'` (plus Tool/Cavity in description for die-cast-origin LOTs).
+9. `COMMIT`.
+10. Final `SELECT @Status, @Message, @NewId, @MintedLotName`.
 
-If any validation fails, no transaction opens, `Audit.Audit_LogFailure` is called with the attempted parameters, and the proc returns early.
+If any validation fails, no transaction opens, `Audit.Audit_LogFailure` is called with the attempted parameters (Tool/Cavity included), and the proc returns early. Note: `IdentifierSequence_Next` is invoked **inside** the transaction so that a rolled-back LOT doesn't burn a counter value.
 
 ### `Lot_AssertNotBlocked` shared guard
 
@@ -521,12 +584,15 @@ Callers read the `IsBlocked` flag. This is an **internal proc** (no audit, no Fa
 | `Location.Terminal_GetByIpAddress` | `@IpAddress NVARCHAR(45)` | Reads `LocationAttribute` where `AttributeName='IpAddress'`; joins to parent Terminal Location and its parent Area. Returns fallback Terminal if no match. Falls back gracefully, never errors on unknown IP. | `Location.Location`, `Location.LocationAttribute`, `Location.LocationType`, `Location.LocationTypeDefinition` | Perspective session start, via Gateway script | Rowset: `TerminalLocationId, TerminalName, ZoneLocationId, ZoneName, DefaultScreen, IdleTimeoutSeconds, RequiresReauthForSensitive` |
 | `Location.Terminal_List` | (none) | Admin query — all Terminal-type Locations with attributes. Used by an admin screen (not operator-facing). | `Location.Location`, `Location.LocationAttribute` | Admin browsing Terminal inventory | Rowset per Terminal |
 
-### AppUser — operator authentication
+### AppUser — initials-based presence + AD elevation
 
 | Procedure | Parameters | Notes | Dependencies | Executed When | Output |
 |---|---|---|---|---|---|
-| `Location.AppUser_AuthenticateByClockAndPin` | `@ClockNumber NVARCHAR(20)`, `@Pin NVARCHAR(20)`, `@TerminalLocationId BIGINT` | Validates against active `AppUser` rows. Hashed PIN compare. On failure, logs `FailureLog` with `LogEventType='LoginRejected'`, `@TerminalLocationId` in AttemptedParameters. No audit on success (Ignition audits logins separately). | `Location.AppUser`, `Audit.Audit_LogFailure` | First-action login at terminal | Single row: `Status BIT, Message NVARCHAR(500), AppUserId BIGINT, FullName NVARCHAR(200)`. `AppUserId` NULL on failure. |
-| `Location.AppUser_GetRoles` | `@AppUserId BIGINT` | Returns the role list for this user. If Phase 0 selects AD-sourced roles, the proc delegates to a cached AD snapshot table populated by a Gateway script; if Phase 0 selects local roles, the proc reads directly from `Location.AppUser`-linked role tables. Used by Perspective to gate screen visibility. | `Location.AppUser`, AD cache (if applicable) | On successful auth, cached in session | Rowset of role names |
+| `Location.AppUser_GetByInitials` | `@Initials NVARCHAR(10)` | Resolves initials to an active `AppUser` row. Empty result set = unknown initials (per FDS-11-011 single-result-set convention). No audit on lookup (initials-presence is not a security event). Used by Perspective on shift-start (Dedicated terminals) and on every Shared-terminal mutation. | `Location.AppUser` | Shift-start handoff; shared-terminal submit; 30-min idle re-confirm | Single row: `Id, Initials, DisplayName, UserClass, IgnitionRole` (or empty set if unknown). |
+| `Location.AppUser_AuthenticateAd` | `@AdAccount NVARCHAR(100)`, `@TerminalLocationId BIGINT`, `@ActionCode NVARCHAR(50)` (e.g., `'HoldPlace'`, `'Scrap'`, `'ToolMount'`) | **Elevation proc.** Delegates the credential check to Ignition's AD binding (the Perspective modal submits `@AdAccount + password` against Ignition; if Ignition validates, it calls this proc with `@AdAccount` only). Proc looks up the matching `AppUser.AdAccount` (filtered UNIQUE), verifies the user is not deprecated, verifies `IgnitionRole` matches the role permitted for `@ActionCode`, and returns the `AppUserId`. On any reject, writes `Audit.FailureLog` with `LogEventType='ElevationDenied'`. On success, writes `Audit.OperationLog` with `LogEventType='ElevationGranted'` (per FDS-04-007). | `Location.AppUser`, `Audit.Audit_LogOperation`, `Audit.Audit_LogFailure` | Every elevated action per FDS-04-007 | Single row: `Status BIT, Message NVARCHAR(500), AppUserId BIGINT` (NULL on failure). |
+| `Location.AppUser_GetRoles` | `@AppUserId BIGINT` | Returns the `IgnitionRole` for interactive users; empty result for operator-class users (no role). Used by Perspective to gate elevated-screen visibility. | `Location.AppUser` | On elevation success | Rowset of role strings. |
+
+> **Explicitly NOT delivered:** `AppUser_AuthenticateByClockAndPin` is **removed from this phase plan** — clock# + PIN is not part of the design. Phase G migration `0012_phase_c_security.sql` already dropped `AppUser.ClockNumber` and `AppUser.PinHash` columns (landed 2026-04-23 as part of `534f55c`). Any Phase 3+ proc that references those columns is a bug.
 
 ### Shift — runtime instances
 
@@ -541,7 +607,8 @@ Callers read the `IsBlocked` flag. This is an **internal proc** (no audit, no Fa
 
 | Procedure | Parameters | Notes | Dependencies | Executed When | Output |
 |---|---|---|---|---|---|
-| `Lots.Lot_Create` | `@LotName NVARCHAR(50)`, `@ItemId BIGINT`, `@LotOriginTypeId BIGINT`, `@CurrentLocationId BIGINT`, `@PieceCount INT`, `@Weight DECIMAL(10,4) NULL`, `@WeightUomId BIGINT NULL`, `@DieNumber NVARCHAR(50) NULL`, `@CavityNumber INT NULL`, `@VendorLotNumber NVARCHAR(100) NULL`, `@MinSerialNumber NVARCHAR(100) NULL`, `@MaxSerialNumber NVARCHAR(100) NULL`, `@AppUserId BIGINT`, `@TerminalLocationId BIGINT` | Creates a Lot with status 'Good'. Validates uniqueness of `@LotName`, `Item` eligibility at `@CurrentLocationId` (via `Parts.ItemLocation`), piece count ≤ `Parts.Item.MaxLotSize`. Inserts initial `LotStatusHistory` row. Audit via `Audit.Audit_LogOperation`. Phase 2 expands for origin-specific validation. | `Lots.Lot`, `Lots.LotStatusHistory`, `Parts.Item`, `Parts.ItemLocation`, `Lots.LotOriginType`, `Lots.LotStatusCode`, `Audit.Audit_LogOperation` | Phase 3+ station produces a new LOT | `Status, Message, NewId` |
+| `Lots.Lot_Create` | `@ItemId BIGINT`, `@LotOriginTypeId BIGINT`, `@CurrentLocationId BIGINT`, `@PieceCount INT`, `@Weight DECIMAL(12,4) NULL`, `@WeightUomId BIGINT NULL`, `@ToolId BIGINT NULL`, `@ToolCavityId BIGINT NULL`, `@VendorLotNumber NVARCHAR(100) NULL`, `@MinSerialNumber INT NULL`, `@MaxSerialNumber INT NULL`, `@AppUserId BIGINT`, `@TerminalLocationId BIGINT` | Creates a Lot with status 'Good'. Mints `LotName` via `Lots.IdentifierSequence_Next @Code='Lot'` inside the transaction. Validates `Item` eligibility at `@CurrentLocationId`, piece count ≤ `Parts.Item.MaxLotSize` (aka `PartsPerBasket`). Validates Tool/Cavity per FDS-05-034 for die-cast-origin LOTs (active ToolAssignment on Cell; cavity belongs to tool; cavity Active). Inserts initial `LotStatusHistory` row. Audit via `Audit.Audit_LogOperation`. No `@LotName`, no `@DieNumber`, no `@CavityNumber` NVARCHAR params (legacy — those are dropped from the contract). | `Lots.Lot`, `Lots.LotStatusHistory`, `Lots.IdentifierSequence`, `Parts.Item`, `Parts.ItemLocation`, `Tools.Tool`, `Tools.ToolCavity`, `Tools.ToolAssignment`, `Lots.LotOriginType`, `Lots.LotStatusCode`, `Audit.Audit_LogOperation` | Phase 3+ station produces a new LOT | `Status, Message, NewId, MintedLotName NVARCHAR(50)` |
+| `Lots.IdentifierSequence_Next` | `@Code NVARCHAR(30)` | Atomically increments `LastValue` and returns the formatted identifier string. Raises on unknown `@Code` or on rollover breach. Called by Lot_Create, SerializedPart_Create, and any future counter path. Single-result-set (per FDS-11-011). | `Lots.IdentifierSequence` | Any identifier minting path | Single row: `Value NVARCHAR(50)`. |
 | `Lots.Lot_Get` | `@LotId BIGINT NULL`, `@LotName NVARCHAR(50) NULL` (one required) | Returns the Lot row. Empty result set = not found (per FDS-11-011). | `Lots.Lot` | Any screen displaying a LOT | Single row of Lot columns |
 | `Lots.Lot_List` | `@ItemId BIGINT NULL`, `@CurrentLocationId BIGINT NULL`, `@LotStatusId BIGINT NULL`, `@LimitRows INT = 100` | Filterable listing. Read-only, no audit. | `Lots.Lot` | LOT search screen | Rowset of Lot columns |
 | `Lots.Lot_UpdateStatus` | `@LotId BIGINT`, `@NewLotStatusId BIGINT`, `@Reason NVARCHAR(500) NULL`, `@AppUserId BIGINT`, `@TerminalLocationId BIGINT`, `@RowVersion ROWVERSION` | Updates `Lot.LotStatusId` with optimistic-lock check. Inserts `LotStatusHistory` row. Rejects no-op (new = current). Phase 2 extends — Phase 1 only accepts Good → Closed transitions as preparation for Phase 7 hold logic. | `Lots.Lot`, `Lots.LotStatusHistory`, `Lots.LotStatusCode`, `Audit.Audit_LogOperation` | Phase 2+ for general transitions; Phase 7 for holds | `Status, Message` |
@@ -558,20 +625,22 @@ Callers read the `IsBlocked` flag. This is an **internal proc** (no audit, no Fa
 
 | Script | Purpose | Trigger | External System | Audit |
 |---|---|---|---|---|
-| `Terminal_ResolveFromSession` | On Perspective session start, read client IP, call `Terminal_GetByIpAddress`, stash Terminal/Zone/DefaultScreen/IdleTimeout/RequiresReauth into `session.custom.terminal.*`. If unregistered IP, fall back to global-default Terminal and flag the session. | Perspective session startup event | — | — (read-only) |
-| `SessionIdleWatcher` (Perspective view-side script, not Gateway) | Per-view inactivity detector. Resets on any interaction. On timeout, clears `session.custom.user.*` and navigates to Home. | Perspective interaction events | — | — |
+| `Terminal_ResolveFromSession` | On Perspective session start, read client IP, call `Terminal_GetByIpAddress`, stash Terminal / Zone / DefaultScreen / TerminalMode into `session.custom.terminal.*`. If unregistered IP, fall back to global-default Terminal and flag the session. | Perspective session startup event | — | — (read-only) |
+| `PresenceIdleWatcher` (Perspective view-side script, not Gateway) | **Dedicated terminals only.** Per-view 30-minute idle detector resets on any interaction. At timeout, shows the "Operate as [XY]? Yes / No — change" modal described in §"Operator presence". On `No — change`, clears `session.custom.user.*` and routes to initials entry. No DB mutation. Shared terminals do not use this — they prompt per-action. | Perspective interaction events | — | — |
 | `ShiftBoundaryTicker` | Every 60 seconds: for each configured schedule, resolve active schedule, detect boundary crossings, call `Shift_End` on outgoing + `Shift_Start` on incoming. Also applies UJ-10 carryover rule to open DowntimeEvents. | Gateway timer (60s) | — | Interface log on any downtime-carryover decision |
-| `AdAuthenticator` | If Phase 0 selects AD-based PIN storage, this script validates clock# + PIN against AD LDAP; otherwise local hashed storage via the proc. Returns the AD user's roles. | `AppUser_AuthenticateByClockAndPin` call (indirect) | Active Directory (optional) | `InterfaceLog` with `SystemName='AD'` |
+
+> **Removed:** `AdAuthenticator` Gateway script is not needed — AD credential validation is delegated to Ignition's built-in AD binding (invoked by the Perspective elevation modal), with `AppUser_AuthenticateAd` performing only the post-validation role check + audit write.
 
 ## Perspective Views
 
 | View | Purpose |
 |---|---|
-| Login (modal) | Clock# numeric pad + PIN pad. Submits `AppUser_AuthenticateByClockAndPin`. Shows inline error on failure. Logout button persistent in session header. |
+| Initials Entry (Dedicated terminals) | Shift-start handoff and 30-minute re-confirm modal. Operator scans or types initials. Submits `AppUser_GetByInitials`; inline error on unknown. Sets `session.custom.user.*` on success. No password, no PIN. |
 | Terminal Selector | Shown only for unregistered-IP sessions. Operator selects terminal from a list or scans a terminal barcode. Updates `session.custom.terminal.*` from a manual selection proc. |
 | Home Router | Stateless: reads `session.custom.terminal.defaultScreen` and navigates. Falls back to a generic Home tile grid if DefaultScreen is NULL. Not a user-visible screen in normal operation — it's a routing pass-through. |
-| Session Timeout Modal | Shown on inactivity timeout. Offers "Continue" (requires re-auth) or "Logout" (clears session). |
-| Re-Auth Modal | Triggered by high-security actions. Clock# + PIN inline, confirms `@AppUserId` for the specific action; does not change the outer session. |
+| 30-Min Idle Re-Confirm Modal | Dedicated terminals only. Message: *"Operate as CM? Yes / No — change."* `Yes` continues presence; `No — change` clears and returns to Initials Entry. |
+| Per-Mutation Initials Field | Every mutation screen shows a prominent Initials field, pre-populated from `session.custom.user.initials` on Dedicated terminals, empty on Shared. Operator can override before submit. The value at submit time stamps the event. |
+| Elevation Modal (per-action AD) | Triggered by elevated actions per FDS-04-007 (hold place/release, scrap, Tool mount, void shipping label, admin remove-item, BOM-destination override, supervisor merge override). AD username + password inline; integrated auth via Ignition AD binding where available. On success, action proceeds with the elevated `@AppUserId`; no sticky session. Every attempt logged to `OperationLog` / `FailureLog`. |
 
 ## Test Coverage
 
@@ -579,29 +648,32 @@ New test suite at `sql/tests/0013_PlantFloor_Foundation/` with files:
 
 | File | Covers |
 |---|---|
-| `010_Terminal_GetByIpAddress.sql` | Known IP resolves to correct Terminal + Zone + DefaultScreen; unknown IP returns fallback; Terminal without DefaultScreen attribute returns NULL DefaultScreen; deprecated Terminal not returned. |
-| `020_AppUser_Authenticate.sql` | Valid clock+PIN returns AppUserId; invalid PIN rejects with FailureLog entry; deprecated AppUser rejects; missing clock# rejects. |
+| `010_Terminal_GetByIpAddress.sql` | Known IP resolves to correct Terminal + Zone + DefaultScreen + TerminalMode; unknown IP returns fallback; Terminal without DefaultScreen attribute returns NULL DefaultScreen; deprecated Terminal not returned. |
+| `020_AppUser_GetByInitials.sql` | Known initials return the AppUser row; unknown initials return empty result set; deprecated AppUser returns empty; case-insensitive matching if configured; mixed-class lookup (operator + interactive) covered. |
+| `025_AppUser_AuthenticateAd.sql` | Valid AD account + permitted role + valid action code returns AppUserId + OperationLog 'ElevationGranted'; wrong role rejects with FailureLog 'ElevationDenied'; deprecated AD user rejects; unknown `@ActionCode` rejects; missing `@AdAccount` rejects. |
 | `030_Shift_lifecycle.sql` | `Shift_Start` creates row; `Shift_Start` rejects when open Shift exists (B3); `Shift_End` closes row; `Shift_End` rejects when no open Shift; `Shift_GetActive` returns schedule by day-of-week bitmask; `Shift_GetOpen` returns open Shift if one exists. |
-| `040_Lot_Create.sql` | Valid manufacture creates Lot + LotStatusHistory; duplicate `LotName` rejects; ineligible Item-at-Location rejects; piece count over `MaxLotSize` rejects; missing `@AppUserId` rejects. |
-| `050_Lot_Get_List.sql` | `Lot_Get` by Id and by LotName; empty result for non-existent; `Lot_List` filters work; limit applied. |
+| `035_IdentifierSequence.sql` | `IdentifierSequence_Next` increments LastValue atomically; returns correctly formatted string for `MESL{0:D7}` and `MESI{0:D7}` patterns; raises on unknown @Code; raises on rollover breach at EndingValue; concurrent callers see strictly-increasing values (no gaps, no duplicates). |
+| `040_Lot_Create.sql` | Valid manufacture creates Lot + LotStatusHistory with Tool/Cavity set; minted `LotName` matches `MESL{0:D7}` format; die-cast-origin LOT without @ToolId rejects; die-cast-origin LOT with @ToolId not mounted on Cell rejects; cavity not belonging to tool rejects; cavity in Closed/Scrapped state rejects; non-die-cast-origin LOT with NULL Tool/Cavity accepted; ineligible Item-at-Location rejects; piece count over `MaxLotSize` rejects; missing `@AppUserId` rejects; IdentifierSequence counter advances on each successful create and rolls back on failed creates. |
+| `050_Lot_Get_List.sql` | `Lot_Get` by Id and by LotName returns Tool/Cavity FKs; empty result for non-existent; `Lot_List` filters by ToolId work; limit applied. |
 | `060_Lot_UpdateStatus.sql` | Valid transition applies; stale `@RowVersion` rejects; no-op (same status) rejects; invalid target status rejects. |
 | `070_Lot_MoveTo.sql` | Valid move updates CurrentLocationId + inserts LotMovement; move from unblocked Lot succeeds; move from blocked Lot (Hold/Scrap/Closed) rejects via `Lot_AssertNotBlocked`. |
 | `080_Lot_AssertNotBlocked.sql` | Good returns `IsBlocked=0`; Hold/Scrap/Closed return `IsBlocked=1` with correct Message; non-existent Lot returns `IsBlocked=1` with 'LOT not found' message. |
 
-Target: 60–80 passing tests in suite 0013.
+Target: 75–95 passing tests in suite 0013 (up from v0.1 target of 60–80 — Tool/Cavity validation + IdentifierSequence + AD elevation add ~15 test assertions).
 
 ## Phase 1 complete when
 
-- [ ] Migration `0010_phase1_shop_floor_foundation.sql` applied to dev; new LocationAttributeDefinition rows seeded on Terminal type.
-- [ ] All repeatable procs under `sql/migrations/repeatable/R__Location_Terminal_*`, `R__Location_AppUser_Authenticate*`, `R__Oee_Shift_Start`, `R__Oee_Shift_End`, `R__Oee_Shift_GetActive`, `R__Oee_Shift_GetOpen`, `R__Lots_Lot_Create`, `R__Lots_Lot_Get`, `R__Lots_Lot_List`, `R__Lots_Lot_UpdateStatus`, `R__Lots_Lot_MoveTo`, `R__Lots_Lot_AssertNotBlocked` present and up-to-date.
-- [ ] All tests in `sql/tests/0013_PlantFloor_Foundation/` pass (target 60–80).
-- [ ] Reset script (`Reset-DevDatabase.ps1`) discovers and applies migration 0010 and runs the new test suite.
+- [ ] Migration `0013_arc2_phase1_shop_floor_foundation.sql` (or next unclaimed number) applied to dev; `Workorder.WorkOrder` / `WorkOrderOperation` / `ProductionEvent` / `ProductionEventValue` / `ConsumptionEvent` / `RejectEvent` CREATE'd per Data Model v1.9 shapes; `Lots.IdentifierSequence` created and seeded from Phase 0 cutover values; `Lots.Lot` ALTER'd to add `ToolId` + `ToolCavityId`; new LocationAttributeDefinition rows seeded on Terminal type (`DefaultScreen`, `TerminalMode`).
+- [ ] All repeatable procs present and up-to-date: `R__Location_Terminal_*`, `R__Location_AppUser_GetByInitials`, `R__Location_AppUser_AuthenticateAd`, `R__Location_AppUser_GetRoles`, `R__Oee_Shift_Start`, `R__Oee_Shift_End`, `R__Oee_Shift_GetActive`, `R__Oee_Shift_GetOpen`, `R__Lots_IdentifierSequence_Next`, `R__Lots_Lot_Create`, `R__Lots_Lot_Get`, `R__Lots_Lot_List`, `R__Lots_Lot_UpdateStatus`, `R__Lots_Lot_MoveTo`, `R__Lots_Lot_AssertNotBlocked`.
+- [ ] **No proc anywhere in the repo references `AppUser.ClockNumber` or `AppUser.PinHash`** (both columns dropped by Phase G migration `0012`). Grep verification: `grep -ri 'ClockNumber\|PinHash\|AuthenticateByClockAndPin' sql/` returns zero hits. If non-zero, this is a phase-complete blocker.
+- [ ] All tests in `sql/tests/0013_PlantFloor_Foundation/` pass (target 75–95).
+- [ ] Reset script (`Reset-DevDatabase.ps1`) discovers and applies the new migration and runs the new test suite.
 - [ ] Gateway script `Terminal_ResolveFromSession` implemented and tested against Perspective sessions from known + unknown IPs.
 - [ ] Gateway script `ShiftBoundaryTicker` implemented; verified end-to-end against a dev ShiftSchedule that crosses a boundary within the test window.
-- [ ] Perspective Home Router view resolves `session.custom.terminal.defaultScreen` correctly for every seeded terminal.
-- [ ] `Audit.Audit_LogOperation` code string → FK resolution verified for `LogEventType='ShiftStarted'`, `'ShiftEnded'`, `'LotCreated'`, `'LotStatusChanged'`, `'LotMoved'`; any missing rows seeded in migration 0010.
-- [ ] Downstream phases can call `Lot_Create`, `Lot_MoveTo`, `Lot_UpdateStatus`, and `Lot_AssertNotBlocked` against the delivered contract.
-- [ ] Integration check: a dev operator logs in at a dev Terminal, gets routed to the correct default screen, and can successfully perform a stub `Lot_Create` end-to-end through Perspective.
+- [ ] Perspective views: Initials Entry, Terminal Selector, Home Router, 30-Min Idle Re-Confirm Modal, Elevation Modal all built. Home Router resolves `session.custom.terminal.defaultScreen` correctly for every seeded terminal; Elevation Modal wired to Ignition's AD binding + `AppUser_AuthenticateAd`.
+- [ ] `Audit.Audit_LogOperation` code string → FK resolution verified for `LogEventType` values: `'ShiftStarted'`, `'ShiftEnded'`, `'LotCreated'`, `'LotStatusChanged'`, `'LotMoved'`, `'ElevationGranted'`. `Audit.Audit_LogFailure` verified for `'ElevationDenied'`. Any missing `Audit.LogEventType` rows seeded in the migration.
+- [ ] Downstream phases can call `Lot_Create` (with Tool/Cavity FKs), `IdentifierSequence_Next`, `AppUser_GetByInitials`, `AppUser_AuthenticateAd`, `Lot_MoveTo`, `Lot_UpdateStatus`, and `Lot_AssertNotBlocked` against the delivered contract.
+- [ ] **End-to-end integration check**: a dev operator scans initials at a dev Dedicated Terminal, presence persists, the operator creates a die-cast LOT (Tool auto-populated from active ToolAssignment, operator confirms, cavity selected), the LOT is minted with `MESL{0:D7}` name, a placeholder elevated action (e.g., admin remove-item stub) triggers the AD Elevation Modal and logs both OperationLog + FailureLog rows appropriately.
 
 ---
 
