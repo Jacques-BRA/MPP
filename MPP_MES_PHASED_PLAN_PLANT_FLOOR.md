@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2b
+**Document ID:** MPP-PLAN-ARC2-v0.2c
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2b (2026-04-24)
+**Version:** 0.2c (2026-04-24)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2c | 2026-04-24 | Blue Ridge Automation | **OI-08 terminal-mode-by-assignment propagated.** `TerminalMode` is no longer a separate `LocationAttribute` — it is derived from the Terminal Location's parent tier (WorkCenter/Cell → Dedicated; Area → Shared). v0.2 overlay §A, Data Model Changes, Open Items table, State & Workflow, Gateway Scripts, Test Coverage, and Phase-1-complete checklist all updated to drop the `TerminalMode` seed + stash path and describe the tier-derivation rule instead. Companion FDS v0.11e + ERD Location tab scope note. No data-model schema change. |
 | 0.2b | 2026-04-24 | Blue Ridge Automation | **OI-07 WorkOrderType correction propagated.** Removed OI-07 from the gating and body Phase-0 open-items tables (maintenance engine is a separate future project; not gating this MES). Added OI-07 to the "Already closed" list in the v0.2 Alignment Overlay. Updated the Phase 1 Data Model Changes entry for `Workorder.WorkOrder` — `WorkOrderTypeId` now defaults to the single-seeded `Production` row; `ToolId` is a future-Maintenance schema hook only. Companion FDS v0.11b, Data Model v1.9b, OIR v2.9 in the same commit. |
 | 0.2 | 2026-04-24 | Blue Ridge Automation | **Alignment overlay for post-Phase-G decisions (Phase C security rewrite + 2026-04-23 Arc 2 model revisions).** v0.1 predates every post-2026-04-20 meeting outcome and all Phase G work. Rather than rewrite 1700 lines in place, v0.2 adds a new §"v0.2 Alignment Overlay" after the front matter that captures the deltas phase-by-phase: Phase 0 open-items list refreshed (OI-03, OI-06, OI-09 closed; new OI-31 opened; new discovery items — WorkOrder BIT flags, TrackingMode, historical data migration, ShotCount semantics); Phase 1 auth narrative rewrites from clock# + PIN to initials-only Phase C model, `AppUser_GetByInitials` added, `Lots.IdentifierSequence` seeded at cutover; Phase 2 `Lot_Create` gains `@ToolId` + `@ToolCavityId` (optional, required-by-origin-check), `Lot_Merge` nulls Tool on merged row; Phase 3 wholesale — Tools.Tool / ToolCavity become system of record, terminal UX auto-populates Tool from active assignment + elevated Edit, cavity-parallel LOTs are peers (not sublots), `ProductionEvent_Record` implements checkpoint shape; Phase 4 trim check-in fires checkpoint ProductionEvent, ScrapSource=Location for scrap-from-workstation events; Phase 5 sub-LOT split unchanged (Machining-only); Phase 6 ContainerConfig.MaxParts + finished-goods LOT auto-close on container fill + 1-line BOM consumption; Phase 7 Workorder.ScrapSource usage, rank-based merges (OI-05) + post-merge-NULL-Tool; Phase 8 already correct. Two new cross-cutting rules codified: **purpose-built Perspective views per terminal function** (no generic dashboard-configuration engine; LocationAttribute for business policies only), and **UserInterfaceScript DB-stored-runtime-code pattern NOT reproduced**. Phase 0 customer-validation gate expanded with 9 consolidated MPP input items. Source: `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` §§7–9. |
 
@@ -41,7 +42,7 @@ v0.1 describes clock# + PIN login. **That is obsolete.** Phase C (2026-04-21) re
 - Operators are identified by **initials only** (no clock number, no PIN) entered at a shop-floor terminal. Initials establish an operator **presence context** that stamps `AppUserId` on events via `Location.AppUser_GetByInitials`.
 - Interactive users (Quality, Supervisor, Engineering, Admin) continue to authenticate via Active Directory.
 - **Elevated actions** require per-action AD re-prompts (FDS-04-007). No session-sticky elevation. No 5-minute timeout. No re-auth-for-sensitive flag on Terminal.
-- **Dedicated vs Shared terminal modes** via `LocationAttribute` (`TerminalMode` = `Dedicated` / `Shared`). Dedicated persists presence through the shift with a 30-minute idle re-confirmation overlay ("Operate as CM? Yes / No — change"). Shared terminals prompt on first action and on machine change.
+- **Dedicated vs Shared terminal modes derived from Terminal's parent Location tier** (v0.2c per OI-08 correction): Terminal parented to a WorkCenter or Cell = Dedicated; Terminal parented to an Area = Shared. No separate `TerminalMode` attribute. Dedicated persists presence through the shift with a 30-minute idle re-confirmation overlay ("Operate as CM? Yes / No — change"). Shared terminals prompt on first action and on machine change.
 - **Pre-populated defeasible Initials field** on every mutation screen.
 - Operator `AppUser` rows are managed in the Configuration Tool (Admin screen); they carry no AD account.
 
@@ -426,7 +427,7 @@ No test suite additions.
 **LocationAttributeDefinition seeds on the `Terminal` `LocationTypeDefinition`:**
 
 - `DefaultScreen` (NVARCHAR — Perspective route path, e.g., `'/shop-floor/die-cast-entry'`).
-- `TerminalMode` (NVARCHAR — `'Dedicated'` or `'Shared'`; default per Phase 0 decision, ~80% Dedicated / 20% Shared per OI-08).
+- ~~`TerminalMode`~~ **(dropped v0.2c)** — mode is now derived from the Terminal Location's parent tier in the ISA-95 hierarchy per OI-08 correction. No seed row needed for this attribute.
 
 **What is NOT seeded (per Phase C security rewrite):**
 
@@ -444,7 +445,7 @@ No test suite additions.
 | Table | Role |
 |---|---|
 | `Location.Location` | Terminal location lookup by IP |
-| `Location.LocationAttribute` | `IpAddress`, `DefaultScreen`, `TerminalMode` values per Terminal |
+| `Location.LocationAttribute` | `IpAddress`, `DefaultScreen` values per Terminal (TerminalMode derived from parent tier, not stored) |
 | `Location.LocationAttributeDefinition` | Definition of Terminal attributes |
 | `Location.AppUser` | Initials-based operator presence resolver; interactive users carry AD account |
 | `Tools.Tool`, `Tools.ToolCavity`, `Tools.ToolAssignment` | System of record for Tool identity; Lot.ToolId / Lot.ToolCavityId FK to these |
@@ -466,7 +467,7 @@ No test suite additions.
 | UJ-10 shift boundary | Resolved in Phase 0 — carryover rule drives the `Shift_End` / `Shift_Start` implementation. |
 | FDS-06-030 WorkOrder BIT flags | Resolved in Phase 0 — live flag column list on `Workorder.WorkOrder` CREATE. |
 | Historical data migration | Resolved in Phase 0 — entity list, pre-flight validation, discrepancy review process. |
-| OI-08 addenda | `TerminalMode` seeded per Cell per Phase 0 direction (Dedicated / Shared default). |
+| OI-08 addenda | Terminal mode derived from Terminal Location's parent tier — Engineering attaches Terminals in the right place in the hierarchy at Configuration time. No seeded attribute. |
 
 ## State & Workflow
 
@@ -480,7 +481,7 @@ An Ignition Perspective session starts when a Perspective client connects to the
    - `TerminalName` (Location.Name — e.g., `'DC-TERM-05'`)
    - `ZoneLocationId` + `ZoneName` (the Terminal's parent Area — e.g., `'Die Cast'`)
    - `DefaultScreen` (from `LocationAttribute`, e.g., `'/shop-floor/die-cast-entry'`)
-   - `TerminalMode` (from `LocationAttribute`, `'Dedicated'` or `'Shared'`, default `'Dedicated'`)
+   - `TerminalMode` (**derived** from the Terminal Location's parent tier: `Dedicated` if parent is a WorkCenter or Cell, `Shared` if parent is an Area — no stored attribute lookup)
 3. If no Terminal matches the IP, proc returns the fallback Terminal's attributes. The Gateway script flags the session as "unregistered terminal" and routes to a generic Terminal Selector screen.
 4. Gateway stashes these values in Perspective session props: `session.custom.terminal.*`.
 5. Perspective's Home router view reads `session.custom.terminal.defaultScreen` and navigates to that path.
@@ -625,7 +626,7 @@ Callers read the `IsBlocked` flag. This is an **internal proc** (no audit, no Fa
 
 | Script | Purpose | Trigger | External System | Audit |
 |---|---|---|---|---|
-| `Terminal_ResolveFromSession` | On Perspective session start, read client IP, call `Terminal_GetByIpAddress`, stash Terminal / Zone / DefaultScreen / TerminalMode into `session.custom.terminal.*`. If unregistered IP, fall back to global-default Terminal and flag the session. | Perspective session startup event | — | — (read-only) |
+| `Terminal_ResolveFromSession` | On Perspective session start, read client IP, call `Terminal_GetByIpAddress`, stash Terminal / Zone / DefaultScreen / **derived-TerminalMode** (from parent Location tier, not an attribute) into `session.custom.terminal.*`. If unregistered IP, fall back to global-default Terminal and flag the session. | Perspective session startup event | — | — (read-only) |
 | `PresenceIdleWatcher` (Perspective view-side script, not Gateway) | **Dedicated terminals only.** Per-view 30-minute idle detector resets on any interaction. At timeout, shows the "Operate as [XY]? Yes / No — change" modal described in §"Operator presence". On `No — change`, clears `session.custom.user.*` and routes to initials entry. No DB mutation. Shared terminals do not use this — they prompt per-action. | Perspective interaction events | — | — |
 | `ShiftBoundaryTicker` | Every 60 seconds: for each configured schedule, resolve active schedule, detect boundary crossings, call `Shift_End` on outgoing + `Shift_Start` on incoming. Also applies UJ-10 carryover rule to open DowntimeEvents. | Gateway timer (60s) | — | Interface log on any downtime-carryover decision |
 
@@ -648,7 +649,7 @@ New test suite at `sql/tests/0013_PlantFloor_Foundation/` with files:
 
 | File | Covers |
 |---|---|
-| `010_Terminal_GetByIpAddress.sql` | Known IP resolves to correct Terminal + Zone + DefaultScreen + TerminalMode; unknown IP returns fallback; Terminal without DefaultScreen attribute returns NULL DefaultScreen; deprecated Terminal not returned. |
+| `010_Terminal_GetByIpAddress.sql` | Known IP resolves to correct Terminal + Zone + DefaultScreen + derived-TerminalMode (Dedicated for WC/Cell parent, Shared for Area parent); unknown IP returns fallback; Terminal without DefaultScreen attribute returns NULL DefaultScreen; deprecated Terminal not returned. |
 | `020_AppUser_GetByInitials.sql` | Known initials return the AppUser row; unknown initials return empty result set; deprecated AppUser returns empty; case-insensitive matching if configured; mixed-class lookup (operator + interactive) covered. |
 | `025_AppUser_AuthenticateAd.sql` | Valid AD account + permitted role + valid action code returns AppUserId + OperationLog 'ElevationGranted'; wrong role rejects with FailureLog 'ElevationDenied'; deprecated AD user rejects; unknown `@ActionCode` rejects; missing `@AdAccount` rejects. |
 | `030_Shift_lifecycle.sql` | `Shift_Start` creates row; `Shift_Start` rejects when open Shift exists (B3); `Shift_End` closes row; `Shift_End` rejects when no open Shift; `Shift_GetActive` returns schedule by day-of-week bitmask; `Shift_GetOpen` returns open Shift if one exists. |
@@ -663,7 +664,7 @@ Target: 75–95 passing tests in suite 0013 (up from v0.1 target of 60–80 — 
 
 ## Phase 1 complete when
 
-- [ ] Migration `0013_arc2_phase1_shop_floor_foundation.sql` (or next unclaimed number) applied to dev; `Workorder.WorkOrder` / `WorkOrderOperation` / `ProductionEvent` / `ProductionEventValue` / `ConsumptionEvent` / `RejectEvent` CREATE'd per Data Model v1.9 shapes; `Lots.IdentifierSequence` created and seeded from Phase 0 cutover values; `Lots.Lot` ALTER'd to add `ToolId` + `ToolCavityId`; new LocationAttributeDefinition rows seeded on Terminal type (`DefaultScreen`, `TerminalMode`).
+- [ ] Migration `0013_arc2_phase1_shop_floor_foundation.sql` (or next unclaimed number) applied to dev; `Workorder.WorkOrder` / `WorkOrderOperation` / `ProductionEvent` / `ProductionEventValue` / `ConsumptionEvent` / `RejectEvent` CREATE'd per Data Model v1.9 shapes; `Lots.IdentifierSequence` created and seeded from Phase 0 cutover values; `Lots.Lot` ALTER'd to add `ToolId` + `ToolCavityId`; new LocationAttributeDefinition row seeded on Terminal type (`DefaultScreen`; `TerminalMode` is derived from parent tier per OI-08 correction — no seed row).
 - [ ] All repeatable procs present and up-to-date: `R__Location_Terminal_*`, `R__Location_AppUser_GetByInitials`, `R__Location_AppUser_AuthenticateAd`, `R__Location_AppUser_GetRoles`, `R__Oee_Shift_Start`, `R__Oee_Shift_End`, `R__Oee_Shift_GetActive`, `R__Oee_Shift_GetOpen`, `R__Lots_IdentifierSequence_Next`, `R__Lots_Lot_Create`, `R__Lots_Lot_Get`, `R__Lots_Lot_List`, `R__Lots_Lot_UpdateStatus`, `R__Lots_Lot_MoveTo`, `R__Lots_Lot_AssertNotBlocked`.
 - [ ] **No proc anywhere in the repo references `AppUser.ClockNumber` or `AppUser.PinHash`** (both columns dropped by Phase G migration `0012`). Grep verification: `grep -ri 'ClockNumber\|PinHash\|AuthenticateByClockAndPin' sql/` returns zero hits. If non-zero, this is a phase-complete blocker.
 - [ ] All tests in `sql/tests/0013_PlantFloor_Foundation/` pass (target 75–95).
