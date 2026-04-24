@@ -1,7 +1,7 @@
 # MPP MES — Data Model Reference
 
-**Version:** v1.8 working draft (rev 2026-04-22 — OI-11 reverted, see revision history)
-**Schemas:** 8 | **Tables:** ~72
+**Version:** v1.9 working draft (rev 2026-04-24 — Arc 2 model revisions landed; see revision history)
+**Schemas:** 8 | **Tables:** ~73
 **Target:** Microsoft SQL Server 2022 Standard Edition
 
 ---
@@ -20,6 +20,7 @@
 | 0.6 | 2026-04-13 | Blue Ridge Automation | **Data type standardization across all ~51 tables.** All primary keys changed from `INT` to `BIGINT IDENTITY`. All foreign keys changed from `INT` to `BIGINT` to match. All `VARCHAR(N)` columns changed to `NVARCHAR(N)` (Unicode support for Honda EDI data). Audit `EntityId` columns (OperationLog, ConfigLog, FailureLog) changed to `BIGINT` to match arbitrary PK references. Non-PK/FK value columns (SortOrder, SequenceNumber, PieceCount, VersionNumber, counts, quantities) remain `INT`. `BIT`, `DECIMAL`, and `DATETIME2(3)` columns unchanged. ERD updated to match. |
 | 1.1 | 2026-04-14 | Blue Ridge Automation | **OperationTemplate versioning — schema change.** Added `VersionNumber INT NOT NULL DEFAULT 1` to `Parts.OperationTemplate`; changed `UNIQUE (Code)` → `UNIQUE (Code, VersionNumber)`. Supports the clone-to-modify workflow: `_CreateNewVersion` inserts a new row sharing the Code with `VersionNumber = MAX(siblings)+1`, copies the parent's `OperationTemplateField` rows, and historical `RouteStep` rows continue pointing at the parent's Id so production traceability is preserved. Mirrors the versioning pattern already used by `RouteTemplate` and (later) `Bom` / `QualitySpec`. Schema plumbing delivered as part of Phase 5 — see Phased Plan v1.3. |
 | 1.8 | 2026-04-22 | Blue Ridge Automation | **Phase E Group 1 — schema additions from the 2026-04-22 legacy-screenshot gap analysis.** Four items (v1.8 initially drafted five, OI-11 reverted — see row below): (1) **OI-12** — `Parts.ContainerConfig.MaxParts INT NULL` (per-container cap — rejects scan-in beyond this limit to stop operators over-scanning). Lineside inventory quantity cap modelled as a new `LocationAttribute` (`LinesideLimit`) attached to Cell definitions via the existing `Location.LocationAttributeDefinition` pattern — no schema change, just a seed entry. (2) **OI-18** — `Parts.ItemLocation` extended with consumption metadata: `MinQuantity INT NULL`, `MaxQuantity INT NULL`, `DefaultQuantity INT NULL`, `IsConsumptionPoint BIT NOT NULL DEFAULT 0`. Drives the runtime Allocations grid at the workstation (quantities the operator is hinted to scan in) and distinguishes consumption points (inputs to the cell) from production points (outputs). (3) **OI-19** — `Parts.Item.CountryOfOrigin NVARCHAR(2) NULL` (ISO 3166-1 alpha-2). Honda compliance field surfaced in the Flexware Material configuration. (4) **OI-20** — new `Workorder.ScrapSource` read-only code table (seeded `Inventory` + `Location` at Phase G) and `Workorder.ProductionEvent.ScrapSourceId BIGINT NULL FK → ScrapSource.Id` (column deferred to Arc 2 Phase 1 — ProductionEvent table doesn't exist yet; code table lands in Phase G). Captures the Flexware "Scrap from inventory" vs "Scrap from the selected location" distinction on the Lot Details screen. `Audit.LogEntityType` gains 1 row (ScrapSource) in Phase G. All four changes are additive — no breaking changes to existing procs or tests. SQL lands in Phase G migration `0010_phase9_tools_and_workorder.sql` alongside the Tools schema. Discovery items (OI-24..30) parked for MPP input. Source: `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` v1.1 §"Additional discovered gaps" + `MPP_MES_Open_Issues_Register.md` v2.5. |
+| 1.9 | 2026-04-24 | Blue Ridge Automation | **Arc 2 model revisions (2026-04-23 session) — Tool/Cavity promoted to `Lots.Lot`, `Workorder.ProductionEvent` reshaped as checkpoint table, new `Lots.IdentifierSequence` table, `Parts.Item.MaxLotSize` semantic repurpose.** Four changes land:<br><br>**(1) `Lots.Lot` ADDs `ToolId BIGINT NULL FK → Tools.Tool.Id` and `ToolCavityId BIGINT NULL FK → Tools.ToolCavity.Id`.** Required at `Lot_Create` for die-cast-origin LOTs (validated against `ToolAssignment_ListActiveByCell` + Cavity belongs to Tool + Cavity Active). NULL for all other origins (Received, Trim / Machining intermediate, Assembly, Serialized). NULL after `Lot_Merge` on blended-origin LOTs. Downstream LOTs do NOT inherit — Honda-trace via `LotGenealogy` recursive traversal. Codifies OI-09: a die-cast machine with N active cavities produces **N parallel independent LOTs, not sublots** (each LOT fills at its own rate, closes independently, no parent/child FK between cavity peers). Pre-v1.9 `Lot.DieNumber NVARCHAR(50)` + `Lot.CavityNumber NVARCHAR(50)` columns are now legacy — retained in this release for any future migration script that needs them during cutover, slated for removal in a follow-up migration once all writers use the new FKs.<br><br>**(2) `Workorder.ProductionEvent` reshaped to checkpoint form.** Per FRS §2.1.2 operator-driven capture: operators visit terminals periodically (checkout from die cast, check-in to trim, complete + move, quality-operation transitions), not per-shot. Each checkpoint writes one event carrying cumulative counters; deltas derived via `LAG()` over `(LotId, EventAt)`. Columns ADDed: `ShotCount INT NULL` (cumulative at event time — **open item** OI-20/Decision 5: may migrate to derived-from-aggregated-LOT-quantity before Arc 2 Phase 3), `ScrapCount INT NULL` (cumulative), `EventAt DATETIME2(3)` (replaces `RecordedAt`), `AppUserId` (replaces `OperatorId` — align to initials-based model). Columns DROPPED: `LocationId` (derivable from `LotMovement` at `EventAt`), `DieIdentifier NVARCHAR(50)` + `CavityNumber INT` (derivable from `Lot.ToolId`/`Lot.ToolCavityId`), `GoodCount` + `NoGoodCount` (replaced by `ShotCount` cumulative with `LAG()`-derived delta — avoids compounding errors from missed events), `ItemId` (derivable from `Lot.ItemId`). Required index `(LotId, EventAt DESC)`. Table is still deferred to Arc 2 Phase 1 CREATE — the column contract in §4 is authoritative.<br><br>**(3) New `Lots.IdentifierSequence` table (OI-31).** Replaces Flexware's `IdentifierFormat`. Columns: `Id`, `Code NVARCHAR(30) UNIQUE`, `Name`, `Description`, `FormatString NVARCHAR(50)` (.NET `string.Format`, e.g., `MESL{0:D7}`), `StartingValue BIGINT DEFAULT 1`, `EndingValue BIGINT DEFAULT 9999999`, `LastValue BIGINT DEFAULT 0`, `ResetIntervalMinutes INT NULL`, `LastResetAt DATETIME2(3) NULL`, `UpdatedAt DATETIME2(3)`. Companion proc `Lots.IdentifierSequence_Next @Code` atomically increments `LastValue`, formats via the `.NET`-style string, raises on rollover. Seeded at cutover with `Lot` (`MESL{0:D7}`, ~1,710,932 baseline) and `SerializedItem` (`MESI{0:D7}`, ~2,492 baseline) — actual `LastValue` sampled from Flexware on cutover day. Lands in Arc 2 Phase 1 migration.<br><br>**(4) `Parts.Item.MaxLotSize` semantic repurpose.** No schema change — the column stays `INT NULL`. In this doc and the Config Tool Item screen the label/caption becomes **`PartsPerBasket`**: one LOT = one basket = one LTT label, so "max parts per LOT" IS "basket capacity" by definition. Basket (Item-level capacity) is distinct from Container (`Parts.ContainerConfig` with tray math for shipping — unchanged). Formal column rename deferred to a later migration.<br><br>**Other v1.9 notes:** `Tools.ToolAssignment` has **two** filtered unique indexes today (`UQ_ToolAssignment_ActiveTool` on `ToolId`, `UQ_ToolAssignment_ActiveCell` on `CellLocationId`). The Cell UNIQUE is correct for Die Cast (one mounted die per cell) but wrong for Machining / Trim / Assembly where multiple Tools coexist on a cell. Documented as a known limitation to resolve when non-Die Tool types go live post-MVP (scope the UNIQUE to `ToolType=Die` or drop it). Source: `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md`. |
 | 1.8-rev | 2026-04-22 | Blue Ridge Automation | **OI-11 reverted — Casting → Trim part rename resolved via 1-line BOM (no new schema).** The v1.8 draft added a dedicated `Parts.ItemTransform` table. On review it was redundant: every column duplicates `Workorder.ConsumptionEvent`. The Casting → Trim boundary is a **degenerate 1-line BOM consumption** — trim part has cast part as its sole component at QtyPer=1; the existing ConsumptionEvent + LotGenealogy flow captures the physical movement and backward trace; the operator prompt is BOM-driven ("receive as trim part?"). No `ItemTransform` table is created in Phase G or deferred to Arc 2. The Phase G migration's `Audit.LogEntityType` seed shrinks from 10 rows to 9 (removed `ItemTransform`; `ScrapSource` shifted from Id=40 to Id=39). OI-11 moves from ⬜ Open to ✅ Resolved in the Open Issues Register (v2.6). This row is a correction to the v1.8 entry above — the table count "~73" also drops back to "~72". |
 | 1.7 | 2026-04-21 | Blue Ridge Automation | **Phase B Tool Management schema — Tool promoted to a first-class polymorphic subsystem (OI-10 superseded).** New `Tools` schema with 10 tables: `ToolType` (seeded read-only — Die/Cutter/Jig/Gauge/AssemblyFixture/TrimTool, `HasCavities` flag), `ToolAttributeDefinition` (per-type attribute schema mirroring `Location.LocationAttributeDefinition`), `Tool` (system of record for tool identity, nullable `DieRankId` for Die-type only, no shot counter — derived from `ProductionEvent`), `ToolAttribute` (values), `ToolCavity` (child of Tool for HasCavities types, 3-state Active/Closed/Scrapped status), `ToolAssignment` (append-only check-in/out history against Cells, filtered UNIQUE on active assignment), `ToolStatusCode` + `ToolCavityStatusCode` (read-only code tables), `DieRank` (empty seed — MPP Quality owes the list), `DieRankCompatibility` (empty seed — merge proc rejects cross-die merges until populated, supervisor AD override per FDS-04-007). `Workorder` gains `WorkOrderType` code table (Demand/Maintenance/Recipe, seeded read-only) and two columns on `Workorder.WorkOrder`: `WorkOrderTypeId BIGINT NOT NULL DEFAULT Demand-Id` (existing rows backfill to Demand) and `ToolId BIGINT NULL FK → Tools.Tool` (Maintenance WOs only — enforced at proc layer, not CHECK, because Recipe WOs legitimately have NULL ToolId). `Audit.LogEntityType` gets 8 new seed rows (Tool, ToolAttributeDefinition, ToolAttribute, ToolCavity, ToolAssignment, DieRank, DieRankCompatibility, WorkOrderType). Maintenance WO *flow* is FUTURE — schema hook only in MVP. Tool-life threshold alarms are FUTURE (scheduled Gateway Script pattern). Block concept (from 2026-04-20 meeting) dropped from Tools — handled by ISA-95 hierarchy + `Parts.ItemLocation` per Phase D / OI-08 addenda. Phase G migration `0010_phase9_tools_and_workorder.sql` delivers the SQL (~35 procs, ~60 tests); same migration drops the legacy `Location.AppUser.ClockNumber` + `.PinHash` columns deferred from Phase C. Full design spec: `docs/superpowers/specs/2026-04-21-tool-management-design.md` v0.2. |
 | 1.6 | 2026-04-21 | Blue Ridge Automation | **AppUser schema realigned to the initials-based security model (OI-06 closed — Phase C of the 2026-04-20 OI review refactor).** `AppUser` now carries `Initials NVARCHAR(10) NOT NULL UNIQUE` as its universal shop-floor stamp. `AdAccount` becomes NULL-capable (filtered UNIQUE where NOT NULL) so Operator-class rows can exist without an AD identity. Added CHECK constraint `IgnitionRole IS NULL OR AdAccount IS NOT NULL`. `ClockNumber` and `PinHash` columns marked legacy — they remain in the Phase 1–8 live schema but will be dropped in the Phase G Tool & Security migration, along with the `AppUser_SetPin` and `AppUser_GetByClockNumber` procs. No changes to event tables — user attribution via `AppUserId` FK already resolves transparently from initials at the UI layer. |
@@ -270,8 +271,8 @@ Item master, bills of material, routes, operation templates, container configura
 | PartNumber | NVARCHAR(50) | NOT NULL, UNIQUE | MPP part number |
 | Description | NVARCHAR(500) | NULL | |
 | MacolaPartNumber | NVARCHAR(50) | NULL | ERP cross-reference |
-| DefaultSubLotQty | INT | NULL | Default pieces per sub-LOT split |
-| MaxLotSize | INT | NULL | Reasonability check ceiling |
+| DefaultSubLotQty | INT | NULL | Default pieces per sub-LOT split (Machining — unchanged) |
+| MaxLotSize | INT | NULL | **Repurposed v1.9 as `PartsPerBasket`.** One LOT = one basket = one LTT label at Die Cast / Trim / intermediate Machining, so "max parts per LOT" IS basket capacity. Config Tool Item screen labels this field `PartsPerBasket`. Distinct from `Parts.ContainerConfig.MaxParts` (shipping-container cap). Formal column rename deferred. |
 | UomId | BIGINT | FK → Uom.Id, NOT NULL | Counting UOM |
 | UnitWeight | DECIMAL(10,4) | NULL | Weight per piece |
 | WeightUomId | BIGINT | FK → Uom.Id, NULL | Weight UOM |
@@ -476,6 +477,8 @@ LOT lifecycle, genealogy, containers, serialized parts, shipping.
 
 The central tracking entity.
 
+> **v1.9 changes:** Added `ToolId` + `ToolCavityId` FKs (Tool/Cavity is system of record on the LOT, not on `ProductionEvent`). Required at `Lot_Create` for die-cast-origin LOTs; NULL elsewhere; NULL after `Lot_Merge` on blended-origin LOTs. Codifies OI-09: a die-cast machine with N active cavities produces **N parallel independent LOTs (not sublots)** — each LOT has fixed Tool + Cavity at creation, fills at its own rate, closes independently via explicit operator action. Pre-v1.9 `DieNumber` + `CavityNumber` NVARCHAR columns are now legacy (retained for cutover transition; slated for removal once all writers use the FKs).
+
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | Id | BIGINT | PK | |
@@ -487,12 +490,14 @@ The central tracking entity.
 | MaxPieceCount | INT | NULL | Reasonability ceiling |
 | Weight | DECIMAL(12,4) | NULL | |
 | WeightUomId | BIGINT | FK → Uom.Id, NULL | |
-| DieNumber | NVARCHAR(50) | NULL | Die cast LOTs only |
-| CavityNumber | NVARCHAR(50) | NULL | Die cast LOTs only |
+| ToolId | BIGINT | FK → Tools.Tool.Id, NULL | Added v1.9. **Required at `Lot_Create` for die-cast-origin LOTs** (validated against `Tools.ToolAssignment_ListActiveByCell` — the Tool must be currently mounted on the cell). NULL for other origins (Received, Trim / Machining intermediate, Assembly, Serialized). NULL after `Lot_Merge` on blended-origin LOTs (can't denormalize multiple Tools). Downstream LOTs do NOT carry — Honda-trace via `LotGenealogy` traversal. |
+| ToolCavityId | BIGINT | FK → Tools.ToolCavity.Id, NULL | Added v1.9. **Required at `Lot_Create` for die-cast-origin LOTs** (validated: cavity belongs to `ToolId` + cavity status is Active). NULL elsewhere. |
+| DieNumber | NVARCHAR(50) | NULL | **Legacy as of v1.9** — superseded by `ToolId` FK above. Retained this release to support any cutover script needing the NVARCHAR form; scheduled for removal in a follow-up migration once all writers move to the Tool FK. |
+| CavityNumber | NVARCHAR(50) | NULL | **Legacy as of v1.9** — superseded by `ToolCavityId` FK. Retained for cutover transition; scheduled for removal. |
 | VendorLotNumber | NVARCHAR(100) | NULL | Received LOTs only |
 | MinSerialNumber | INT | NULL | Vendor serial range (received bulk parts) |
 | MaxSerialNumber | INT | NULL | |
-| ParentLotId | BIGINT | FK → Lot.Id, NULL | Adjacency list link for sub-LOTs |
+| ParentLotId | BIGINT | FK → Lot.Id, NULL | Adjacency list link for **Machining sub-LOTs** (FDS §5.4). Not used for cavity-parallel LOTs at Die Cast — those are peers, not parent/child. |
 | CurrentLocationId | BIGINT | FK → Location.Id, NOT NULL | Where this LOT is now |
 | CreatedByUserId | BIGINT | FK → AppUser.Id, NOT NULL | |
 | CreatedAtTerminalId | BIGINT | FK → Location.Id (Terminal), NULL | |
@@ -574,6 +579,35 @@ Audit log for attribute modifications.
 | Id | BIGINT | PK | |
 | Code | NVARCHAR(50) | NOT NULL, UNIQUE | |
 | Name | NVARCHAR(100) | NOT NULL | |
+
+### IdentifierSequence
+
+Added v1.9 (OI-31). Replaces Flexware's `IdentifierFormat` table and drives all MPP-internal identifier minting — Lot LTT barcode (`MESL{0:D7}`), SerializedItem ID (`MESI{0:D7}`), and any future non-AIM counters. Honda AIM shipper IDs are out of scope (those come from `AIM.GetNextNumber`). Cutover-day migration seeds `LastValue` at or above the live Flexware value to avoid collisions with in-circulation LOTs.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| Code | NVARCHAR(30) | NOT NULL, UNIQUE | Sequence key (e.g., `Lot`, `SerializedItem`). Passed to `IdentifierSequence_Next @Code`. |
+| Name | NVARCHAR(100) | NOT NULL | Display name |
+| Description | NVARCHAR(500) | NULL | |
+| FormatString | NVARCHAR(50) | NOT NULL | `.NET` `string.Format` pattern, e.g., `MESL{0:D7}` produces `MESL0000001` for value 1. |
+| StartingValue | BIGINT | NOT NULL, DEFAULT 1 | Lower bound of the numeric range |
+| EndingValue | BIGINT | NOT NULL, DEFAULT 9999999 | Upper bound before rollover — `IdentifierSequence_Next` raises a business-rule error when `LastValue + 1 > EndingValue` without an explicit reset policy |
+| LastValue | BIGINT | NOT NULL, DEFAULT 0 | Most recent issued numeric value. `IdentifierSequence_Next` atomically increments this and returns the formatted string. |
+| ResetIntervalMinutes | INT | NULL | Unused at MPP today (Flexware has no reset policy); nullable for future line/shift-specific reset rules if MPP elects them. |
+| LastResetAt | DATETIME2(3) | NULL | Timestamp of last reset (manual or scheduled); unused at MPP today |
+| UpdatedAt | DATETIME2(3) | NOT NULL, DEFAULT SYSUTCDATETIME() | |
+
+**Companion proc:** `Lots.IdentifierSequence_Next @Code` — single-row lookup + atomic `UPDATE ... SET LastValue = LastValue + 1 OUTPUT inserted.LastValue, inserted.FormatString` inside a transaction, then formats the result. Raises on unknown `@Code` and on rollover. Returns a single result set `(Value NVARCHAR(50))` per the Ignition JDBC single-result-set convention (FDS-11-011).
+
+**Seed data (Arc 2 Phase 1 migration, values confirmed on cutover day):**
+
+| Code | FormatString | LastValue (Flexware sample 2026-04-23) |
+|---|---|---|
+| Lot | `MESL{0:D7}` | 1,710,932 (drift expected; re-sample at cutover) |
+| SerializedItem | `MESI{0:D7}` | 2,492 (drift expected; re-sample at cutover) |
+
+**Open questions (OI-31):** format carry-forward (keep `MESL`/`MESI`, or mint new?), additional counters in use at MPP we haven't seen, reset policy, rollover policy at 9,999,999. See `MPP_MES_Open_Issues_Register.md` OI-31.
 
 ### LotLabel
 
@@ -778,29 +812,52 @@ Individual operation execution — the actual step that happened.
 
 ### ProductionEvent
 
-Immutable record of production output and of the data collection required by the operation template. One row per LOT-passes-through-operation. Hot data collection fields (die, cavity, weight, counts) are typed columns on this table; any additional `DataCollectionField` configured on the operation template is captured in child `ProductionEventValue` rows.
+**Checkpoint-shape event table (v1.9).** Per FRS §2.1.2 operator-driven capture: operators are not at the terminal for every shot — they log at checkpoints (checkout from die cast, check-in to trim, complete + move, quality-operation transitions). Each checkpoint fires one row carrying the **cumulative** counters as-of-that-moment; deltas are derived by the reader via `LAG()` window function over `(LotId, EventAt)`. A missed event doesn't compound errors — the next event carries truth.
 
-> **⚠ Implementation deferred to Arc 2 Phase 1** (discovered 2026-04-22). Like `Workorder.WorkOrder`, this table does not yet exist in the codebase. Arc 2 Phase 1 CREATEs it with the full column list below, including the v1.8 `ScrapSourceId` (FK → `Workorder.ScrapSource`, created in Phase G). The column contract is authoritative; the DDL verb is CREATE, not ALTER.
+> **⚠ Implementation deferred to Arc 2 Phase 1.** The `Workorder.ProductionEvent` table does not exist in the Phase 1–8 codebase. Arc 2 Phase 1 CREATEs it with the full column list below. The column contract is authoritative.
+
+**What's deliberately NOT on this table (Data Model v1.9 reshape):**
+- **No `LocationId`** — derivable from `LotMovement` at `EventAt` timestamp. Redundant.
+- **No `ItemId`** — derivable from `Lot.ItemId`.
+- **No `DieIdentifier` / `CavityNumber`** — `Lot.ToolId` / `Lot.ToolCavityId` are system of record; ProductionEvent does not carry.
+- **No `ToolId` / `ToolCavityId`** — derived via `ProductionEvent.LotId → Lot.ToolId / Lot.ToolCavityId`.
+- **No `StartedAt` / `EndedAt`** — the "start" of any event's interval is the previous event for the same LOT (derived via `LAG()`). Avoids dangling "started-but-not-ended" rows entirely.
+- **No `GoodCount` / `NoGoodCount`** per-event — replaced by cumulative `ShotCount` + `ScrapCount` with `LAG()`-derived deltas.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
-| Id | BIGINT | PK | |
-| WorkOrderOperationId | BIGINT | FK → WorkOrderOperation.Id, NULL | |
-| OperationTemplateId | BIGINT | FK → Parts.OperationTemplate.Id, NOT NULL | The versioned operation template this event executed under. Direct FK so events remain queryable even when work orders are absent (OI-07 background-only WOs). |
-| LotId | BIGINT | FK → Lot.Id, NOT NULL | |
-| LocationId | BIGINT | FK → Location.Id, NOT NULL | Machine/cell where the operation ran |
-| ItemId | BIGINT | FK → Item.Id, NOT NULL | |
-| GoodCount | INT | NOT NULL | |
-| NoGoodCount | INT | NOT NULL, DEFAULT 0 | |
-| ScrapSourceId | BIGINT | FK → ScrapSource.Id, NULL | Populated only when this event represents a scrap action; identifies whether the scrap came from unallocated inventory (`Inventory`) or from in-process material at a workstation (`Location`). NULL for non-scrap events. Added v1.8 (OI-20). |
-| DieIdentifier | NVARCHAR(50) | NULL | Die name/number captured from the machine's `LocationAttribute` value at event time. Retained as an immutable historical snapshot (survives tool rename/replacement). v1.7 promoted Tool to a first-class entity (§7 Tools Schema) — a parallel `ToolId BIGINT FK → Tools.Tool` may be added in a later phase for query/analytics joins, but this NVARCHAR column stays as the as-captured string. |
-| CavityNumber | INT | NULL | Cavity captured when the operation template requires `CavityInfo` |
-| WeightValue | DECIMAL(10,3) | NULL | Captured when operation template requires `Weight` (e.g., scale-driven container closure, OI-02) |
-| WeightUomId | BIGINT | FK → Parts.Uom.Id, NULL | Required whenever `WeightValue` is set |
-| OperatorId | BIGINT | FK → AppUser.Id, NOT NULL | |
-| TerminalLocationId | BIGINT | FK → Location.Id (Terminal), NULL | Terminal where action was performed |
-| RecordedAt | DATETIME2(3) | NOT NULL | |
-| Remarks | NVARCHAR(500) | NULL | |
+| Id | BIGINT | PK IDENTITY | |
+| LotId | BIGINT | FK → Lots.Lot.Id, NOT NULL | Tool + Cavity derived via `Lot.ToolId` / `Lot.ToolCavityId`. |
+| OperationTemplateId | BIGINT | FK → Parts.OperationTemplate.Id, NOT NULL | Captures the FDS-03-017a data-collection contract — what fields were required at this checkpoint. Direct FK so events remain queryable when work orders are absent (OI-07 background-only WOs). |
+| WorkOrderOperationId | BIGINT | FK → Workorder.WorkOrderOperation.Id, NULL | Nullable (MVP-LITE WO model). |
+| EventAt | DATETIME2(3) | NOT NULL, DEFAULT SYSUTCDATETIME() | Checkpoint timestamp. Used with `LAG()` for delta derivation. |
+| ShotCount | INT | NULL | **Cumulative** shot counter at event time. Reader derives `ShotsSinceLast = ShotCount - LAG(ShotCount) OVER (PARTITION BY LotId ORDER BY EventAt)`. **Open item** (per Decision 5 of the 2026-04-23 spec): may migrate to derived-from-aggregated-LOT-quantity before Arc 2 Phase 3 if the LOT-quantity aggregation proves authoritative for "shots per die" reporting. Kept nullable and provisional until resolved. |
+| ScrapCount | INT | NULL | Cumulative scrap counter at event time. Delta via `LAG()`. |
+| ScrapSourceId | BIGINT | FK → Workorder.ScrapSource.Id, NULL | Populated only when this event represents a scrap action. Distinguishes scrap-from-inventory vs scrap-from-location per OI-20. NULL for non-scrap checkpoints. |
+| WeightValue | DECIMAL(12,4) | NULL | Captured when the operation template requires `Weight` (e.g., scale-driven container closure, OI-02). |
+| WeightUomId | BIGINT | FK → Parts.Uom.Id, NULL | Required whenever `WeightValue` is set. |
+| AppUserId | BIGINT | FK → Location.AppUser.Id, NOT NULL | Who captured this event (initials-based per Phase C). |
+| TerminalLocationId | BIGINT | FK → Location.Location.Id (Terminal), NULL | Terminal where the checkpoint was registered. |
+| Remarks | NVARCHAR(500) | NULL | Free-text note attached to the checkpoint. |
+
+**Required index:** `(LotId, EventAt DESC)` — "previous event for this LOT" must be a single-row seek.
+
+**Sample delta query:**
+```sql
+SELECT
+    pe.Id,
+    pe.EventAt,
+    pe.ShotCount,
+    pe.ShotCount - LAG(pe.ShotCount) OVER (PARTITION BY pe.LotId ORDER BY pe.EventAt) AS ShotsSinceLast,
+    pe.ScrapCount - LAG(pe.ScrapCount) OVER (PARTITION BY pe.LotId ORDER BY pe.EventAt) AS ScrapSinceLast
+FROM Workorder.ProductionEvent pe
+WHERE pe.LotId = @LotId
+ORDER BY pe.EventAt;
+```
+
+**Honda-trace (finished part → originating die):** walks `LotGenealogy` from the finished LOT back to the die-cast-origin LOT, then reads `Lot.ToolId`. See Arc 2 Phase 7 narrative.
+
+**Data collection capture:** Any `DataCollectionField` configured on the operation template that isn't promoted to a typed column above is captured in child `ProductionEventValue` rows.
 
 ### ProductionEventValue
 
@@ -818,7 +875,7 @@ Child of `ProductionEvent` — holds any `DataCollectionField` value configured 
 
 **Unique constraint:** `UNIQUE (ProductionEventId, DataCollectionFieldId)` — a given field is captured once per event.
 
-**Rule:** fields already represented as typed columns on `ProductionEvent` (GoodCount, NoGoodCount, DieIdentifier, CavityNumber, WeightValue) SHALL NOT also be written to `ProductionEventValue`. The Phase 8 write proc enforces this.
+**Rule:** fields already represented as typed columns on `ProductionEvent` (`ShotCount`, `ScrapCount`, `WeightValue`) SHALL NOT also be written to `ProductionEventValue`. The Arc 2 Phase 1 write proc enforces this. (Pre-v1.9 the list included `GoodCount`, `NoGoodCount`, `DieIdentifier`, `CavityNumber` — all removed from ProductionEvent in the v1.9 reshape.)
 
 ### ConsumptionEvent
 
@@ -1309,7 +1366,11 @@ Append-only check-in / out history. A Tool can be mounted on a Cell; release clo
 | ReleasedByUserId | BIGINT | FK → AppUser.Id, NULL | Supervisor who released (elevated action per FDS-04-007) |
 | Notes | NVARCHAR(500) | NULL | |
 
-**Unique:** `UQ_ToolAssignment_ActiveToolMount` — filtered UNIQUE on `ToolId` where `ReleasedAt IS NULL`. A tool can only be mounted on one Cell at a time; mounting elsewhere requires releasing the previous assignment first.
+**Unique constraints (migration `0010_phase9_tools_and_workorder.sql`):**
+- `UQ_ToolAssignment_ActiveTool` — filtered UNIQUE on `ToolId` where `ReleasedAt IS NULL`. A tool can only be mounted on one Cell at a time; mounting elsewhere requires releasing the previous assignment first.
+- `UQ_ToolAssignment_ActiveCell` — filtered UNIQUE on `CellLocationId` where `ReleasedAt IS NULL`. Enforces **one active mounted Tool per Cell** — correct for Die Cast.
+
+**Known limitation (flagged v1.9, non-blocking for MVP):** The `UQ_ToolAssignment_ActiveCell` rule is **Die-only-correct**. When non-Die Tool types activate (Machining cutters/fixtures/jigs coexist on a cell; Trim dies + deburr tools + jigs; Assembly fixtures + jigs + gauges), this constraint breaks. Tool tracking is Die-focused in MVP, so the constraint doesn't bite yet. Post-MVP adjustment path: either scope the UNIQUE to `(CellLocationId, ToolTypeId=Die)` by joining `Tool.ToolTypeId` via an indexed view or a filtered-on-Die filtered unique, OR drop the Cell UNIQUE entirely and let `UQ_ToolAssignment_ActiveTool` carry the rule. Either is a one-migration refactor when the time comes.
 
 **Elevated action:** Tool mount / release is in the FDS-04-007 elevated-action list (per-action AD elevation prompt, no session-sticky elevation).
 
