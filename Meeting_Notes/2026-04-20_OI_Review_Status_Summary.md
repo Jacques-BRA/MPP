@@ -41,11 +41,11 @@ The 2026-04-20 customer review closed 2 items, revised 6, reopened 2 with addend
 - **Status:** **Already delivered** (commit `dbeac08`). Schema cleanup (drop `ClockNumber`/`PinHash`) deferred to Phase G — migration drops both columns in the same file that creates Tools.
 - **Still open:** Tom owes final elevated-action list.
 
-### Medium — Three Work Order types (OI-07)
+### Medium — Work Order types (OI-07) — **corrected 2026-04-24**
 
 - **Before:** Single "WO" concept, MVP-lite invisible-to-operators.
-- **After:** `Demand` / `Maintenance` / `Recipe` types. Demand is as-designed. `Maintenance` WO targets a `ToolId` (schema hook only, flow is FUTURE). `Recipe` hidden from operator.
-- **Impact:** Minor schema change (`Workorder.WorkOrderType` code table + nullable `ToolId`). Bigger unknown is Maintenance lifecycle — **Ben owes scope** before Phase G can close.
+- **After (originally written 2026-04-20, corrected 2026-04-24):** ~~`Demand` / `Maintenance` / `Recipe` types. Demand is as-designed. `Maintenance` WO targets a `ToolId` (schema hook only, flow is FUTURE). `Recipe` hidden from operator.~~ The 2026-04-20 meeting note was mis-recorded. Under MPP's actual taxonomy, the active MVP type is **`Production`** (the pre-existing MVP-LITE bookkeeping; originally mis-named "Demand" in the meeting note). `Demand` = planned preventative maintenance, `Maintenance` = emergency maintenance — both FUTURE, not built in this project. Recipe doesn't exist. Ben's maintenance-engine scope is a separate future project, not gating this MES.
+- **Impact:** Minor schema change (`Workorder.WorkOrderType` code table + nullable `ToolId` remain as hooks). The shipped Phase G seed (3 rows) is corrected via a follow-up migration to 1 row (`Production`). OIR v2.9 / Data Model v1.9b / FDS v0.11b carry the corrected narrative.
 
 ### Medium — LOT merge rules (OI-05)
 

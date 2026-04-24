@@ -116,7 +116,7 @@ This note snapshots what's now *executable* via the stored-proc layer. Deferred 
 | `Tools.ToolStatusCode` | `_List` | 4 rows: Active, UnderRepair, Scrapped, Retired |
 | `Tools.ToolCavityStatusCode` | `_List` | 3 rows: Active, Closed, Scrapped |
 | `Tools.ToolType` | `_List`, `_Get` | 6 rows: Die, Cutter, Jig, Gauge, AssemblyFixture, TrimTool |
-| `Workorder.WorkOrderType` | `_List`, `_Get` | 3 rows: Demand, Maintenance, Recipe |
+| `Workorder.WorkOrderType` | `_List`, `_Get` | **Seed corrected 2026-04-24 (OI-07)**: target = 1 row (`Production`). Shipped Phase G migration seeded 3 rows (`Demand`/`Maintenance`/`Recipe`); follow-up versioned correction migration queued. |
 | `Workorder.ScrapSource` | `_List`, `_Get` | 2 rows: Inventory, Location |
 
 ---

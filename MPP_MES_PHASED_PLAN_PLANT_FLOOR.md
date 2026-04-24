@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2
+**Document ID:** MPP-PLAN-ARC2-v0.2b
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2 (2026-04-24)
+**Version:** 0.2b (2026-04-24)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2b | 2026-04-24 | Blue Ridge Automation | **OI-07 WorkOrderType correction propagated.** Removed OI-07 from the gating and body Phase-0 open-items tables (maintenance engine is a separate future project; not gating this MES). Added OI-07 to the "Already closed" list in the v0.2 Alignment Overlay. Updated the Phase 1 Data Model Changes entry for `Workorder.WorkOrder` — `WorkOrderTypeId` now defaults to the single-seeded `Production` row; `ToolId` is a future-Maintenance schema hook only. Companion FDS v0.11b, Data Model v1.9b, OIR v2.9 in the same commit. |
 | 0.2 | 2026-04-24 | Blue Ridge Automation | **Alignment overlay for post-Phase-G decisions (Phase C security rewrite + 2026-04-23 Arc 2 model revisions).** v0.1 predates every post-2026-04-20 meeting outcome and all Phase G work. Rather than rewrite 1700 lines in place, v0.2 adds a new §"v0.2 Alignment Overlay" after the front matter that captures the deltas phase-by-phase: Phase 0 open-items list refreshed (OI-03, OI-06, OI-09 closed; new OI-31 opened; new discovery items — WorkOrder BIT flags, TrackingMode, historical data migration, ShotCount semantics); Phase 1 auth narrative rewrites from clock# + PIN to initials-only Phase C model, `AppUser_GetByInitials` added, `Lots.IdentifierSequence` seeded at cutover; Phase 2 `Lot_Create` gains `@ToolId` + `@ToolCavityId` (optional, required-by-origin-check), `Lot_Merge` nulls Tool on merged row; Phase 3 wholesale — Tools.Tool / ToolCavity become system of record, terminal UX auto-populates Tool from active assignment + elevated Edit, cavity-parallel LOTs are peers (not sublots), `ProductionEvent_Record` implements checkpoint shape; Phase 4 trim check-in fires checkpoint ProductionEvent, ScrapSource=Location for scrap-from-workstation events; Phase 5 sub-LOT split unchanged (Machining-only); Phase 6 ContainerConfig.MaxParts + finished-goods LOT auto-close on container fill + 1-line BOM consumption; Phase 7 Workorder.ScrapSource usage, rank-based merges (OI-05) + post-merge-NULL-Tool; Phase 8 already correct. Two new cross-cutting rules codified: **purpose-built Perspective views per terminal function** (no generic dashboard-configuration engine; LocationAttribute for business policies only), and **UserInterfaceScript DB-stored-runtime-code pattern NOT reproduced**. Phase 0 customer-validation gate expanded with 9 consolidated MPP input items. Source: `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` §§7–9. |
 
 ---
@@ -117,7 +118,6 @@ The v0.1 Phase 0 table is stale. Use this consolidated list for the Phase 0 work
 | **OI-31** (NEW) | IdentifierSequence format carry-forward + cutover `LastValue` values. Any additional counters (container barcodes, shipping print sequences) in use? Reset policy? Rollover policy at 9,999,999? | Phase 1 migration seeds `Lots.IdentifierSequence.LastValue` at cutover-day values; wrong seed = LTT collisions with live Flexware LOTs. |
 | **OI-02 / UJ-13** | Weight vs count container closure. Is scale-driven closure the design? | Phase 6 non-serialized container lifecycle; most Flexware WO BIT flags are subsumed by this decision. |
 | **OI-05 / UJ-08** | Full die-rank compatibility matrix owed by MPP Quality. | Phase 7 `Lot_Merge` rejects cross-die merges until matrix loaded; supervisor override is the only path otherwise. |
-| **OI-07 / UJ-07** | Maintenance WO engine scope (Ben owes). Lifecycle, scheduling, integration with MPP maintenance team's existing tooling. | Phase G delivered the schema hook (FUTURE flow); Maintenance WO Perspective work doesn't start until Ben closes this. |
 | **OI-08 / UJ-12 addenda** | Final `TrackingMode` enumeration on Cell (values?) + Part ↔ Machine validity model confirmation. | Phase 3 / 4 terminal UX + scan-in guard depends on these. |
 | **UJ-05** | Sort Cage serial migration — void-and-recreate or update-in-place with new `ContainerSerialHistory` table? | Phase 7 Sort Cage flow; update-in-place requires a new table. |
 | **UJ-10** | Shift boundary rules — carryover of open downtime events, partial containers, in-progress LOTs. | Phase 1 `Shift_End` / Phase 8 boundary ticker cannot be built without this. |
@@ -328,6 +328,7 @@ This phase **is** the open items phase. Its goal is to resolve:
 - **OI-01** Event outbox pattern — direct-call-with-logging, no outbox (v0.9 resolution).
 - **OI-03** Shift runtime adjustments — availability derived from events, no minute adjustments (2026-04-20).
 - **OI-06 / UJ-01** Operator identity & elevation — initials-only presence + per-action AD elevation (Phase C, 2026-04-21). Clock# + PIN are dead; do not raise them in the workshop.
+- **OI-07** Work order scope — corrected 2026-04-24. MVP ships with one active WO type (`Production`, the existing MVP-LITE bookkeeping). `Demand` (planned PM) and `Maintenance` (emergency) are genuinely separate future WO types but **not built in this project**; the `WorkOrderType` code table remains as a future hook. Recipe was a mis-recording and has been deleted. Ben's maintenance-engine scope is **not gating** this project.
 - **OI-09** Multi-cavity / cavity-parallel LOTs — N cavities produce N parallel peer LOTs with `Lot.ToolCavityId` set (Data Model v1.9). Machining sub-LOT split remains a separate pattern.
 - **OI-10** Tool life tracking — superseded by Phase B Tool Management; shot counts derive from `Workorder.ProductionEvent` group-by Tool/Cavity (Phase G).
 - **OI-11** Casting → Trim part identity — 1-line BOM consumption (Bom + ConsumptionEvent + LotGenealogy); no new schema.
@@ -342,7 +343,6 @@ This phase **is** the open items phase. Its goal is to resolve:
 | **Historical data migration** | Cutover approach — which entities migrate (LOTs, SerializedItems, ProductionOrders, Containers, Genealogy). Discrepancy review for unmatched rows (e.g., Flexware `LotAttribute.DIE NAME` with no matching `Tools.Tool.Code`). | Phase 1 migration-script + pre-flight validation design. |
 | **OI-02 / UJ-13** Weight vs count container closure | Is scale-driven closure the design? | Phase 6 non-serialized container lifecycle; most Flexware WorkOrder BIT flags are subsumed by this decision. |
 | **OI-05 / UJ-08** Die-rank compatibility matrix | Full compatibility matrix owed by MPP Quality. | Phase 7 `Lot_Merge` rejects cross-die merges until matrix loaded; supervisor override is the only path otherwise. |
-| **OI-07 / UJ-07** Maintenance WO engine scope | Ben owes lifecycle, scheduling, integration with MPP maintenance team's tooling. | Phase G delivered the schema hook (FUTURE flow); Maintenance WO Perspective work doesn't start until Ben closes this. |
 | **OI-08 / UJ-12 addenda** | Final `TrackingMode` enumeration on Cell (values?) + Part ↔ Machine validity model confirmation. | Phase 3 / 4 terminal UX + scan-in guard depends on these. |
 | **ShotCount semantics** | `Workorder.ProductionEvent.ShotCount` = cumulative counter OR derived from aggregated LOT quantities? | Phase 3 operator-screen design + reporting path. |
 | **Workstation `DefaultScreen` seeding** | List of terminal-function Perspective views + which terminal routes to which. | Phase 1 seed data for B11 routing. |
@@ -411,7 +411,7 @@ No test suite additions.
 
 **New tables (Arc 2 — introduced here, per Data Model v1.9):**
 
-- `Workorder.WorkOrder` — CREATE with v1.7 / v1.9 column contract: `Id`, `WoNumber`, `WorkOrderTypeId` (FK → `Workorder.WorkOrderType`), `ItemId`, `RouteTemplateId`, `WorkOrderStatusId`, `ToolId` (FK → `Tools.Tool`, NULL — Maintenance only), `CreatedAt`, `CompletedAt`. Plus the FDS-06-030 Phase-0-confirmed BIT-flag columns (live flags only).
+- `Workorder.WorkOrder` — CREATE with v1.7 / v1.9 / v1.9b column contract: `Id`, `WoNumber`, `WorkOrderTypeId` (FK → `Workorder.WorkOrderType`; defaults to the single-seeded `Production` row per OI-07 correction), `ItemId`, `RouteTemplateId`, `WorkOrderStatusId`, `ToolId` (FK → `Tools.Tool`, NULL — future-Maintenance schema hook only, not populated in MVP), `CreatedAt`, `CompletedAt`. Plus the FDS-06-030 Phase-0-confirmed BIT-flag columns (live flags only).
 - `Workorder.WorkOrderOperation` — CREATE per Data Model §4.
 - `Workorder.ProductionEvent` — CREATE per Data Model v1.9 checkpoint shape: `Id`, `LotId`, `OperationTemplateId`, `WorkOrderOperationId` (NULL), `EventAt`, `ShotCount` (NULL, cumulative — open per Decision 5), `ScrapCount` (NULL, cumulative), `ScrapSourceId` (NULL), `WeightValue`, `WeightUomId`, `AppUserId`, `TerminalLocationId`, `Remarks`. Required index `(LotId, EventAt DESC)`. No `LocationId`, no `ItemId`, no `DieIdentifier`, no `CavityNumber`, no `GoodCount` / `NoGoodCount`, no `StartedAt` / `EndedAt`.
 - `Workorder.ProductionEventValue` — CREATE per Data Model §4 (child of ProductionEvent, extensible `DataCollectionField` capture).

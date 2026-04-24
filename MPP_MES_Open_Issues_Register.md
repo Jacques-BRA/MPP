@@ -1,7 +1,7 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.8 — Working Draft
+**Version:** 2.9 — Working Draft
 **Date:** 2026-04-24
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
@@ -20,6 +20,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | 2.4 | 2026-04-21 | Blue Ridge Automation | **Phase A of the 2026-04-20 OI review refactor.** Closed OI-03 (shift runtime derived from events) and OI-06 (initials-based operator identity — see Phase C / FDS v0.8). Revised OI-04 (line-stop, not LOT-hold; 10-fail escalation; CRT 200% inspect), OI-05 (die-rank compatibility merge rules), OI-07 (three WO types, Maintenance targets Tools), OI-08 addenda (terminal locked to machine context; part↔machine validity map; mobile consideration), OI-09 addenda (sublot pattern with parent FK), OI-10 (superseded by Phase B Tool Management design). Added four new items: OI-11 (part rename at Casting → Trim), OI-12 (lineside inventory caps), OI-13 (BOM source = Flexware app @ IP .919), OI-14 (admin remove-item). Structural change: each OI and UJ now has its own subsection instead of living inside a giant grid table — easier to read, diff, and update. Source meeting notes at `Meeting_Notes/2026-04-20_OI_Review.md`. Running plan in `memory/project_mpp_oi_refactor.md`. |
 | 2.5 | 2026-04-22 | Blue Ridge Automation | **Legacy MES screenshot review gap analysis.** 36 screenshots of the Flexware Madison MES reviewed against the current FDS / Data Model. 16 new Part A items added (OI-15 through OI-30): 9 concrete design additions (Track screen, auto-finish-on-target WO, tray-divisibility rule, ItemLocation consumption metadata, Country of Origin, scrap source enum, partial start/complete, Hold Management screen, Lot computed fields) and 7 discovery items to confirm with MPP (Automation tile scope, Notifications, per-workstation scripting, Supply Part flag, cast-override cell flag, Workstation Category grouping, Reports tile contents). Source summary at `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Legacy screenshots at `reference/MPP_Current_MES_screenshots.docx`. |
 | 2.6 | 2026-04-22 | Blue Ridge Automation | **OI-11 resolved — Casting → Trim rename modelled via 1-line BOM, not `Parts.ItemTransform`.** Review of the v2.5 design surfaced that the proposed `Parts.ItemTransform` table duplicated every column of `Workorder.ConsumptionEvent`. The rename is a degenerate 1-line BOM consumption: trim part has cast part as its sole component at QtyPer=1; existing ConsumptionEvent + LotGenealogy machinery handles the flow and the Honda backward trace. OI-11 moves ⬜ Open → ✅ Resolved. Downstream corrections: Data Model v1.8-rev (ItemTransform table section replaced with a ✅ Resolved callout; `Audit.LogEntityType` seed shrinks from 10 to 9 rows; table count "~73" → "~72"), FDS v0.10-rev (§5.10 retained, rewritten around FDS-05-033 BOM-driven scan-in; FDS-05-034/-035 retired), User Journeys v0.7-rev (Trim Shop narrative simplified to normal consumption), Phase G migration `0010_phase9_tools_and_workorder.sql` (ItemTransform LogEntityType row dropped; ScrapSource shifted from Id=40 to Id=39; re-run green, 779/779 tests still pass). |
+| 2.9 | 2026-04-24 | Blue Ridge Automation | **OI-07 rewritten — WorkOrderType corrected to `Production` only; `Recipe` deleted; `Demand` and `Maintenance` reclassified as FUTURE hooks.** Jacques clarified that the 2026-04-20 meeting note "recipe work orders to not be operator visible" was a mis-recording — the "Recipe" line was actually about the **Production** work orders already modelled (MVP-lite, auto-generated, invisible to operators). There is no separate Recipe concept. The existing WO our design supports is Production. Under MPP's framing, **Demand** (planned preventative maintenance) and **Maintenance** (emergency maintenance) are genuinely separate future WO types — but building them is out of scope for this project; the data model only needs to **not block** their future addition. OI-07 scope narrows accordingly: the `Workorder.WorkOrderType` code table remains in the schema as a future hook (new rows can be INSERTed for Demand/Maintenance when Ben scopes the maintenance engine), but the seed is corrected to a single `Production` row. `Recipe` is stripped from every doc, seed, proc comment, and test description. Downstream effects: FDS §6.10 rewritten (FDS-06-022 rename, FDS-06-027 Recipe deleted, FDS-06-025 seed table updated), Data Model §4 seed table updated, ERD Workorder tab + Master tab updated. **SQL follow-up queued** (not executed this turn): a correction migration is needed to rename the shipped `WorkOrderType` seed row `Demand`→`Production`, DELETE `Recipe`, and DELETE `Maintenance` (re-addable later), plus a test update in `sql/tests/0019_Parts_ConsumptionMetadata_And_ScrapSource/010_Phase_E_additives.sql` (current test asserts 3 seed rows + Code='Demand'). |
 | 2.8 | 2026-04-24 | Blue Ridge Automation | **Legacy MES Storyboards review additions.** Review of `reference/NewInput/Madison MES - Storyboards.pdf` (2012 Flexware) + `5GO-AP4 IPAddresses.xlsx` against v1.9 / v0.11 / v0.8 / v2.7 design: 43/52 legacy capabilities covered (83%), 5 partial (10%), 4 gaps (7%), 0 out-of-scope. Two register updates: (1) **OI-32 NEW / ⬜ Open** — Material Allocation operator screen. Flexware has a dedicated pre-PLC allocation workflow (`MaterialAllocationMenuView` / `CreateView` / `UpdateView`) gated by `Workstation.MaterialAllocationRequired` BIT; we have the data (OI-18 ItemLocation metadata) but no operator screen. Phase 6 Assembly gates on resolving this. Couples to UJ-09. (2) **OI-32b NEW / ⬜ Open (discovery)** — Material Classes as a first-class entity. Flexware's `Material.MaterialClassID` FK may cover Honda-customer groupings our `Parts.ItemType` misses. Phase 0 confirmation of live usage needed. Full review report at `reference/NewInput/REVIEW_2026-04-24.md`. OI-31 "extend counters" inference from the review was **reverted** — Jacques confirmed the `IdentifierFormat` export he provided (Lot + SerializedItem, 2 rows) is the complete live counter list, not a sample. Design confirmations: DashboardConfiguration / UserInterfaceScript / clock# + PIN rejections validated — no functional loss. |
 | 2.7 | 2026-04-24 | Blue Ridge Automation | **Arc 2 model revisions (2026-04-23 session) landed.** OI-09 ✅ Closed — Die Cast cavity-parallel LOTs codified into Data Model v1.9 via `Lot.ToolId` + `Lot.ToolCavityId` (N active cavities → N parallel independent LOTs, not sublots). Machining sub-LOT split remains a separate concept in FDS §5.4. **OI-26 DELETED** (not Resolved, not Superseded — removed entirely). Flexware's `UserInterfaceScript` DB-stored-runtime-code pattern is not reproduced: LocationAttribute on Terminal/Workstation tier + Perspective session-scoped scripts cover every legitimate use case; runtime code lives in Ignition project files, version-controlled. **OI-31 NEW / ⬜ Open** — `Lots.IdentifierSequence` table (Flexware `IdentifierFormat` equivalent, carries `MESL{0:D7}` Lot and `MESI{0:D7}` SerializedItem counters). Schema locked; seed values pending Flexware cutover snapshot. OI-05 confirmed — post-merge LOT has NULL Tool / Cavity (blended-origin can't denormalize). Source decisions: `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md`. Downstream commits in the same refresh pass: Data Model v1.9, FDS v0.11, User Journeys v0.8, Arc 2 phased plan refresh. |
 
@@ -174,12 +175,12 @@ Delivered via FDS v0.8, Data Model v1.6, User Journeys v0.6, Config Tool phased 
 
 ---
 
-### OI-07 — Work order scope — 🔶 In Review (revised)
+### OI-07 — Work order scope — 🔶 In Review (revised 2026-04-24)
 
-**Priority:** HIGH
-**Owner:** MPP / Blue Ridge (Ben is SME)
+**Priority:** HIGH (active); FUTURE hooks are LOW
+**Owner:** MPP / Blue Ridge (Ben is SME for the future Demand / Maintenance engine)
 **FDS §:** 6.10
-**References:** FDS-06-022, FDS-06-023, FDS-06-024; FRS 3.1.5, 3.10.1, 3.10.2, 3.10.5; Spark Dep. B.5
+**References:** FDS-06-022, FDS-06-023, FDS-06-024, FDS-06-025, FDS-06-026; FRS 3.1.5, 3.10.1, 3.10.2, 3.10.5; Spark Dep. B.5
 
 **Description:** Include Work Orders in MVP or defer entirely? Biggest CONDITIONAL decision.
 
@@ -188,12 +189,41 @@ Delivered via FDS v0.8, Data Model v1.6, User Journeys v0.6, Config Tool phased 
 - (b) Defer — all WO tables exist but are not populated.
 - (c) MVP-lite — create WOs but no operator-facing screens.
 
-**Revised decision (2026-04-20):** MVP-lite **with three explicit work-order types**:
-- **Demand WO** — production work, auto-generated on LOT start, invisible to operators (existing MVP-lite story).
-- **Maintenance WO** — **targets a Tool** (couples to Phase B Tool Management). Has its own engine per MPP; needs clarification from Ben on lifecycle, scheduling, and integration with the maintenance team's existing tooling.
-- **Recipe WO** — hidden from the operator (recipe / configuration context).
+**Decision (2026-04-24 correction of 2026-04-20):** **MVP-LITE with a single active type — `Production`.** Plus a code-table hook that allows future Demand (planned PM) and Maintenance (emergency) types to be added without schema change. Recipe is deleted entirely.
 
-Data model adds `Workorder.WorkOrderType` code table (Demand / Maintenance / Recipe) and a nullable `ToolId` FK on `Workorder.WorkOrder` to support Maintenance. Ben owes the maintenance-engine scope before Phase G (SQL) can proceed. FDS §6.10 rewrite in Phase D.
+**The 2026-04-20 meeting note was mis-recorded.** The raw note read:
+
+```
+Ben has more information about work orders
+maintenance engine
+demand work orders, maintenance work orders
+recipe work orders to not be operator visible
+```
+
+Jacques clarified 2026-04-24: the "recipe work orders to not be operator visible" line was actually describing the **Production** work orders already in our design (MVP-lite, auto-generated on LOT start, invisible to operators). There is no separate Recipe concept and there never was. The earlier three-type `Demand` / `Maintenance` / `Recipe` model (FDS v0.10, Data Model v1.7) grew out of extrapolating those four meeting-note words into a full taxonomy — a drafter's error.
+
+**Under MPP's actual taxonomy:**
+
+| Type | Meaning | MVP status |
+|---|---|---|
+| **Production** | The existing auto-generated, per-LOT, invisible-to-operators bookkeeping (formerly mis-named "Demand"). | **MVP-LITE** — built, auto-generated, no operator screens. |
+| **Demand** | Planned preventative maintenance. | **FUTURE** — not in scope for this project. |
+| **Maintenance** | Emergency maintenance. | **FUTURE** — not in scope for this project. |
+
+The existing **MVP-lite behaviour does not change.** What changes is:
+- The code value in `Workorder.WorkOrderType` is renamed `Demand` → `Production`.
+- `Recipe` is deleted from the code table and from every doc.
+- `Maintenance` is also removed from the current seed (it was only a placeholder for a future flow). The code table **mechanism** stays as the schema hook — future MPP work can INSERT `Demand` and `Maintenance` rows without a schema change.
+- The nullable `ToolId` FK on `Workorder.WorkOrder` stays as a schema hook for future Maintenance WOs targeting a Tool. No flow or proc enforcement in MVP.
+
+**Data model impact:** `Workorder.WorkOrderType` remains. Seed shrinks from 3 rows to 1 row (`Production`).
+
+**SQL correction follow-up (queued, not executed this turn):**
+1. New versioned migration (next unclaimed number, e.g., `0013_workordertype_correction.sql`): `UPDATE Workorder.WorkOrderType SET Code='Production', Name='Production Work Order', Description='...' WHERE Id=1`; `DELETE WHERE Id IN (2, 3);` — leaves a single-row seed.
+2. Update `sql/tests/0019_Parts_ConsumptionMetadata_And_ScrapSource/010_Phase_E_additives.sql` — current test asserts 3 seed rows + presence of Code='Demand'. Should assert 1 seed row + Code='Production'.
+3. Update repeatable proc comments for `R__Workorder_WorkOrderType_List.sql` and `R__Workorder_WorkOrderType_Get.sql` (comment-only change landing this turn).
+
+**Ben's maintenance-engine scope** is NOT gating this project. When MPP later scopes a maintenance MES project, they can INSERT the new `Demand` (planned PM) and `Maintenance` (emergency) code rows and build the flow on top of the existing schema hook. Until then, leave the code table single-seeded.
 
 ---
 

@@ -1,10 +1,12 @@
 # Tool Management — Design Spec (Phase B of the 2026-04-20 OI review refactor)
 
-**Status:** Draft for review
+**Status:** Draft for review — shipped in Phase G (commit `534f55c`). Retained as a design record; supersessions noted inline.
 **Owner:** Jacques Potgieter
-**Date:** 2026-04-21
+**Date:** 2026-04-21 (original); OI-07 correction addendum 2026-04-24
 **Supersedes:** OI-10 in `MPP_MES_Open_Issues_Register.md` v2.4
-**Implementation target:** Phase G SQL migration `0010_phase9_tools_and_workorder.sql`
+**Implementation target:** Phase G SQL migration `0010_phase9_tools_and_workorder.sql` (shipped 2026-04-22)
+
+> **⚠ Correction note added 2026-04-24 (OIR v2.9 / Data Model v1.9b / FDS v0.11b):** This spec originally described `Workorder.WorkOrderType` seeded with 3 rows (`Demand` / `Maintenance` / `Recipe`) and called out `WorkOrder.ToolId` as populated only for `Maintenance` WOs. Jacques clarified that the 2026-04-20 meeting note behind that taxonomy was mis-recorded — the "Recipe" line was describing the Production flow (the pre-existing MVP-LITE bookkeeping). Under MPP's actual taxonomy, the only active WO type is **Production** (renamed from "Demand"). `Demand` (planned PM) and `Maintenance` (emergency) are genuinely separate future WO types but are OUT OF SCOPE for this project. Recipe is deleted. The code-table mechanism remains as a future hook. See OIR OI-07 for the full narrative. The strike-through edits below mark the superseded lines; the shipped Phase G migration's 3-row seed is corrected via a follow-up versioned migration (queued, not yet executed).
 
 ## Purpose
 
@@ -284,8 +286,8 @@ Add two columns to the existing table:
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
-| WorkOrderTypeId | BIGINT | FK → WorkOrderType, NOT NULL DEFAULT Demand-Id | Backfill existing rows to `Demand` |
-| ToolId | BIGINT | FK → Tools.Tool, NULL | NULL unless `WorkOrderTypeId = Maintenance`. Enforced at the proc layer (no hard CHECK because Recipe WOs legitimately have NULL `ToolId`). |
+| WorkOrderTypeId | BIGINT | FK → WorkOrderType, NOT NULL DEFAULT ~~Demand~~ **Production**-Id (corrected v1.9b) | Backfill existing rows to ~~`Demand`~~ **`Production`**. |
+| ToolId | BIGINT | FK → Tools.Tool, NULL | ~~NULL unless `WorkOrderTypeId = Maintenance`.~~ **Future-Maintenance schema hook only (v1.9b correction). Not populated or enforced in MVP; reserved for a future maintenance-engine project.** |
 
 The default-to-Demand backfill lets the Phase 7 procs keep working unchanged — existing production work orders continue as Demand type without touching the create/update procs. When Maintenance WOs arrive (FUTURE), new procs handle the ToolId flow.
 
@@ -354,7 +356,7 @@ Phase G delivers (revised):
 3. Create `ToolType` with seed rows (Die / Cutter / Jig / Gauge / AssemblyFixture / TrimTool).
 4. Create `ToolAttributeDefinition` (empty).
 5. Create `Tool`, `ToolAttribute`, `ToolCavity`, `ToolAssignment` with FKs + filtered unique indexes.
-6. Create `Workorder.WorkOrderType` with seed (Demand / Maintenance / Recipe) — **standalone code table, no FK back into WorkOrder at this stage** (WorkOrder doesn't exist; Arc 2 adds the reverse FK when it creates WorkOrder).
+6. Create `Workorder.WorkOrderType` with seed ~~(Demand / Maintenance / Recipe)~~ **(single row: `Production` — corrected v1.9b OI-07, was originally 3 rows Demand/Maintenance/Recipe)** — **standalone code table, no FK back into WorkOrder at this stage** (WorkOrder doesn't exist; Arc 2 adds the reverse FK when it creates WorkOrder).
 7. Create `Workorder.ScrapSource` with seed (Inventory / Location) — same pattern, standalone code table ready for Arc 2 to FK into.
 8. ALTER Phase E additive columns (all land on existing tables): `Parts.Item.CountryOfOrigin`, `Parts.ContainerConfig.MaxParts`, `Parts.ItemLocation` consumption cols (Min/Max/DefaultQuantity + IsConsumptionPoint).
 9. DROP legacy `Location.AppUser.ClockNumber` + `PinHash` columns (Phase C deferred cleanup).

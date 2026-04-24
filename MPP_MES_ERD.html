@@ -797,18 +797,18 @@ erDiagram
     <div class="schema-desc">
         <h2>workorder <span class="scope-badge scope-mixed">Mixed Scope</span></h2>
         <p>Internal work order context that operators never see. Auto-generated when production activity begins, providing bookkeeping for production events, material consumption, and reject tracking. Links LOTs to machines, routes, and operators. Every good count, bad count, and material consumption is recorded as an immutable event.</p>
-        <p class="scope-note">Work order tables (<code>WorkOrder</code>, <code>WorkOrderOperation</code>, <code>WorkOrderType</code>) are <strong>MVP-LITE</strong> per OI-07 — auto-generated and populated, but invisible to operators (no WO screens). Production/consumption/reject event tables are <strong>MVP</strong>. Events have nullable FKs to <code>WorkOrderOperation</code>, so they function independently. v1.7 adds the three-type model (Demand / Maintenance / Recipe) confirmed at the 2026-04-20 meeting — Maintenance WO <em>flow</em> is <strong>FUTURE</strong>, but the schema hook (<code>WorkOrderTypeId</code> + nullable <code>ToolId → Tools.Tool</code>) is MVP.</p>
+        <p class="scope-note">Work order tables (<code>WorkOrder</code>, <code>WorkOrderOperation</code>, <code>WorkOrderType</code>) are <strong>MVP-LITE</strong> per OI-07 — auto-generated and populated, but invisible to operators (no WO screens). Production/consumption/reject event tables are <strong>MVP</strong>. Events have nullable FKs to <code>WorkOrderOperation</code>, so they function independently. <strong>v1.9b (2026-04-24 OI-07 correction):</strong> MVP ships with one active <code>WorkOrderType</code> row — <code>Production</code> — preserving the MVP-LITE bookkeeping. <code>Demand</code> (planned preventative maintenance) and <code>Maintenance</code> (emergency) are genuinely separate future WO types under MPP's taxonomy but are NOT built in this project; the code table stays as a future hook so a separate maintenance-engine project can INSERT those rows without schema change. The nullable <code>ToolId</code> FK on <code>WorkOrder</code> remains as a schema hook for the future Maintenance flow. The pre-correction three-type model (Demand / Maintenance / Recipe) and the Recipe concept have been retired.</p>
     </div>
 
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
-            <h4>WorkOrderType <span class="scope-badge scope-mvp">MVP-Lite v1.7</span></h4>
-            <p>Read-only code table seeded at migration: <code>Demand</code> (production, existing MVP-Lite behaviour), <code>Maintenance</code> (targets a Tool; flow is FUTURE, schema hook only in MVP), <code>Recipe</code> (configuration/recipe context, hidden from operator). Added v1.7 as part of the Phase B refactor. Existing WorkOrder rows backfill to Demand.</p>
+            <h4>WorkOrderType <span class="scope-badge scope-mvp">MVP-Lite v1.9b</span></h4>
+            <p>Read-only code table. <strong>Seed corrected v1.9b (2026-04-24 OI-07):</strong> single row <code>Production</code> — the existing MVP-LITE bookkeeping flow (auto-generated on LOT start, invisible to operators). Added v1.7 as part of the Phase B refactor; originally seeded with three rows (Demand / Maintenance / Recipe) which were retired when Jacques clarified the 2026-04-20 meeting note had been mis-recorded. Future additions — <code>Demand</code> (planned preventative maintenance) and <code>Maintenance</code> (emergency) — are out of scope for this project; the code-table mechanism is the hook so a future maintenance-engine project can INSERT those rows without schema change. Existing WorkOrder rows backfill to <code>Production</code>.</p>
         </div>
         <div class="table-card">
             <h4>WorkOrder <span class="scope-badge scope-mvp">MVP-Lite</span></h4>
-            <p>Auto-generated internal work order. Links an item to a route template. Operators never interact with this &mdash; it provides context for aggregating production data. (OI-07 resolved to MVP-Lite: included but hidden, no WO screens.) v1.7 adds <code>WorkOrderTypeId</code> (NOT NULL DEFAULT Demand-Id) and nullable <code>ToolId FK → Tools.Tool</code>. <code>ToolId</code> is populated only when <code>WorkOrderType = Maintenance</code>; enforced at proc layer (no CHECK — Recipe WOs legitimately leave it NULL).</p>
+            <p>Auto-generated internal work order. Links an item to a route template. Operators never interact with this &mdash; it provides context for aggregating production data. (OI-07: MVP-Lite, included but hidden, no WO screens.) v1.7 adds <code>WorkOrderTypeId</code> (NOT NULL DEFAULT <code>Production</code>-Id per v1.9b correction) and nullable <code>ToolId FK → Tools.Tool</code>. <code>ToolId</code> is a future-Maintenance schema hook; not populated or enforced in MVP.</p>
         </div>
         <div class="table-card">
             <h4>WorkOrderOperation <span class="scope-badge scope-mvp">MVP-Lite</span></h4>
@@ -852,7 +852,7 @@ erDiagram
 
     WorkOrderType {
         bigint Id PK
-        nvarchar Code "Demand / Maintenance / Recipe"
+        nvarchar Code "Production (only active v1.9b); future: Demand / Maintenance"
         nvarchar Name
         nvarchar Description
     }
@@ -873,11 +873,11 @@ erDiagram
     WorkOrder {
         bigint Id PK
         nvarchar WoNumber
-        bigint WorkOrderTypeId FK
+        bigint WorkOrderTypeId FK "DEFAULT Production v1.9b"
         bigint ItemId FK
         bigint RouteTemplateId FK
         bigint WorkOrderStatusId FK
-        bigint ToolId FK "NULL (Maintenance WOs only)"
+        bigint ToolId FK "NULL (future Maintenance hook)"
         datetime2 CreatedAt
         datetime2 CompletedAt
     }
@@ -1464,7 +1464,7 @@ erDiagram
         <li><strong><code>Tools.Tool.Id</code> ←—— <code>Lots.Lot.ToolId</code></strong> — system of record for die-cast-origin LOTs. Required at <code>Lot_Create</code> when the Cell has an active <code>ToolAssignment</code>. NULL for non-die-cast origins. NULL after <code>Lot_Merge</code> on blended-origin LOTs. Downstream LOTs do NOT carry.</li>
         <li><strong><code>Tools.ToolCavity.Id</code> ←—— <code>Lots.Lot.ToolCavityId</code></strong> — same rules. Cavity must belong to the tool and be in <code>Active</code> status at <code>Lot_Create</code>.</li>
         <li><strong><code>Workorder.ProductionEvent</code> does NOT carry Tool or Cavity</strong> — v1.9 reshape. Reports derive via <code>ProductionEvent.LotId → Lot.ToolId / Lot.ToolCavityId</code>. Honda-trace queries walk <code>LotGenealogy</code> back to origin Die-Cast LOTs.</li>
-        <li><strong><code>Tools.Tool.Id</code> ←—— <code>Workorder.WorkOrder.ToolId</code></strong> — Maintenance WO target. NULL for Demand and Recipe WOs. Enforced at proc layer (no CHECK — Recipe WOs legitimately leave it NULL).</li>
+        <li><strong><code>Tools.Tool.Id</code> ←—— <code>Workorder.WorkOrder.ToolId</code></strong> — future-Maintenance schema hook per v1.9b OI-07 correction. NULL for all Production WOs (the only active type in MVP). Not enforced or populated in MVP; reserved for a future maintenance-engine project.</li>
     </ul>
 </div>
 
@@ -1630,10 +1630,10 @@ erDiagram
             <tr><td>lots</td><td>Container.CurrentLocationId</td><td>location</td><td>Location.Id</td><td></td></tr>
             <tr><td>lots</td><td>SerializedPart.ItemId</td><td>parts</td><td>Item.Id</td><td></td></tr>
             <tr><td colspan="5" style="background:#1a1d27; padding:0.5rem; font-weight:bold;">Workorder schema cross-references</td></tr>
-            <tr><td>workorder</td><td>WorkOrder.WorkOrderTypeId</td><td>workorder</td><td>WorkOrderType.Id</td><td><strong>v1.7</strong> — Demand / Maintenance / Recipe discriminator</td></tr>
+            <tr><td>workorder</td><td>WorkOrder.WorkOrderTypeId</td><td>workorder</td><td>WorkOrderType.Id</td><td><strong>v1.9b</strong> — single-seeded `Production` row; future `Demand`/`Maintenance` rows addable without schema change</td></tr>
             <tr><td>workorder</td><td>WorkOrder.ItemId</td><td>parts</td><td>Item.Id</td><td></td></tr>
             <tr><td>workorder</td><td>WorkOrder.RouteTemplateId</td><td>parts</td><td>RouteTemplate.Id</td><td></td></tr>
-            <tr><td>workorder</td><td><strong>WorkOrder.ToolId</strong></td><td>tools</td><td>Tool.Id</td><td><strong>v1.7</strong> — Maintenance WO target (nullable)</td></tr>
+            <tr><td>workorder</td><td><strong>WorkOrder.ToolId</strong></td><td>tools</td><td>Tool.Id</td><td><strong>v1.7</strong> — future-Maintenance schema hook (nullable, not populated in MVP)</td></tr>
             <tr><td>workorder</td><td>WorkOrderOperation.LocationId / RouteStepId</td><td>location / parts</td><td>Location.Id / RouteStep.Id</td><td></td></tr>
             <tr><td>workorder</td><td>ProductionEvent.LotId</td><td>lots</td><td>Lot.Id</td><td><strong>v1.9</strong> — Tool/Cavity derived via Lot</td></tr>
             <tr><td>workorder</td><td>ProductionEvent.OperationTemplateId</td><td>parts</td><td>OperationTemplate.Id</td><td></td></tr>
@@ -1849,7 +1849,7 @@ erDiagram
 
     %% ═══ WORKORDER intra-schema ═══
     wo__WorkOrderStatus ||--o{ wo__WorkOrder : status
-    wo__WorkOrderType ||--o{ wo__WorkOrder : "type (Demand/Maint/Recipe)"
+    wo__WorkOrderType ||--o{ wo__WorkOrder : "type (Production; future Demand/Maint)"
     wo__WorkOrder ||--o{ wo__WorkOrderOperation : ops
     wo__OperationStatus ||--o{ wo__WorkOrderOperation : status
     wo__WorkOrderOperation ||--o{ wo__ProductionEvent : "executed at (NULL)"
@@ -1861,7 +1861,7 @@ erDiagram
     %% ═══ WORKORDER → PARTS / LOTS / LOCATION / TOOLS / QUALITY ═══
     parts__Item ||--o{ wo__WorkOrder : item
     parts__RouteTemplate ||--o{ wo__WorkOrder : route
-    tools__Tool ||--o{ wo__WorkOrder : "Maintenance WO target (v1.7)"
+    tools__Tool ||--o{ wo__WorkOrder : "future Maintenance hook (v1.7; not populated in MVP)"
     parts__RouteStep ||--o{ wo__WorkOrderOperation : step
     parts__OperationTemplate ||--o{ wo__ProductionEvent : executed
     parts__DataCollectionField ||--o{ wo__ProductionEventValue : field
