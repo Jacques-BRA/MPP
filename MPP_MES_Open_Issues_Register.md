@@ -1,7 +1,7 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.9 — Working Draft
+**Version:** 2.10 — Working Draft
 **Date:** 2026-04-24
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
@@ -20,6 +20,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | 2.4 | 2026-04-21 | Blue Ridge Automation | **Phase A of the 2026-04-20 OI review refactor.** Closed OI-03 (shift runtime derived from events) and OI-06 (initials-based operator identity — see Phase C / FDS v0.8). Revised OI-04 (line-stop, not LOT-hold; 10-fail escalation; CRT 200% inspect), OI-05 (die-rank compatibility merge rules), OI-07 (three WO types, Maintenance targets Tools), OI-08 addenda (terminal locked to machine context; part↔machine validity map; mobile consideration), OI-09 addenda (sublot pattern with parent FK), OI-10 (superseded by Phase B Tool Management design). Added four new items: OI-11 (part rename at Casting → Trim), OI-12 (lineside inventory caps), OI-13 (BOM source = Flexware app @ IP .919), OI-14 (admin remove-item). Structural change: each OI and UJ now has its own subsection instead of living inside a giant grid table — easier to read, diff, and update. Source meeting notes at `Meeting_Notes/2026-04-20_OI_Review.md`. Running plan in `memory/project_mpp_oi_refactor.md`. |
 | 2.5 | 2026-04-22 | Blue Ridge Automation | **Legacy MES screenshot review gap analysis.** 36 screenshots of the Flexware Madison MES reviewed against the current FDS / Data Model. 16 new Part A items added (OI-15 through OI-30): 9 concrete design additions (Track screen, auto-finish-on-target WO, tray-divisibility rule, ItemLocation consumption metadata, Country of Origin, scrap source enum, partial start/complete, Hold Management screen, Lot computed fields) and 7 discovery items to confirm with MPP (Automation tile scope, Notifications, per-workstation scripting, Supply Part flag, cast-override cell flag, Workstation Category grouping, Reports tile contents). Source summary at `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Legacy screenshots at `reference/MPP_Current_MES_screenshots.docx`. |
 | 2.6 | 2026-04-22 | Blue Ridge Automation | **OI-11 resolved — Casting → Trim rename modelled via 1-line BOM, not `Parts.ItemTransform`.** Review of the v2.5 design surfaced that the proposed `Parts.ItemTransform` table duplicated every column of `Workorder.ConsumptionEvent`. The rename is a degenerate 1-line BOM consumption: trim part has cast part as its sole component at QtyPer=1; existing ConsumptionEvent + LotGenealogy machinery handles the flow and the Honda backward trace. OI-11 moves ⬜ Open → ✅ Resolved. Downstream corrections: Data Model v1.8-rev (ItemTransform table section replaced with a ✅ Resolved callout; `Audit.LogEntityType` seed shrinks from 10 to 9 rows; table count "~73" → "~72"), FDS v0.10-rev (§5.10 retained, rewritten around FDS-05-033 BOM-driven scan-in; FDS-05-034/-035 retired), User Journeys v0.7-rev (Trim Shop narrative simplified to normal consumption), Phase G migration `0010_phase9_tools_and_workorder.sql` (ItemTransform LogEntityType row dropped; ScrapSource shifted from Id=40 to Id=39; re-run green, 779/779 tests still pass). |
+| 2.10 | 2026-04-24 | Blue Ridge Automation | **Jacques OIR review annotations applied.** Jacques annotated v2.8 of this register and returned it; this revision folds every inline "Decision (4/24/2026):" note back into the register source with matching status changes. 17 items moved Resolved (OI-02, -04, -05, -08, -12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -32b). 2 UJs closed (UJ-02, UJ-04). Several carry modifications that trigger downstream data-model / FDS / ERD updates: **OI-12** — `MaxParts` reclassified as a `Parts.Item` attribute (not `ContainerConfig`). **OI-17** — tray-divisibility reclassified as a Finished-Good Part attribute. **OI-18** — `Parts.ItemLocation` extended to support Area / WorkCenter / Cell hierarchy (not Cell-only) with compatibility validation cascading up the hierarchy at check-in. **OI-16** — adds expected PLC confirmation BIT and a new Terminal-scoped `LocationAttribute` toggling a "Confirm Completion" button style (large button on designated lines vs passive popup). **OI-21** — adds a **Pausable WorkOrder** concept (resume prompt on starting a new job while one is paused). **OI-23** — derivation implemented as a view (not materialized columns). **OI-32b** closed: `Parts.ItemType` suffices; no Material Classes table. **OI-32** remains open — Jacques challenged the framing; clarification response logged in Decision narrative. **OI-08** closes with new terminal-mode-by-assignment rule: Terminal assigned to a WorkCenter → Dedicated + no location scan; Terminal assigned to an Area → Shared + location selection is the first step of every interaction. Count shifts: Resolved 5 → 22, In Review 6 → 1 (OI-07 only, mid-revision), Open 20 → 8, Part B Resolved 4 → 6, Part B In Review 3 → 2, Part B Open 12 → 10 (UJ-02 and UJ-04 closed). **UJ insufficiency noted but not addressed this revision** — Jacques flagged that the UJ entries lack the options/impact depth of the OI entries; a separate enrichment pass is queued. **Downstream doc integration queued as a list (data model, FDS, ERD, Arc 2 Plan) but not executed in this commit** — each "Section needs Integrated into other Docs" note from Jacques becomes its own targeted commit. |
 | 2.9 | 2026-04-24 | Blue Ridge Automation | **OI-07 rewritten — WorkOrderType corrected to `Production` only; `Recipe` deleted; `Demand` and `Maintenance` reclassified as FUTURE hooks.** Jacques clarified that the 2026-04-20 meeting note "recipe work orders to not be operator visible" was a mis-recording — the "Recipe" line was actually about the **Production** work orders already modelled (MVP-lite, auto-generated, invisible to operators). There is no separate Recipe concept. The existing WO our design supports is Production. Under MPP's framing, **Demand** (planned preventative maintenance) and **Maintenance** (emergency maintenance) are genuinely separate future WO types — but building them is out of scope for this project; the data model only needs to **not block** their future addition. OI-07 scope narrows accordingly: the `Workorder.WorkOrderType` code table remains in the schema as a future hook (new rows can be INSERTed for Demand/Maintenance when Ben scopes the maintenance engine), but the seed is corrected to a single `Production` row. `Recipe` is stripped from every doc, seed, proc comment, and test description. Downstream effects: FDS §6.10 rewritten (FDS-06-022 rename, FDS-06-027 Recipe deleted, FDS-06-025 seed table updated), Data Model §4 seed table updated, ERD Workorder tab + Master tab updated. **SQL follow-up queued** (not executed this turn): a correction migration is needed to rename the shipped `WorkOrderType` seed row `Demand`→`Production`, DELETE `Recipe`, and DELETE `Maintenance` (re-addable later), plus a test update in `sql/tests/0019_Parts_ConsumptionMetadata_And_ScrapSource/010_Phase_E_additives.sql` (current test asserts 3 seed rows + Code='Demand'). |
 | 2.8 | 2026-04-24 | Blue Ridge Automation | **Legacy MES Storyboards review additions.** Review of `reference/NewInput/Madison MES - Storyboards.pdf` (2012 Flexware) + `5GO-AP4 IPAddresses.xlsx` against v1.9 / v0.11 / v0.8 / v2.7 design: 43/52 legacy capabilities covered (83%), 5 partial (10%), 4 gaps (7%), 0 out-of-scope. Two register updates: (1) **OI-32 NEW / ⬜ Open** — Material Allocation operator screen. Flexware has a dedicated pre-PLC allocation workflow (`MaterialAllocationMenuView` / `CreateView` / `UpdateView`) gated by `Workstation.MaterialAllocationRequired` BIT; we have the data (OI-18 ItemLocation metadata) but no operator screen. Phase 6 Assembly gates on resolving this. Couples to UJ-09. (2) **OI-32b NEW / ⬜ Open (discovery)** — Material Classes as a first-class entity. Flexware's `Material.MaterialClassID` FK may cover Honda-customer groupings our `Parts.ItemType` misses. Phase 0 confirmation of live usage needed. Full review report at `reference/NewInput/REVIEW_2026-04-24.md`. OI-31 "extend counters" inference from the review was **reverted** — Jacques confirmed the `IdentifierFormat` export he provided (Lot + SerializedItem, 2 rows) is the complete live counter list, not a sample. Design confirmations: DashboardConfiguration / UserInterfaceScript / clock# + PIN rejections validated — no functional loss. |
 | 2.7 | 2026-04-24 | Blue Ridge Automation | **Arc 2 model revisions (2026-04-23 session) landed.** OI-09 ✅ Closed — Die Cast cavity-parallel LOTs codified into Data Model v1.9 via `Lot.ToolId` + `Lot.ToolCavityId` (N active cavities → N parallel independent LOTs, not sublots). Machining sub-LOT split remains a separate concept in FDS §5.4. **OI-26 DELETED** (not Resolved, not Superseded — removed entirely). Flexware's `UserInterfaceScript` DB-stored-runtime-code pattern is not reproduced: LocationAttribute on Terminal/Workstation tier + Perspective session-scoped scripts cover every legitimate use case; runtime code lives in Ignition project files, version-controlled. **OI-31 NEW / ⬜ Open** — `Lots.IdentifierSequence` table (Flexware `IdentifierFormat` equivalent, carries `MESL{0:D7}` Lot and `MESI{0:D7}` SerializedItem counters). Schema locked; seed values pending Flexware cutover snapshot. OI-05 confirmed — post-merge LOT has NULL Tool / Cavity (blended-origin can't denormalize). Source decisions: `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md`. Downstream commits in the same refresh pass: Data Model v1.9, FDS v0.11, User Journeys v0.8, Arc 2 phased plan refresh. |
@@ -32,22 +33,31 @@ This register consolidates all open items and design decisions that gate Perspec
 
 | Priority | ✅ Resolved | 🔶 In Review | ⬜ Open | Superseded | **Total** |
 |---|---|---|---|---|---|
-| HIGH | 1 (OI-01) | 3 (OI-02, OI-05, OI-07) | 2 (OI-13, OI-15) | 0 | **6** |
-| MEDIUM | 4 (OI-03, OI-06, OI-09, OI-11) | 3 (OI-04, OI-08, OI-12) | 10 (OI-16, OI-17, OI-18, OI-21, OI-22, OI-24, OI-28, OI-30, OI-31, OI-32) | 0 | **17** |
-| LOW | 0 | 0 | 8 (OI-14, OI-19, OI-20, OI-23, OI-25, OI-27, OI-29, OI-32b) | 0 | **8** |
+| HIGH | 3 (OI-01, OI-02, OI-05) | 1 (OI-07) | 2 (OI-13→resolved, OI-15→resolved, remaining: none HIGH still open) | 0 | **6** |
+| MEDIUM | 13 (OI-03, OI-04, OI-06, OI-08, OI-09, OI-11, OI-12, OI-16, OI-17, OI-18, OI-21, OI-22, OI-31) | 0 | 4 (OI-24, OI-28, OI-30, OI-32) | 0 | **17** |
+| LOW | 6 (OI-14, OI-19, OI-20, OI-23, OI-32b, plus OI-13 resolved HIGH moved up) | 0 | 4 (OI-25, OI-27, OI-29) | 0 | **10** |
 | — | 0 | 0 | 0 | 1 (OI-10) | **1** |
-| **Total** | **5** | **6** | **20** | **1** | **32** |
+| **Total** | **22** | **1** | **8** | **1** | **32** |
+
+> **Note on the count table:** Jacques's 2026-04-24 batch resolved OI-13 (HIGH) + OI-15 (HIGH) but there are no other HIGH items still Open. Resolved column bumps significantly. Corrected row totals below:
+>
+> - Resolved (22) = OI-01, -02, -03, -04, -05, -06, -08, -09, -11, -12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -32b
+> - In Review (1) = OI-07 (mid-correction — see v2.9 entry)
+> - Open (8) = OI-24, -25, -27, -28, -29, -30, -31, -32
+> - Superseded (1) = OI-10
 
 **Part B counts (19 items):**
 
 | Priority | ✅ Resolved | 🔶 In Review | ⬜ Open | **Total** |
 |---|---|---|---|---|
-| HIGH | 1 (UJ-01) | 0 | 6 (UJ-04, UJ-07, UJ-08, UJ-11, UJ-13, UJ-18, UJ-19) | **7** |
-| MEDIUM | 2 (UJ-12, UJ-15) | 3 (UJ-02, UJ-03, UJ-14) | 6 (UJ-05, UJ-09, UJ-10, UJ-16, UJ-17) | **11** |
+| HIGH | 2 (UJ-01, UJ-04) | 0 | 5 (UJ-07, UJ-08, UJ-11, UJ-13, UJ-18, UJ-19) | **7** |
+| MEDIUM | 3 (UJ-02, UJ-12, UJ-15) | 2 (UJ-03, UJ-14) | 5 (UJ-05, UJ-09, UJ-10, UJ-16, UJ-17) | **11** |
 | LOW | 1 (UJ-06) | 0 | 0 | **1** |
-| **Total** | **4** | **3** | **12** | **19** |
+| **Total** | **6** | **2** | **10** | **19** |
 
-**Grand total:** 51 items (32 Part A + 19 Part B). 9 resolved, 9 in review, 32 open, 1 superseded.
+**Grand total:** 51 items (32 Part A + 19 Part B). 28 resolved, 3 in review, 18 open, 1 superseded + 1 superseded-style (OI-10).
+
+> **Note on UJ descriptions:** Jacques flagged 2026-04-24 that UJ entries lack the options/impact/reference depth of the OI entries. A separate enrichment pass is queued before the next MPP review — not addressed in v2.10.
 
 ---
 
@@ -74,7 +84,7 @@ These items are called out inline in the FDS with `> **RESOLVED**` / `> **PENDIN
 
 ---
 
-### OI-02 — Weight-based container closure — 🔶 In Review
+### OI-02 — Weight-based container closure — ✅ Resolved (2026-04-24)
 
 **Priority:** HIGH
 **Owner:** Blue Ridge / MPP Engineering
@@ -88,6 +98,8 @@ These items are called out inline in the FDS with `> **RESOLVED**` / `> **PENDIN
 - (b) Weight closure handled entirely in the PLC — MES responds to a "container full" signal only.
 
 **Proposed decision (pending customer validation):** Non-serialized lines should receive feedback from a scale. The two columns (`ClosureMethod`, `TargetWeight`) were added as nullable to `ContainerConfig` in Phase 4 pending confirmation.
+
+**Decision (2026-04-24):** Proposed decision confirmed by Jacques. `ClosureMethod` + `TargetWeight` on `Parts.ContainerConfig` stay. Non-serialized lines drive closure via scale feedback per FDS-06-014. **Integration queued:** remove "pending validation" language from FDS §6.6 / §3.6; ERD Parts tab card updated to drop the "pending" caveat. UJ-13 (duplicate open item) also closes.
 
 ---
 
@@ -109,7 +121,7 @@ These items are called out inline in the FDS with `> **RESOLVED**` / `> **PENDIN
 
 ---
 
-### OI-04 — Vision system conflict resolution — 🔶 In Review (revised)
+### OI-04 — Vision system conflict resolution — ✅ Resolved (2026-04-24)
 
 **Priority:** MEDIUM
 **Owner:** MPP Engineering / Quality
@@ -131,9 +143,11 @@ These items are called out inline in the FDS with `> **RESOLVED**` / `> **PENDIN
 
 Supervisor elevation uses the per-action AD prompt from FDS-04-007 (no PIN). Requires FDS §10.3 rewrite and a new escalation-state model. Work lands in Phase D.
 
+**Decision (2026-04-24):** Proposed decision confirmed by Jacques. FDS §10.3 rewrite from 2026-04-21 (FDS-10-005, -009, -010, -011, -012) is the authoritative spec. **Integration queued:** UJ-17 (duplicate open item) closes.
+
 ---
 
-### OI-05 — LOT merge business rules — 🔶 In Review (revised)
+### OI-05 — LOT merge business rules — ✅ Resolved (2026-04-24)
 
 **Priority:** HIGH
 **Owner:** MPP Production Control / Quality
@@ -151,6 +165,8 @@ Supervisor elevation uses the per-action AD prompt from FDS-04-007 (no PIN). Req
 **Addendum (2026-04-23):** Post-merge LOT has **NULL `ToolId` + `ToolCavityId`** on `Lots.Lot` — blended-origin material cannot denormalize multiple Tool origins into a single FK pair. Tool-specific trace reconstructed via genealogy of the pre-merge source LOTs (`Lots.LotGenealogy` walk).
 
 Implementation couples to the Phase B Tool Management design because die rank lives on the Tool / Cavity entity. Data model will grow a `Tools.DieRankCompatibility` lookup seeded from the MPP matrix. FDS §5.5 rewrite in Phase D.
+
+**Decision (2026-04-24):** Revised decision + 2026-04-23 post-merge-NULL-Tool addendum both confirmed by Jacques. `Tools.DieRankCompatibility` matrix still owed by MPP Quality; supervisor AD override is the only cross-die merge path until the matrix loads. **Integration queued:** UJ-08 (duplicate open item) closes.
 
 ---
 
@@ -227,7 +243,7 @@ The existing **MVP-lite behaviour does not change.** What changes is:
 
 ---
 
-### OI-08 — Terminal architecture — 🔶 In Review (addenda after resolution)
+### OI-08 — Terminal architecture — ✅ Resolved (2026-04-24)
 
 **Priority:** MEDIUM
 **Owner:** MPP IT / Operations
@@ -246,6 +262,14 @@ The existing **MVP-lite behaviour does not change.** What changes is:
 - **Honda RFID on labels (future).** Honda plans RFID; the MES should not block that path. Out-of-scope for MVP but worth a forward-compatibility note in FDS §2.5.
 
 Work lands in Phase D (FDS §2.5 addenda pass).
+
+**Decision (2026-04-24) — new clarification from Jacques:** The Terminal's **Location assignment determines its mode**:
+- **Terminal assigned to a WorkCenter (or Cell)** → `TerminalMode = Dedicated`. Machine context is pre-known from the Location hierarchy. No location scan/select required at the start of an interaction.
+- **Terminal assigned to an Area** → `TerminalMode = Shared`. Location selection / scanning is the mandatory first step of every interaction (operator picks the destination Cell from the Area's Cells).
+
+This supersedes the earlier `TerminalMode` LocationAttribute approach with a simpler rule: the Location the Terminal is attached to *is* the signal. If a Terminal is a child of a WorkCenter Location in the hierarchy, it's Dedicated by definition; a child of an Area is Shared. No separate attribute value required.
+
+**Integration queued:** FDS §2.5 (FDS-02-010 `TerminalMode` LocationAttribute) rewritten to derive from Terminal parent-Location tier instead of being a separately-seeded attribute. Arc 2 Plan Phase 1 `Terminal_ResolveFromSession` proc reads the parent tier and returns Dedicated/Shared accordingly. Data Model Phase 9 migration may drop the `TerminalMode` `LocationAttributeDefinition` seed if fully superseded (verify during integration). UJ-12 already closed.
 
 ---
 
@@ -323,7 +347,7 @@ This item remains in the register for traceability but is no longer a stand-alon
 
 ---
 
-### OI-12 — Lineside inventory caps — ⬜ Open (new)
+### OI-12 — Lineside inventory caps — ✅ Resolved with modification (2026-04-24)
 
 **Priority:** MEDIUM
 **Owner:** MPP Operations / Blue Ridge
@@ -338,9 +362,18 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Add `MaxParts INT NULL` to `Parts.ContainerConfig`. Add a `LinesideLimit` concept as a `LocationAttribute` on Cells. Validation fires in the scan-in mutation proc. Designed in Phase E, implemented in Phase G.
 
+**Decision (2026-04-24) — modification from Jacques:** Proposed decision is **fundamentally inaccurate** on the `MaxParts` placement. **`MaxParts` is a Part attribute, not a ContainerConfig attribute** — it's evaluated when inventory is checked into a Location, against the Part identity, not against the container's packing recipe. The lineside-limit concept (per-Cell `LinesideLimit` `LocationAttribute`) stays — that is a Location concern. But the per-basket-type cap moves off `Parts.ContainerConfig` and onto `Parts.Item`.
+
+**Integration queued:**
+- **Data Model v1.9b** (or next rev): DROP `Parts.ContainerConfig.MaxParts` column (shipped in Phase G migration `0010`); ADD `Parts.Item.MaxParts INT NULL` — cap of pieces allowed to check into any single Location for this Item. Validation: on `LotMovement` to a Cell, sum pieces already at the destination Cell of this Item + incoming quantity ≤ `Parts.Item.MaxParts`.
+- **FDS-03-019** rewritten to target `Parts.Item`, not `Parts.ContainerConfig`.
+- **FDS-03-020** (Lineside cap via `LocationAttribute`) stays as-is.
+- **SQL correction migration queued**: drop `Parts.ContainerConfig.MaxParts`, add `Parts.Item.MaxParts`, update test `sql/tests/0019_Parts_ConsumptionMetadata_And_ScrapSource/`. Coordinate with the OI-07 correction migration.
+- **ERD Parts tab** — move the `MaxParts` annotation from `ContainerConfig` to `Item`.
+
 ---
 
-### OI-13 — BOM source system — ⬜ Open (new, HIGH)
+### OI-13 — BOM source system — ✅ Resolved with caveat (2026-04-24)
 
 **Priority:** HIGH
 **Owner:** MPP IT / Blue Ridge
@@ -356,9 +389,15 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Option (a) — one-shot export at cutover. Document the export spec in FDS §1.4, add to the Reference Material list, and plan a bulk-load proc (similar to `Oee.DowntimeReasonCode_BulkLoadFromSeed`) once MPP delivers the export. Designed in Phase E; bulk-load proc in Phase G.
 
+**Decision (2026-04-24) — caveat from Jacques:** Proposed direction confirmed with **two-pull** timing: (1) first export pulled **NOW** for dev integration + validation (load into dev DB; verify parts/BOMs resolve correctly; surface missing items and data gaps before cutover); (2) cutover-day re-export + re-run of the bulk-load migration to catch any changes MPP made in the interim. This converts the "one-shot at cutover" into a rehearsed two-phase process — dev load is the rehearsal, cutover load is the production run.
+
+**Integration queued:**
+- FDS-14-005 Flexware BOM Import — update "Cutover handoff" bullet to describe the two-pull timing.
+- **Action needed NOW:** coordinate with MPP IT for the first Flexware export delivery. Pre-flight validation proc (`Parts.Bom_BulkLoadFromSeed`) design starts immediately.
+
 ---
 
-### OI-14 — Admin remove-item capability — ⬜ Open (new, LOW)
+### OI-14 — Admin remove-item capability — ✅ Resolved (2026-04-24)
 
 **Priority:** LOW
 **Owner:** Blue Ridge
@@ -369,9 +408,11 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Admin-only Configuration Tool screen with full audit trail. Already listed in FDS-04-007 elevated-action list (Phase C). Detail design in Phase E; proc in Phase G.
 
+**Decision (2026-04-24):** Proposed direction confirmed by Jacques. **Integration queued:** Config Tool phased plan — add admin remove-item screen to Phase 9 or later Config Tool pass; SQL procs to land in the next Phase G-equivalent batch for Arc 2.
+
 ---
 
-### OI-15 — Global Trace / Track screen — ⬜ Open (new)
+### OI-15 — Global Trace / Track screen — ✅ Resolved (2026-04-24)
 
 **Priority:** HIGH
 **Owner:** Blue Ridge / MPP Operations
@@ -387,9 +428,11 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Option (a). Honda traceability is the core mission of the project; operators, supervisors, and quality all need a zero-context lookup path. Designed in Phase E.
 
+**Decision (2026-04-24):** Proposed direction confirmed by Jacques. FDS-12-012 / -013 / -014 Global Trace Tool is authoritative. **Integration queued:** Arc 2 Plan Phase 7 (or earlier Phase that ships the home-tile router) to include the Track tile wiring.
+
 ---
 
-### OI-16 — Auto-finish-on-target WO semantics — ⬜ Open (new)
+### OI-16 — Auto-finish-on-target WO semantics — ✅ Resolved with additions (2026-04-24)
 
 **Priority:** MEDIUM
 **Owner:** Blue Ridge / MPP Engineering
@@ -400,9 +443,20 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Extend §6.10 and `Workorder.ProductionEvent_Record` to fire a WO-close event when cumulative ProductionEvent count (camera) or cumulative weight (scale) reaches the WO target. Configurable per WO.
 
+**Decision (2026-04-24) — additions from Jacques:** Proposed direction confirmed with two additions:
+
+1. **Expect a PLC confirmation BIT.** When camera / scale target is reached, the PLC writes a confirmation BIT; our Gateway script observes the BIT (not just the cumulative count) before firing the auto-close. Belt-and-suspenders: count crosses target AND PLC affirms, not either-or.
+
+2. **Confirm-button style is a per-Terminal `LocationAttribute`.** Some production lines require the operator to physically press a large "Confirm Completion" button at a fixed 1:1 terminal before the WO / Tray / Container closes (manual acknowledgement step). Other lines just show a passive popup ("WorkOrder completed" / "Tray completed" / "Container completed" — whichever is relevant) and proceed. This is configurable per Terminal via a new `LocationAttribute` (e.g., `RequiresCompletionConfirm BIT`) on the Terminal Location.
+
+**Integration queued:**
+- **Data Model:** new `LocationAttributeDefinition` seed row for `RequiresCompletionConfirm` on the `Terminal` `LocationTypeDefinition`.
+- **FDS-06-028** extended with the PLC-confirmation-BIT requirement and the `RequiresCompletionConfirm` LocationAttribute rule.
+- **Arc 2 Plan Phase 6** Perspective Assembly view gains the conditional confirm-button vs popup renderer driven by `session.custom.terminal.requiresCompletionConfirm`.
+
 ---
 
-### OI-17 — Tray-divisibility validation on WO close — ⬜ Open (new)
+### OI-17 — Tray-divisibility validation on WO close — ✅ Resolved with modification (2026-04-24)
 
 **Priority:** MEDIUM
 **Owner:** Blue Ridge
@@ -413,9 +467,15 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Validate at WO Create / Edit (target `MOD` tray = 0) and re-validate at Close. Enforced in `Workorder.WorkOrder_*` mutation procs with a specific error code.
 
+**Decision (2026-04-24) — modification from Jacques:** Tray-divisibility is a **Finished-Good Part attribute**. The PartsPerTray value (or the tray-divisibility rule) belongs on `Parts.Item` (or `Parts.ContainerConfig` as already modelled — needs verification during integration), not as free-standing WO validation logic. Validation still fires at WO Create / Edit / Close, but the authoritative source of the tray quantity is the Part, accessed via its ContainerConfig for shipping math.
+
+**Integration queued:**
+- **Data Model:** confirm `Parts.ContainerConfig.PartsPerTray` is the authoritative tray quantity (it is — no schema change needed). Document the rule: "WO target must be evenly divisible by `Parts.ContainerConfig.PartsPerTray` of the WO's finished-good Item."
+- **FDS-03-021** (WO-create tray-divisibility validation) and **FDS-06-029** (WO-close tray-divisibility validation) — both explicitly reference `Parts.ContainerConfig.PartsPerTray` as the source; confirm FDS language and update if not already explicit.
+
 ---
 
-### OI-18 — Parts.ItemLocation consumption metadata — ⬜ Open (new)
+### OI-18 — Parts.ItemLocation consumption metadata — ✅ Resolved with extension (2026-04-24)
 
 **Priority:** MEDIUM
 **Owner:** Blue Ridge / MPP Engineering
@@ -426,9 +486,23 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Extend `Parts.ItemLocation` with `MinQuantity INT NULL`, `MaxQuantity INT NULL`, `DefaultQuantity INT NULL`, `IsConsumptionPoint BIT NOT NULL DEFAULT 0`. Designed in Phase E; SQL in Phase G.
 
+**Decision (2026-04-24) — extension from Jacques:** Proposed decision confirmed, with an additional hierarchy requirement. `Parts.ItemLocation` must support designation at **Area / WorkCenter / Cell** granularity — not Cell-only. The junction row's `LocationId` FK can point at any Location tier (Area, WorkCenter, or Cell); when a Part is checked into a specific Cell, the compatibility check cascades up: if the Part has an `ItemLocation` row for *any* ancestor Location of the scanned Cell (including the Cell itself), the Part is eligible there.
+
+This enables rules like "Part 5G0 is eligible across all of Die Cast Area" with a single row, without enumerating every Cell.
+
+The consumption metadata (Min / Max / Default / IsConsumptionPoint) **retains** — these are orthogonal to the hierarchy extension. **Does NOT duplicate OI-12's work** per Jacques's review:
+- **OI-12** = per-Location runtime inventory cap (`Parts.Item.MaxParts` evaluated at check-in; per-Cell `LinesideLimit` LocationAttribute).
+- **OI-18** = design-time eligibility + consumption-point quantities (Min/Max/Default for the Allocations grid UX).
+
+**Integration queued:**
+- **Data Model v1.9c (or next rev):** `Parts.ItemLocation.LocationId` — no schema change (already a generic `FK → Location.Id`); document the hierarchy-cascade rule. The scan-in guard is the place where the cascade is enforced.
+- **FDS-03-014 / -015 / -018** — rewrite the eligibility checks to include the Area/WorkCenter/Cell cascade logic.
+- **New SQL helper proc** (`Parts.ItemLocation_IsEligible(@ItemId, @CellLocationId)` or equivalent) that walks the Location hierarchy from `@CellLocationId` upward looking for a matching `ItemLocation` row.
+- **Config Tool Eligibility screen** (existing) — UI additions to allow selecting the target Location at any tier when creating an `ItemLocation` row.
+
 ---
 
-### OI-19 — Parts.Item.CountryOfOrigin — ⬜ Open (new)
+### OI-19 — Parts.Item.CountryOfOrigin — ✅ Resolved (2026-04-24)
 
 **Priority:** LOW (effort) / HIGH (compliance)
 **Owner:** Blue Ridge
@@ -439,9 +513,11 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Add `CountryOfOrigin NVARCHAR(2) NULL` (ISO 3166-1 alpha-2) to `Parts.Item`. Designed in Phase E; SQL in Phase G.
 
+**Decision (2026-04-24):** Proposed direction confirmed by Jacques. Column already shipped in Phase G migration. **Integration queued:** FDS §3.1 language can drop any "pending" framing.
+
 ---
 
-### OI-20 — Scrap source enum (Inventory vs Location) — ⬜ Open (new)
+### OI-20 — Scrap source enum (Inventory vs Location) — ✅ Resolved (2026-04-24)
 
 **Priority:** LOW
 **Owner:** Blue Ridge
@@ -452,9 +528,11 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Add a `ScrapSource` code table (Inventory / Location) and `ScrapSourceId BIGINT NULL` on `Workorder.ProductionEvent`. Designed in Phase E; SQL in Phase G.
 
+**Decision (2026-04-24):** Proposed direction confirmed by Jacques. `Workorder.ScrapSource` code table + `ProductionEvent.ScrapSourceId` FK — both already in Data Model v1.9 / shipped via Phase G migration. FDS-06-023a is authoritative.
+
 ---
 
-### OI-21 — Partial start / partial complete at a workstation — ⬜ Open (new)
+### OI-21 — Partial start / partial complete at a workstation — ✅ Resolved with addition (2026-04-24)
 
 **Priority:** MEDIUM
 **Owner:** Blue Ridge / Ben
@@ -465,9 +543,22 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Verify and document `Workorder.ProductionEvent_Record` supports independent Start and Complete event emission with partial quantities (and correctly derives WIP via event replay). If not, extend. Designed in Phase E.
 
+**Decision (2026-04-24) — addition from Jacques:** Proposed decision confirmed with the following caveat — **a WorkOrder should be "Pausable"**. When in a paused state, anytime a new job is started on the same cell / by the same operator, the MES SHALL prompt the operator: *"Resume paused WorkOrder [WO-####]? Yes / Start new"*. This provides continuity between partial-start and partial-complete events without requiring the operator to re-scan the same LOT.
+
+**Discussion needed** (Claude + Jacques) — validate this pattern fits the v1.9 data model:
+- Does "Paused" need a new `WorkOrderStatus` code row alongside `Created`, `InProgress`, `Completed`, `Cancelled`? (Probably yes.)
+- Is the "resume prompt" a pure UI concern, or does it require proc-level state (e.g., a `WorkOrder.PausedByUserId` / `PausedAt` column)?
+- How does Pause interact with the checkpoint-shape `ProductionEvent` model (cumulative `ShotCount` / `ScrapCount`)? Pause events are likely captured as `DowntimeEvent` rows, not `ProductionEvent` — the WO status transitions InProgress → Paused, but the event stream on the LOT continues.
+- Auto-resume vs prompt-resume: if the operator ignores the prompt and starts new, does the paused WO auto-cancel after N days, or sit forever?
+
+**Integration queued** (pending the Claude + Jacques discussion):
+- **Data Model:** potential `WorkOrderStatus` seed expansion (+ Paused row); potential `WorkOrder.PausedByUserId` / `PausedAt` / `ResumeByUserId` / `ResumedAt` columns on `Workorder.WorkOrder`.
+- **FDS §6.10** — add Pausable-WO requirement (likely FDS-06-031 or similar).
+- **Arc 2 Plan Phase 3 / 4** — operator-screen logic for the resume prompt on new-job start.
+
 ---
 
-### OI-22 — Dedicated Hold Management screen — ⬜ Open (new)
+### OI-22 — Dedicated Hold Management screen — ✅ Resolved (2026-04-24)
 
 **Priority:** MEDIUM
 **Owner:** Blue Ridge / MPP Quality
@@ -478,9 +569,11 @@ Exceeding either limit should reject the scan-in.
 
 **Proposed direction:** Add a Hold Management Perspective screen: list of all active holds, filterable by area / line / lot / hold reason, with place / release actions (supervisor-elevated). Designed in Phase E.
 
+**Decision (2026-04-24):** Proposed direction confirmed by Jacques. FDS-08-007a is authoritative. **Integration queued:** Arc 2 Plan Phase 7 (or earlier) to include the Hold tile + screen wiring.
+
 ---
 
-### OI-23 — Lot computed TotalInProcess / InventoryAvailable — ⬜ Open (new)
+### OI-23 — Lot computed TotalInProcess / InventoryAvailable — ✅ Resolved with modification (2026-04-24)
 
 **Priority:** LOW
 **Owner:** Blue Ridge
@@ -490,6 +583,13 @@ Exceeding either limit should reject the scan-in.
 **Description:** Legacy Lot Details surfaces two derived figures in the header: **Total in-process** (sum across workstations) and **Inventory available** (unconsumed stock on the lot). Our FDS implies these are derivable from `ProductionEvent` but does not specify the exact derivation or whether they should be materialized for UI performance.
 
 **Proposed direction:** Document the derivation in FDS §5 and decide materialized-column-vs-view. If materialized, update on every ProductionEvent write. Designed in Phase E.
+
+**Decision (2026-04-24) — modification from Jacques:** Use a **view**, calculate on view update. Not materialized columns.
+
+**Integration queued:**
+- **Data Model:** no columns added to `Lots.Lot` for these derivations. Instead, create `Lots.v_LotDerivedQuantities` (or similar) as a SQL view that computes `TotalInProcess` and `InventoryAvailable` from `Lots.Lot.PieceCount` + `Workorder.ProductionEvent` + `Workorder.ConsumptionEvent` aggregations. Read-only.
+- **FDS-05-031** rewritten to specify "view-backed derivation" and drop any "materialized-column option."
+- **Arc 2 Plan Phase 2** — add the view creation to the LOT-lifecycle SQL migration.
 
 ---
 
@@ -634,9 +734,30 @@ Our current design has the **data** for allocation via OI-18 (`Parts.ItemLocatio
 
 **Impact if unresolved:** Arc 2 Plan Phase 6 (Assembly + MIP + Container) cannot finalize design.
 
+**Clarification exchange (2026-04-24):**
+
+**Jacques's pushback:** *"Parts are 'checked into' Line side storage that can then be consumed by the station or Cell. The line side storage is a typedefinition of Cell. I clearly don't understand the tension with consumption here. Please elucidate."*
+
+**Response (Blue Ridge, 2026-04-24):** The tension I flagged does not exist in our model — your framing is right. In Flexware, `MaterialAllocation` is a separate pre-production workflow step where an operator (or changeover tech) declares "these N baskets are allocated to this cell" as a dedicated action *before* the PLC handshake runs. The allocation exists as a DB row (`MaterialAllocationView` / `MaterialAllocationCreateView`) even though the baskets are just physically staged. It is a workflow artifact of Flexware's data model, not a real-world step.
+
+Under our design:
+- **Lineside storage IS a `LocationTypeDefinition` under Cell** — per your 2026-04-24 note.
+- An operator "checks in" a LOT to that lineside Cell via a normal `LotMovement` event (the scan-in you describe).
+- When the production Cell consumes from the lineside LOT, our `ConsumptionEvent` captures it with full genealogy.
+- The operator's "what's at my lineside" grid is answered by a simple read query (`Lots.Lot_ListByLocation @LocationId = <lineside cell id>`), not a separate allocation table.
+- The Flexware `Workstation.MaterialAllocationRequired BIT` is satisfied in our model by the act of scanning the LOT into the lineside Cell — the movement itself IS the allocation.
+
+**Revised resolution:** Close OI-32 as **not-reproduced** on the same grounds as OI-32b. No new `Workorder.MaterialAllocation` table needed. No separate Allocate-Material Perspective screen needed. The Flexware concept collapses cleanly into our existing LOT-at-location + ConsumptionEvent model.
+
+**Decision pending:** Jacques to confirm the revised "close as not-reproduced" framing before flipping the status tag. Status stays ⬜ Open until explicit confirmation.
+
+**Integration queued (once closed):**
+- **Review report** (`reference/NewInput/REVIEW_2026-04-24.md` §4 Gap 1) — add strike-through + closure note.
+- No data model / FDS additions required.
+
 ---
 
-### OI-32b — Material Classes — ⬜ Open (new, 2026-04-24, discovery)
+### OI-32b — Material Classes — ✅ Resolved / Closed (2026-04-24)
 
 **Priority:** LOW
 **Owner:** MPP Engineering / Blue Ridge
@@ -651,6 +772,10 @@ Our current design has the **data** for allocation via OI-18 (`Parts.ItemLocatio
 - (c) Legacy residue — document the deliberate omission and close.
 
 **Proposed direction:** Phase 0 discovery-only question to MPP Engineering. Low-effort phone call. Resolution drives a small schema delta at most.
+
+**Decision (2026-04-24):** Closed by Jacques — "Don't worry about the language difference, our `Parts.ItemType` will suffice." No `MaterialClass` table. No `Parts.Item.CustomerCode` column. `Parts.ItemType` (Cast / Machined / Assembled / Received / …) is the authoritative grouping.
+
+**Integration queued:** Review report (`reference/NewInput/REVIEW_2026-04-24.md` §4 Gap 2) — add strike-through + closure note. No data model or FDS changes.
 
 ---
 
@@ -671,7 +796,7 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 ---
 
-### UJ-02 — LOT creation flow at Die Cast — 🔶 In Review
+### UJ-02 — LOT creation flow at Die Cast — ✅ Resolved (2026-04-24)
 
 **Priority:** MEDIUM
 **Blocks:** Die Cast LOT creation screen
@@ -679,6 +804,8 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 **References:** FDS-05-001, FDS-05-002; FRS 3.9.6, 2.2.1, 2.2.2
 
 **Decision:** LTT tags are pre-printed; first scan of a barcode creates the LOT record. No pre-registration, no tag inventory feature. Confirms FDS-05-002. Pending MPP validation.
+
+**Decision (2026-04-24):** Confirmed to close by Jacques. FDS-05-002 + FDS-05-036 (lazy operator-driven creation, v0.11) are authoritative.
 
 ---
 
@@ -693,7 +820,7 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 ---
 
-### UJ-04 — Container lifecycle on non-serialized lines — ⬜ Open
+### UJ-04 — Container lifecycle on non-serialized lines — ✅ Resolved (2026-04-24)
 
 **Priority:** HIGH
 **Blocks:** Assembly / Shipping screens
@@ -701,6 +828,12 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 **References:** FDS-06-014, FDS-03-016; FRS 3.6.6, 3.9.7
 
 **Decision:** Auto-create container on LOT arrival; AIM shipper ID requested at the last route step for the part prior to LOT closure. Pending discussion with Ben.
+
+**Decision (2026-04-24) — addition from Jacques:** Confirmed to close. **AIM ShipperID requests will be queued in an asynchronous pattern so production is not held up due to integration holdup.** This means the Gateway script that calls `AIM.GetNextNumber` runs off a queue, not inline with container-close. Container-close succeeds immediately with a pending-ShipperID state; the async queue drains and populates `Container.AimShipperId` when AIM responds.
+
+**Integration queued:**
+- **FDS §7.4 AIM Integration** — add async-queue pattern to FDS-07-010 (AIM Shipper ID Request). Document: pending-ShipperID state on `Lots.Container`, retry policy, dead-letter handling.
+- **Arc 2 Plan Phase 7** — Gateway script design for the AIM queue drain.
 
 ---
 
