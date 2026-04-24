@@ -374,8 +374,8 @@ erDiagram
             <p>Defines what data to collect at a given operation type: die info, cavity, weight, counts, material verification, serial numbers. Linked to an area.</p>
         </div>
         <div class="table-card">
-            <h4>ItemLocation</h4>
-            <p>Part-to-machine eligibility mapping. Certain parts can only run on certain machines. MES uses this to prevent operators from entering LOTs on incompatible equipment. v1.8 extends with consumption metadata: <code>MinQuantity</code> / <code>MaxQuantity</code> / <code>DefaultQuantity</code> / <code>IsConsumptionPoint</code> — drives the runtime Allocations grid at the workstation (OI-18).</p>
+            <h4>ItemLocation <span class="scope-badge scope-mvp">MVP v1.9d</span></h4>
+            <p>Part-to-location eligibility. <strong>v1.9d (OI-18 extension):</strong> <code>LocationId</code> accepts any Location tier — Area / WorkCenter / Cell. Eligibility at a specific Cell is resolved by walking UP the Location hierarchy from the scanned Cell to Site; first matching <code>ItemLocation</code> row returns eligible. Engineering declares the coarsest appropriate tier (one "Part 5G0 eligible across Die Cast Area" row replaces per-Cell enumeration). Helper proc <code>Parts.ItemLocation_IsEligible(@ItemId, @CellLocationId)</code> encapsulates the walk. v1.8 consumption metadata (<code>MinQuantity</code> / <code>MaxQuantity</code> / <code>DefaultQuantity</code> / <code>IsConsumptionPoint</code>) lives on the matching row at whatever tier — ancestor-row metadata applies when no Cell-specific override exists.</p>
         </div>
         <div class="table-card">
             <h4>ContainerConfig</h4>
@@ -1614,7 +1614,7 @@ erDiagram
         <tbody>
             <tr><td colspan="5" style="background:#1a1d27; padding:0.5rem; font-weight:bold;">Location schema is the target of most cross-schema FKs (AppUser.Id, Location.Id)</td></tr>
             <tr><td>parts</td><td>OperationTemplate.AreaLocationId</td><td>location</td><td>Location.Id (Area tier)</td><td>Defect / downtime code filtering</td></tr>
-            <tr><td>parts</td><td>ItemLocation.LocationId</td><td>location</td><td>Location.Id (Cell tier)</td><td>Eligibility + consumption metadata (v1.8)</td></tr>
+            <tr><td>parts</td><td>ItemLocation.LocationId</td><td>location</td><td>Location.Id (Area / WorkCenter / Cell)</td><td><strong>v1.9d (OI-18 extension):</strong> any tier; eligibility cascades up from scanned Cell. Consumption metadata on the matching row (v1.8).</td></tr>
             <tr><td>parts</td><td>Item.CreatedByUserId / UpdatedByUserId</td><td>location</td><td>AppUser.Id</td><td>User attribution</td></tr>
             <tr><td>parts</td><td>Bom.CreatedByUserId / QualitySpec*.*</td><td>location</td><td>AppUser.Id</td><td>User attribution</td></tr>
             <tr><td>lots</td><td>Lot.ItemId</td><td>parts</td><td>Item.Id</td><td></td></tr>
@@ -1801,7 +1801,7 @@ erDiagram
 
     %% ═══ PARTS → LOCATION ═══
     loc__Location ||--o{ parts__OperationTemplate : "Area context"
-    loc__Location ||--o{ parts__ItemLocation : "Cell eligibility"
+    loc__Location ||--o{ parts__ItemLocation : "Area/WC/Cell eligibility (v1.9d)"
     loc__AppUser ||--o{ parts__Item : "created/updated by"
     loc__AppUser ||--o{ parts__Bom : "created by"
     loc__AppUser ||--o{ parts__RouteTemplate : "created by"
