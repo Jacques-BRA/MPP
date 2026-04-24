@@ -69,9 +69,23 @@ Start here and work down. Each document builds on the previous.
 
 When in doubt about scope, check `reference/MPP_Scope_Matrix.xlsx` — it is the authority.
 
-## Current State (as of 2026-04-22)
+## Current State (as of 2026-04-24)
 
-**2026-04-20 OI review refactor largely complete through Phase G.2.** Phases C (security rewrite), A (OI register refresh), B (Tool Management design spec + data-model rollup), D (remaining FDS updates), and E (design + doc additions for OI-11..23) are complete. Phase F text-side docx regeneration + ERD refresh done 2026-04-22 in v1.8 form. **Phase G SQL:** G.1 migration (`0010_phase9_tools_and_workorder.sql`) landed 2026-04-22 (Tools schema + 2 Workorder code tables + Parts ALTERs + 9 Audit.LogEntityType seed rows); G.2 delivered 45 stored procs (Tools subsystem CRUD + Workorder code-table reads). Stored proc count 171 → 216. 779/779 existing tests still pass. OI-11 resolved 2026-04-22 via 1-line BOM (no `Parts.ItemTransform` table — fully redundant with `ConsumptionEvent`). Discovery items OI-24..30 parked for the next MPP review. Phase G.3 (Phase E additive procs ~3 files), G.4 (AppUser legacy DROP), G.5 (~60 test assertions) still queued. Full plan in `memory/project_mpp_oi_refactor.md`. Phase G capability snapshot: `Meeting_Notes/2026-04-22_Phase_G_Capabilities_Summary.md`. Phase B Tool-design decisions live in `docs/superpowers/specs/2026-04-21-tool-management-design.md` v0.3.
+**2026-04-20 OI review refactor fully landed (all phases A/B/C/D/E/F/G complete).** Post-refactor work through 2026-04-24:
+- **Arc 2 Model Revisions (2026-04-23 session)** — 6 commits on 2026-04-23 lifted doc set to Data Model v1.9 / FDS v0.11 / UJ v0.8 / OIR v2.7 / Arc 2 Plan v0.2. Tool/Cavity promoted to `Lots.Lot`; ProductionEvent reshaped to checkpoint form; new `Lots.IdentifierSequence` table; `MaxLotSize` repurposed as `PartsPerBasket`; OI-09 closed (cavity-parallel LOTs as peers); OI-26 deleted; OI-31 opened.
+- **2026-04-24 corrections + integrations:**
+  - ERD full rebuild — every tab fully current to v1.9; Master tab rebuilt from v1.5 baseline; Audit `bigbigint` typos + OEE column mismatches fixed; Tools cross-schema FKs drawn (commits `2a91da0`, `70d0f37`).
+  - Phase 0 + Phase 1 of Arc 2 Plan rewritten in-place (clock# + PIN removed from body, not just overlay) — commit `9121502`.
+  - **OI-07 correction** — `WorkOrderType` corrected to single `Production` row; Demand + Maintenance moved to FUTURE hooks; Recipe deleted (commit `ce3e080`). The 2026-04-20 meeting note behind the original three-type model was mis-recorded.
+  - **Storyboards + IPAddresses review** (commit `7550bb8`) — 2012 Flexware docs reviewed against v1.9 design. 83% coverage. Report at `reference/NewInput/REVIEW_2026-04-24.md`. OI-32 Material Allocation + OI-32b Material Classes opened.
+  - **OI-31 single-line deployment memo for Ben** — `Meeting_Notes/2026-04-24_OI-31_Single-Line_Deployment_Impact.md`. Three mitigation options (prefix split recommended).
+  - **Jacques's OIR review batch applied** (commit `6865d8d`, OIR v2.10) — 17 Part A OIs moved Resolved (OI-02, -04, -05, -08, -12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -32b) + 2 UJ closures (UJ-02, UJ-04). Downstream per-item integration queue in progress.
+- **Phase G SQL:** All five sub-phases (G.1–G.5) landed by 2026-04-23 (terminal commit `534f55c`). **853/853 tests passing** across 20+ test suites. Two correction migrations queued: **OI-07** (rename `WorkOrderType` seed Demand→Production + DELETE Recipe/Maintenance rows + update test 0019) and **OI-12** (DROP `Parts.ContainerConfig.MaxParts`, ADD `Parts.Item.MaxParts`).
+- **Discovery OI items still Open:** OI-24 (Automation tile), OI-25 (Notifications), OI-27 (Supply part flag), OI-28 (cast-override cell flag), OI-29 (Workstation Category), OI-30 (Reports enumeration), OI-31 (IdentifierSequence — awaits Ben on rollout shape), OI-32 (Material Allocation — Jacques challenged the premise, Blue Ridge clarification response awaiting his confirmation).
+- **Integration queue from OIR v2.10** (per-item commits in progress): (1) OI-12 MaxParts move to Parts.Item, (2) OI-18 ItemLocation hierarchy cascade, (3) OI-08 Terminal mode by Location assignment, (4) OI-23 Lot derivations as view, (5) OI-16 PLC confirm + RequiresCompletionConfirm LocationAttribute, (6) OI-21 Pausable WorkOrder (needs design discussion first), (7) UJ-04 AIM async queue, (8) OI-13 two-pull BOM timing.
+- **UJ insufficiency noted** — Jacques flagged 2026-04-24 that UJ entries lack the options/impact depth of OI entries. Enrichment pass queued before next MPP review.
+
+Source-of-truth docs: `MPP_MES_DATA_MODEL.md` v1.9b, `MPP_MES_FDS.md` v0.11b, `MPP_MES_Open_Issues_Register.md` v2.10, `MPP_MES_USER_JOURNEYS.md` v0.8, `MPP_MES_PHASED_PLAN_PLANT_FLOOR.md` v0.2b, `MPP_MES_ERD.html` (current through v1.9b). Arc 2 revisions spec at `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (still untracked in working tree). Phase G capability snapshot: `Meeting_Notes/2026-04-22_Phase_G_Capabilities_Summary.md`.
 
 - **Data model:** v1.8 (rev 2026-04-22) — 8 schemas, ~72 tables. **v1.8 — Phase E additive changes:** `Parts.Item.CountryOfOrigin NVARCHAR(2)` (OI-19), `Parts.ItemLocation` + `MinQuantity` / `MaxQuantity` / `DefaultQuantity` / `IsConsumptionPoint` (OI-18), `Parts.ContainerConfig.MaxParts` (OI-12), Cell `LinesideLimit` LocationAttribute (OI-12), new `Workorder.ScrapSource` code table (OI-20; `Workorder.ProductionEvent.ScrapSourceId` FK baked in by Arc 2 Phase 1 — ProductionEvent table doesn't exist yet). **OI-11 resolved via 1-line BOM** (no new schema) — Casting → Trim rename is a degenerate 1-line BOM consumption; `Parts.ItemTransform` was drafted then reverted 2026-04-22 as fully redundant with `Workorder.ConsumptionEvent`. `Audit.LogEntityType` +1 row in Phase G (ScrapSource; ItemTransform reservation dropped). All additive — no breaking changes. Phase G migration `0010_phase9_tools_and_workorder.sql` landed 2026-04-22 (Tools schema + 2 code tables + 3 Parts ALTERs + 9 LogEntityType rows; 779/779 tests still pass). BIGINT PKs/FKs everywhere, NVARCHAR (no VARCHAR). Location schema uses three-tier polymorphic model. Audit schema has 4 log streams. All enum/status columns are code-table backed with FKs. User attribution via `BIGINT FK → AppUser.Id`. OperationTemplate data collection is configurable via junction (no hardcoded BIT flags). HoldEvent is a single place/release lifecycle table. SortOrder on Location.Location with MoveUp/MoveDown. v1.4 closed the template→event capture gap: `Workorder.ProductionEvent` gained `OperationTemplateId` FK + hot typed columns (`DieIdentifier`, `CavityNumber`, `WeightValue`+`WeightUomId`) and new `Workorder.ProductionEventValue` child table for extensible `DataCollectionField` capture. v1.5 added the Phase 8 Oee reference tables (`DowntimeReasonType` seed-only, `DowntimeReasonCode`, `ShiftSchedule` with `DaysOfWeekBitmask INT`, `Shift` runtime). **v1.6 (2026-04-21):** `Location.AppUser` realigned to the initials-based security model — `Initials NOT NULL UNIQUE`, `AdAccount` nullable with filtered UNIQUE, CHECK binding `IgnitionRole` to `AdAccount` presence; `ClockNumber` + `PinHash` flagged legacy for Phase G removal. **v1.7 (2026-04-21) — Phase B data-model rollup landed.** New `Tools` schema (§7) with 10 tables: `ToolType` (seeded read-only, `HasCavities` flag), `ToolAttributeDefinition`, `Tool` (nullable `DieRankId` — Die-type only, no shot counter), `ToolAttribute`, `ToolCavity` (3-state Active/Closed/Scrapped), `ToolAssignment` (append-only check-in/out with filtered UNIQUE on active mount), `ToolStatusCode` + `ToolCavityStatusCode` (read-only), `DieRank` + `DieRankCompatibility` (both empty seed — MPP Quality owes). `Workorder.WorkOrder` gains `WorkOrderTypeId` (NOT NULL DEFAULT `Production`-Id per OI-07 correction 2026-04-24; originally defaulted to `Demand`-Id, corrected in v1.9b) and nullable `ToolId` FK → Tools.Tool. New `Workorder.WorkOrderType` code table — **v1.9b seed is 1 row (`Production`)**. The originally-shipped 3-row seed (`Demand`/`Maintenance`/`Recipe`) was corrected when Jacques clarified the 2026-04-20 meeting note had been mis-recorded: the "Recipe" line was describing the same Production flow; `Demand` and `Maintenance` are genuinely separate future WO types (planned PM + emergency) but are FUTURE — not built in this project. Code table stays as a future hook. SQL seed correction migration queued. Audit Schema renumbered to §8. Phase G migration `0010_phase9_tools_and_workorder.sql` delivers the SQL + drops legacy AppUser.ClockNumber + PinHash.
 - **FDS:** v0.10 (rev 2026-04-22) working draft — all 15 sections + appendix placeholders. **v0.10 — Phase E:** §5.10 Part Identity Change Casting→Trim via 1-line BOM (FDS-05-033; the earlier draft's FDS-05-034/-035 plus the proposed `Parts.ItemTransform` table were retired 2026-04-22 as redundant with `Workorder.ConsumptionEvent`), new §12.5 Global Trace Tool (FDS-12-012..014, OI-15), +requirements across §§1.4 (FDS-01-013 BOM source), 3.1 (CountryOfOrigin), 3.5 (FDS-03-018 consumption metadata), 3.6 (FDS-03-019 MaxParts, 03-020 LinesideLimit, 03-021 tray-divisibility), 4.3 (admin remove-item in elevated list), 5.1 (FDS-05-031 computed lot quantities), 5.3 (FDS-05-032 partial start/complete), 6.8 (FDS-06-023a ScrapSource), 6.10 (FDS-06-028 auto-finish-on-target, 06-029 tray-divisibility at close), 8.2 (FDS-08-007a Hold Management screen), 14 (FDS-14-005 Flexware BOM import). §4 User Authentication & Session Management **fully rewritten (Phase C, 2026-04-21)**: operators identified by initials only, per-action AD elevation, no clock # / PIN, dedicated vs shared terminal modes, 30-min idle re-confirmation. §11 Audit has 4 log streams with code-string audit proc signatures. FDS-11-011 codifies the Ignition JDBC single-result-set convention. FDS-03-017a codifies the data-collection capture contract. **Phase D (2026-04-21) rewrote six sections:** §2.5 Terminals (OI-08 addenda — TerminalMode attribute, machine-context lock, tablet design input), §5.4 Sub-LOT Splitting (OI-09 sublot pattern formalised — parent FK, per-cavity concurrent sublots, label parent reference), §5.5 LOT Merging (OI-05 revised — post-sort only, same part, cross-die via `Tools.DieRankCompatibility` with supervisor override, FIFO-by-cavity), §6.10 Work Orders (OI-07 revised — three WO types Demand/Maintenance/Recipe, Maintenance flow FUTURE), §9.4 Shift Management (OI-03 closed — availability derived from events, no minute adjustments), §10.3 Non-Serialized Line Integration (OI-04 revised — line-stop not LOT-hold, 10-consecutive-fail escalation, CRT 200%-inspect workflow). Of 14 open items (10 original + 4 new from 2026-04-20 meeting): 3 resolved (OI-01, 03, 06), 6 in revised/in-review (OI-02, 04, 05, 07, 08-addenda, 09-addenda), 4 open including 4 new (OI-11, 12, 13, 14), 1 superseded (OI-10 rolled into Phase B Tool Management spec).
@@ -121,18 +135,45 @@ DROP TABLE #Result;
 
 ## Remaining Tasks
 
-See `MPP_MES_SUMMARY.md` "Remaining Tasks" section for the full list. Key items:
-1. Complete FDS appendices (currently placeholder references)
-2. Resolve remaining open items requiring MPP input (see Open Issues Register for current status)
-3. Map scope matrix rows and paper production sheet fields to FDS sections
-4. Validate data model against FDS
-5. Begin Arc 2 (Plant Floor) plan — data-collection capture contract (FDS-03-017a, `Workorder.ProductionEvent_Record`) is the key first target once prerequisites are sequenced.
-6. Run `Oee.DowntimeReasonCode_BulkLoadFromSeed` against the 353-row downtime CSV once MPP confirms the three DeptCode→Area mappings (DC, MS, TS) in production.
-7. Load machines.csv seed data into Location rows (209 machines — procs exist, mapping needed)
-8. Load defect_codes.csv seed data into `Quality.DefectCode` (153 codes — procs exist, mapping to Area needed)
-9. Load MPP parts list into `Parts.Item` once MPP supplies the export (bulk-load proc deferred)
-10. MPP shipping-staff validation of `Lots.LabelTypeCode` seed values (Primary/Container/Master/Void — currently proposed, not authoritative)
-11. MPP customer validation of OI-02: scale-driven container closure (`ClosureMethod` + `TargetWeight` columns exist nullable on `Parts.ContainerConfig` pending decision)
+See `MPP_MES_SUMMARY.md` "Remaining Tasks" section for the full list. Key items as of 2026-04-24:
+
+**Integration queue from Jacques's OIR v2.10 review (per-item commits):**
+1. **OI-12 `MaxParts` move** — DROP `Parts.ContainerConfig.MaxParts`, ADD `Parts.Item.MaxParts`. Data Model + FDS-03-019 + ERD + SQL correction migration.
+2. **OI-18 `Parts.ItemLocation` hierarchy cascade** — support Area/WorkCenter/Cell granularity with compatibility walk-up at check-in. New helper proc `Parts.ItemLocation_IsEligible`.
+3. **OI-08 Terminal mode by Location assignment** — drop `TerminalMode` LocationAttribute seed; derive mode from parent Location tier (WorkCenter → Dedicated, Area → Shared).
+4. **OI-23 `Lots.v_LotDerivedQuantities` view** — use a view for TotalInProcess / InventoryAvailable, not materialized columns.
+5. **OI-16 PLC confirmation BIT + `RequiresCompletionConfirm` LocationAttribute** per Terminal.
+6. **OI-21 Pausable WorkOrder** — NEEDS Claude + Jacques design discussion on data-model fit (new WorkOrderStatus row? new cols?).
+7. **UJ-04 AIM async-queue pattern** for ShipperID requests — FDS-07-010 extension + Gateway script design.
+8. **OI-13 Two-pull BOM timing** — coordinate with MPP IT for the dev-integration pull NOW.
+
+**SQL correction migrations queued (not yet landed):**
+- **OI-07** — rename `WorkOrderType` seed `Demand`→`Production`, DELETE Ids 2 + 3; update test `sql/tests/0019_Parts_ConsumptionMetadata_And_ScrapSource/010_Phase_E_additives.sql`.
+- **OI-12** (per #1 above).
+
+**Arc 2 Plan follow-up:**
+- Phases 2–8 in-place rewrite (currently overlay-only after Phase 0/1 rewrite on 2026-04-24).
+
+**MPP-owed items (blocking specific downstream work):**
+1. **Ben** — OI-31 rollout shape decision (single-line vs full-cutover vs shadow); memo at `Meeting_Notes/2026-04-24_OI-31_Single-Line_Deployment_Impact.md`.
+2. **MPP Quality** — full `Tools.DieRankCompatibility` matrix seed.
+3. **MPP IT** — Flexware BOM export (two-pull: NOW for dev validation, re-run at cutover per OI-13 caveat).
+4. **Tom (security SME)** — final elevated-action list validation (FDS-04-007).
+
+**MPP data loads (procs exist, mappings/files needed):**
+5. Machines.csv (209 machines) → Location rows.
+6. `Oee.DowntimeReasonCode_BulkLoadFromSeed` against 353-row CSV (needs DC/MS/TS→Area mapping).
+7. `Quality.DefectCode` (153 codes) — mapping to Area needed.
+8. MPP parts-list export → `Parts.Item`.
+9. MPP shipping-staff validation of `Lots.LabelTypeCode` seed values (Primary/Container/Master/Void).
+
+**Non-SQL work:**
+10. Complete FDS appendices (currently placeholder references).
+11. Map scope matrix rows + paper production sheet fields to FDS sections.
+12. UJ enrichment pass — Jacques flagged entries lack the options/impact depth of OI entries.
+13. Ignition Perspective frontend build not started.
+
+**OIR status:** 28 resolved, 3 in review, 18 open, 1 superseded. Discovery items (OI-24, OI-25, OI-27, OI-28, OI-29, OI-30) still awaiting MPP input for the next review.
 
 ## Conventions
 
