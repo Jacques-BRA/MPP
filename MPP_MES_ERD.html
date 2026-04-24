@@ -182,7 +182,7 @@
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
     <p>Madison Precision Products — MES Database Schema (8 schemas, 73 tables)</p>
-    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-24 — <strong>full v1.9 pass: every schema tab and the Master ERD tab regenerated end-to-end</strong>. (1) Lots tab: <code>Lot.ToolId</code> + <code>Lot.ToolCavityId</code> added (die-cast-origin system of record; NULL elsewhere / after merge); new <code>IdentifierSequence</code> table + diagram (replaces Flexware <code>IdentifierFormat</code>; 2 counters — <code>Lot</code> <code>MESL{0:D7}</code> + <code>SerializedItem</code> <code>MESI{0:D7}</code>). (2) Workorder tab: <code>ProductionEvent</code> reshaped to checkpoint form (cumulative <code>ShotCount</code>/<code>ScrapCount</code>; dropped <code>LocationId</code>, <code>ItemId</code>, <code>DieIdentifier</code>, <code>CavityNumber</code>, per-event <code>GoodCount</code>/<code>NoGoodCount</code>; renamed <code>RecordedAt</code>→<code>EventAt</code>, <code>OperatorId</code>→<code>AppUserId</code>). (3) Tools tab: cross-schema <code>Tool</code>/<code>ToolCavity</code>→<code>Lot</code> relationships + Cross-schema callout. (4) OEE tab: <code>ShiftSchedule</code> fixed (DaysOfWeekBitmask INT + 5 missing columns); <code>Shift</code> fixed (ShiftDate removed + CreatedAt/Remarks added); <code>DowntimeReasonType.Code</code> + <code>DowntimeReasonCode</code> extended with SourceCode/user-attribution/etc. per v1.5. (5) Audit tab: four "bigbigint" typos corrected to "bigint". (6) Master ERD tab: full rebuild — 73 tables in 8 schemas with complete cross-schema FK summary table (44 rows) + comprehensive mermaid diagram covering all intra- and inter-schema relationships including v1.7 Tools, v1.8 ScrapSource / ItemLocation consumption metadata / Item.CountryOfOrigin / ContainerConfig.MaxParts, and v1.9 Lot.Tool*/ProductionEvent reshape / IdentifierSequence. OI-09 closed — N cavities → N parallel peer LOTs, not sublots. <code>Parts.Item.MaxLotSize</code> repurposed as <code>PartsPerBasket</code> (semantic only).</p>
+    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-24 — <strong>full v1.9 pass: every schema tab and the Master ERD tab regenerated end-to-end</strong>. (1) Lots tab: <code>Lot.ToolId</code> + <code>Lot.ToolCavityId</code> added (die-cast-origin system of record; NULL elsewhere / after merge); new <code>IdentifierSequence</code> table + diagram (replaces Flexware <code>IdentifierFormat</code>; 2 counters — <code>Lot</code> <code>MESL{0:D7}</code> + <code>SerializedItem</code> <code>MESI{0:D7}</code>). (2) Workorder tab: <code>ProductionEvent</code> reshaped to checkpoint form (cumulative <code>ShotCount</code>/<code>ScrapCount</code>; dropped <code>LocationId</code>, <code>ItemId</code>, <code>DieIdentifier</code>, <code>CavityNumber</code>, per-event <code>GoodCount</code>/<code>NoGoodCount</code>; renamed <code>RecordedAt</code>→<code>EventAt</code>, <code>OperatorId</code>→<code>AppUserId</code>). (3) Tools tab: cross-schema <code>Tool</code>/<code>ToolCavity</code>→<code>Lot</code> relationships + Cross-schema callout. (4) OEE tab: <code>ShiftSchedule</code> fixed (DaysOfWeekBitmask INT + 5 missing columns); <code>Shift</code> fixed (ShiftDate removed + CreatedAt/Remarks added); <code>DowntimeReasonType.Code</code> + <code>DowntimeReasonCode</code> extended with SourceCode/user-attribution/etc. per v1.5. (5) Audit tab: four "bigbigint" typos corrected to "bigint". (6) Master ERD tab: full rebuild — 73 tables in 8 schemas with complete cross-schema FK summary table (44 rows) + comprehensive mermaid diagram covering all intra- and inter-schema relationships including v1.7 Tools, v1.8 ScrapSource / ItemLocation consumption metadata / Item.CountryOfOrigin, and v1.9 Lot.Tool*/ProductionEvent reshape / IdentifierSequence. <strong>v1.9c (2026-04-24):</strong> OI-12 correction — <code>MaxParts</code> relocated from <code>Parts.ContainerConfig</code> to <code>Parts.Item</code> per Jacques's OIR review (MaxParts is a Part attribute, not a container attribute). OI-09 closed — N cavities → N parallel peer LOTs, not sublots. <code>Parts.Item.MaxLotSize</code> repurposed as <code>PartsPerBasket</code> (semantic only).</p>
     <div class="conventions">
         <span>UpperCamelCase</span>
         <span>singular nouns</span>
@@ -350,8 +350,8 @@ erDiagram
     <h3>Tables</h3>
     <div class="table-list">
         <div class="table-card">
-            <h4>Item</h4>
-            <p>The part/product master. Every raw material, component, sub-assembly, and finished good. Carries MPP part number, optional Macola ERP number, default sub-lot quantity, max lot size, unit weight, and (v1.8) Country of Origin (ISO 3166-1 alpha-2, OI-19).</p>
+            <h4>Item <span class="scope-badge scope-mvp">MVP v1.9c</span></h4>
+            <p>The part/product master. Every raw material, component, sub-assembly, and finished good. Carries MPP part number, optional Macola ERP number, <code>DefaultSubLotQty</code>, <code>MaxLotSize</code> (repurposed v1.9 as <code>PartsPerBasket</code>), <code>MaxParts</code> (v1.9c, OI-12 correction — per-Item per-Location hard cap), unit weight, and (v1.8) <code>CountryOfOrigin</code> (ISO 3166-1 alpha-2, OI-19).</p>
         </div>
         <div class="table-card">
             <h4>ItemType</h4>
@@ -379,7 +379,7 @@ erDiagram
         </div>
         <div class="table-card">
             <h4>ContainerConfig</h4>
-            <p>Honda-specified packing rules per product: trays per container, parts per tray, serialized flag, returnable dunnage code, customer code. v1.8 adds <code>MaxParts</code> hard cap (OI-12) and surfaces the existing <code>ClosureMethod</code> / <code>TargetWeight</code> columns (OI-02 pending).</p>
+            <p>Honda-specified packing rules per product: trays per container, parts per tray, serialized flag, returnable dunnage code, customer code. <code>ClosureMethod</code> / <code>TargetWeight</code> (OI-02, confirmed 2026-04-24) drive weight-based closure on non-serialized lines. <em>Note: the v1.8 <code>MaxParts</code> column was moved from <code>ContainerConfig</code> to <code>Parts.Item</code> in v1.9c (OI-12 correction) — MaxParts is a Part attribute, not a container attribute.</em></p>
         </div>
     </div>
 
@@ -407,7 +407,8 @@ erDiagram
         nvarchar Description
         nvarchar MacolaPartNumber
         int DefaultSubLotQty
-        int MaxLotSize
+        int MaxLotSize "v1.9 PartsPerBasket"
+        int MaxParts "v1.9c per-Location cap OI-12"
         bigint UomId FK
         decimal UnitWeight
         bigint WeightUomId FK
@@ -504,7 +505,6 @@ erDiagram
         bigint ItemId FK
         int TraysPerContainer
         int PartsPerTray
-        int MaxParts "v1.8"
         bit IsSerialized
         nvarchar ClosureMethod
         decimal TargetWeight
