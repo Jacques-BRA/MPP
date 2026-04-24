@@ -4,8 +4,8 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.10 — Working Draft
-**Date:** 2026-04-22
+**Version:** 0.11 — Working Draft
+**Date:** 2026-04-24
 
 ---
 
@@ -20,6 +20,7 @@
 | 0.5 | 2026-04-10 | Blue Ridge Automation | §11 Audit & Logging expanded: added fourth log stream `Audit.FailureLog` for attempted-but-rejected operations (new FDS-11-004). High-Fidelity Interface Logging renumbered from FDS-11-004 to FDS-11-005 to make room. Added FDS-11-008 documenting the code-string signatures for the four shared audit procs. Renumbered FDS-11-007 → FDS-11-009 (Retention Policy) and FDS-11-008 → FDS-11-010 (BIGINT Primary Keys) to accommodate. Normalized vocabulary examples in FDS-11-006/007 updated to UpperCamelCase (`Created`/`Updated`/`Deprecated`/`LotCreated` etc. instead of UPPER_SNAKE). |
 | 0.7 | 2026-04-15 | Blue Ridge Automation | **Production data collection capture.** Closed a gap where `OperationTemplate` + `OperationTemplateField` + `DataCollectionField` defined *what* to collect but nothing persisted *what was actually collected* when a LOT passed through. Updated §3.4 (FDS-03-012 operation-template definition — replaced stale `Collects*`/`Requires*` BIT-flag table with the `OperationTemplateField` → `DataCollectionField` junction wording that matches data model rev 0.7+). Updated §6.2 (FDS-06-001 die cast screen — now driven by `OperationTemplateField` rows rather than flags) and FDS-06-003 (die cast production event — now captures `OperationTemplateId`, `DieIdentifier`, `CavityNumber`, `WeightValue`/`WeightUomId` as hot columns plus N `ProductionEventValue` children for any other configured field). Added new FDS-03-017a specifying how the Perspective screen resolves operation-template fields into inputs and writes the header+children transactionally. Data model aligned at v1.4 (new `Workorder.ProductionEventValue` table + `ProductionEvent` extensions). |
 | 0.6 | 2026-04-15 | Blue Ridge Automation | Reflects Phase 5/6 SQL completion and the Ignition JDBC stored-procedure convention change. Data model realigned to v1.3: added HoldEvent place/release lifecycle table, SortOrder + MoveUp/MoveDown pattern on `Location.Location`, OperationTemplate→DataCollectionField junction (replacing hardcoded BIT flags), and seven new code tables backing all former enum/status columns. Versioning pattern for RouteTemplate, OperationTemplate, and Bom standardized on the three-state `Draft / Published / Deprecated` model (PublishedAt + DeprecatedAt). Added FDS-11-011 documenting the Ignition JDBC single-result-set convention: stored procedures SHALL NOT use `OUTPUT` parameters; mutation procs SHALL return `SELECT Status, Message, NewId` as their sole result set, read procs SHALL return a single result set (empty = not found), and the four shared audit writers SHALL emit no result set (they run inside caller transactions and would otherwise break INSERT-EXEC with ROLLBACK). |
+| 0.11 | 2026-04-24 | Blue Ridge Automation | **Arc 2 model revisions (2026-04-23 session) — Tool/Cavity on Lot, ProductionEvent checkpoint shape, Identifier Sequences, cavity-parallel LOT pattern codified.** New requirements land across §§3.4, 5.1, 5.2, 5.3, 5.4, 5.5, 6.2, 6.10, plus a new section on identifier sequences:<br><br>• **§3.4 FDS-03-017a rewritten** — `ProductionEvent` is now a checkpoint shape (cumulative `ShotCount`/`ScrapCount`, no `DieIdentifier`/`CavityNumber`/`LocationId`/`ItemId`/per-event `GoodCount`/`NoGoodCount`). `Lot.ToolId`/`Lot.ToolCavityId` are the system of record — derived at read time via join, not stored on the event.<br>• **§5.1 FDS-05-003 revised** — `Lot.ToolId` + `Lot.ToolCavityId` added to the LOT attributes table. Pre-v0.11 `DieNumber`/`CavityNumber` NVARCHAR attributes marked legacy.<br>• **§5.1 FDS-05-034 (NEW)** — Die-cast-origin LOTs SHALL require `ToolId` + `ToolCavityId` at `Lot_Create`, validated against active `Tools.ToolAssignment` on the Cell + `ToolCavity` belongs to Tool + Cavity Active.<br>• **§5.1 FDS-05-035 (NEW)** — Tools system-of-record rule: Tool / Cavity live on `Lot`, NOT on `ProductionEvent`. Downstream LOTs do NOT carry the FKs — Honda-trace via `LotGenealogy` recursive traversal.<br>• **§5.2 FDS-05-004 revised** — Die Cast LOT creation step now auto-populates Tool from `ToolAssignment_ListActiveByCell`; operator confirms; elevated Edit triggers inline `ToolAssignment_Release`/`_Assign`. Other areas (trim, machining, assembly) do not require operator Tool validation at LOT create.<br>• **§5.3 FDS-05-036 (NEW)** — LOT creation is **lazy and operator-driven**. No auto-create of N LOTs at run start. Physical-but-unlogged baskets exist until the operator logs them. Tool+Cavity assignment happens at `Lot_Create` time.<br>• **§5.3 FDS-05-037 (NEW)** — LOT close semantics: Component LOTs (Die Cast, Trim, intermediate Machining) close via explicit operator "Complete + Move" action — combined status transition + movement in one atomic UI action. Cavity state changes do NOT auto-close LOTs. Finished-goods LOTs MAY auto-close on container fill (§6 — Container_Complete).<br>• **§5.4 restated** — Cavity-parallel LOTs at Die Cast are **peers, not sublots** (N active cavities → N parallel independent LOTs, no parent/child FK). Machining sub-LOT split remains a sublot pattern (parent FK + split genealogy). The 2026-04-20 FDS-05-023 per-cavity-sublot requirement is superseded — per-cavity LOTs are now first-class LOTs with `ToolCavityId` set.<br>• **§5.5 FDS-05-030 (NEW)** — Post-merge LOT SHALL have `ToolId = NULL` and `ToolCavityId = NULL` — blended-origin material can't denormalize multiple Tools into a single FK pair. Tool-specific trace reconstructed via `LotGenealogy` walk of pre-merge source LOTs.<br>• **§6.2 FDS-06-003 revised** — Die Cast `ProductionEvent` capture aligned to checkpoint shape (cumulative counters + delta via `LAG()`; no per-event `GoodCount`/`NoGoodCount`; no `DieIdentifier`/`CavityNumber` on event — derived from Lot).<br>• **§6.10 FDS-06-030 (NEW)** — Phase 0 MPP input item: WorkOrder BIT-flag enumeration (Flexware `IsCameraProcessingEnabled`, `IsScaleProcessingEnabled`, `GroupTargetWeight`, `GroupTargetWeightTolerance`, `TargetWeightUnitOfMeasureID`, `RecipeNumber`, `TrayQuantity`, `ReturnableDunnageCode`, `Customer`). Live flags become columns on `Workorder.WorkOrder` at Arc 2 Phase 1 CREATE; dead flags don't ship.<br>• **NEW §16 Identifier Sequences** — `Lots.IdentifierSequence` table + `IdentifierSequence_Next @Code` proc. Seeded at cutover from Flexware `LastCounterValue` for `Lot` (`MESL{0:D7}`) and `SerializedItem` (`MESI{0:D7}`). FDS-16-001..003.<br>• **Cross-cutting guidance** — Per-terminal-function purpose-built Perspective views; LocationAttribute used for business policies only, never UI config. Flexware's `*DashboardConfiguration` family and `UserInterfaceScript` DB-stored-code pattern are NOT reproduced.<br><br>Source: `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md`. Companion changes: Data Model v1.9, User Journeys v0.8, Arc 2 phased plan refresh. |
 | 0.10-rev | 2026-04-22 | Blue Ridge Automation | **OI-11 reversal.** The initial v0.10 draft added §5.10 + FDS-05-033..035 covering a new `Parts.ItemTransform` table to bridge the Casting → Trim part rename. On review the table was redundant with `Workorder.ConsumptionEvent` (every column duplicated). §5.10 retained as a section but rewritten: the Casting → Trim boundary is modelled as a **degenerate 1-line BOM consumption** (trim part has cast part as its sole component at QtyPer=1). FDS-05-033..035 consolidated into a single FDS-05-033 describing the BOM-driven scan-in flow. No new schema — existing `Parts.Bom`, `Workorder.ConsumptionEvent`, and `Lots.LotGenealogy` carry it. OI-11 moves to ✅ Resolved in the Open Issues Register v2.6. Data Model v1.8 updated accordingly (ItemTransform table section replaced with a ✅ Resolved callout). |
 | 0.10 | 2026-04-22 | Blue Ridge Automation | **Phase E of the 2026-04-20 OI review refactor — design + doc additions for OI-11..23.** Closes 13 items discovered across the 2026-04-20 MPP meeting (OI-11..14) and the 2026-04-22 legacy-MES screenshot review (OI-15..23). New sections: §3.6 extended with FDS-03-019 per-container MaxParts cap (OI-12) and FDS-03-020 lineside inventory cap (OI-12); §3.5 extended with FDS-03-018 ItemLocation consumption metadata (OI-18); §3.1 FDS-03-001 extended for Country of Origin (OI-19); §5.10 Part Identity Change — Casting to Trim, new subsection with FDS-05-033..035 (OI-11); §5.1 FDS-05-031 LOT computed quantities (TotalInProcess, InventoryAvailable) (OI-23); §5.3 FDS-05-032 partial start / partial complete confirmation (OI-21); §6.8 FDS-06-023a Scrap Source distinction (Inventory vs Location) (OI-20); §6.10 FDS-06-028 auto-finish-on-target WO + FDS-06-029 tray-divisibility validation (OI-16, OI-17); §8.2 FDS-08-007a dedicated Hold Management screen (OI-22); §12.5 Global Trace Tool, new subsection with FDS-12-009..011 (OI-15); §1.4 FDS-01-013 BOM import from Flexware @ .919 (OI-13); §4.3 Elevation Model extended with admin remove-item entry (OI-14); §14 Data Migration extended with Flexware BOM one-shot import (OI-13). Data model companion change: v1.7 → v1.8 adds `Parts.ItemTransform`, `Workorder.ScrapSource`, `Parts.ContainerConfig.MaxParts`, `Parts.ItemLocation` consumption cols, `Parts.Item.CountryOfOrigin`, `Workorder.ProductionEvent.ScrapSourceId`. All changes additive — no breaking re-numbering. Discovery items OI-24..30 remain parked for MPP input. Source: `MPP_MES_Open_Issues_Register.md` v2.5, `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` v1.1. |
 | 0.9 | 2026-04-21 | Blue Ridge Automation | **Phase D of the 2026-04-20 OI review refactor — six FDS sections rewritten.** §2.5 Terminals gains OI-08 addenda: `TerminalMode` LocationAttribute (Dedicated ≈80% / Shared ≈20%) via FDS-02-010, terminal machine-context lock (FDS-02-011, no UI navigation off-machine), part↔machine validity via `Parts.ItemLocation` (FDS-02-012), mobile-friendly tablet design input for Die Cast (FDS-02-013), Honda RFID forward-compatibility note (FDS-02-014 FUTURE). §5.4 Sub-LOT Splitting — formalised the sublot pattern for OI-09 addenda: general parent-FK + sublot semantics (FDS-05-022), per-cavity concurrent sublots at Die Cast (FDS-05-023), sublot label parent reference (FDS-05-024); retained existing auto-split workflow as one specific case. §5.5 LOT Merging — OI-05 revised: replaced loose "configurable" wording with concrete rules: post-sort only (FDS-05-023), same-part-number (FDS-05-024), die-rank compatibility via `Tools.DieRankCompatibility` with supervisor AD override (FDS-05-025), quality-status gating with no override for mixed status (FDS-05-026), machining FIFO-by-cavity is not a merge (FDS-05-027). §6.10 Work Orders — OI-07 three-type model: Demand / Maintenance / Recipe; `WorkOrderType` code table (FDS-06-025); Demand retains MVP-LITE auto-generation; Maintenance is `FUTURE` flow with schema hook only (FDS-06-026); Recipe is hidden from operator (FDS-06-027). §9.4 Shift Management — OI-03 closed: availability **derived from events**, not adjustable start/end columns; import schedules from MPP spreadsheet (FDS-09-012); break logging is end-of-shift only, no live per-break entry (FDS-09-013); early starts auto-increase availability because events drive runtime (FDS-09-014). §10.3 Non-Serialized Line Integration — OI-04 revised: line-stop semantics replace LOT auto-hold (FDS-10-005 rewritten), 10-consecutive-fail leader escalation with configurable threshold (FDS-10-009), failure-type branching (wrong part → immediate flag; wrong orientation → threshold only — FDS-10-010), hold-release paths via Quality or CRT (FDS-10-011), Controlled Run Tag workflow with mandatory 200%-inspect and missed-CRT re-run rule (FDS-10-012). Related Documents table updated to reference data model v1.7 (8 schemas, ~70 tables). Open Items Register grid refreshed to show revised statuses and the four new items (OI-11 part rename at Casting→Trim, OI-12 lineside inventory caps, OI-13 BOM source Flexware@.919, OI-14 admin remove-item). |
@@ -531,16 +532,18 @@ Data collection requirements are modeled as a one-to-many junction (`Parts.Opera
 #### FDS-03-013 — Operation Templates Drive Screen Behavior
 The Perspective production screen SHALL dynamically render input fields based on the operation template's `OperationTemplateField` rows. A Die Cast screen shows die/cavity/weight fields; an Assembly screen shows serial number and material verification fields. The same screen component is reused — the junction rows control which sections are visible and whether each field is required. (FRS 3.11.6)
 
-#### FDS-03-017a — Data Collection Capture at Event Time
-When a LOT passes through an operation, the system SHALL persist every field configured on the operation template as part of the production event:
+#### FDS-03-017a — Data Collection Capture at Event Time (Checkpoint Shape, v0.11)
+
+When a LOT passes through an operation, the MES writes one **checkpoint event** per operator logging action. Events carry **cumulative** counters (`ShotCount`, `ScrapCount`); deltas are derived by the reader via `LAG()` window function over `(LotId, EventAt)`. Operators are NOT at the terminal per shot — checkpoints are coarse (checkout from die cast, check-in to trim, complete + move, quality-operation transitions). A missed checkpoint does not compound errors; the next event carries truth.
 
 1. On screen load, the client SHALL read `OperationTemplateField` rows for the active template to determine the visible inputs.
-2. On submit, the Phase 8 `ProductionEvent_Record` stored procedure SHALL, in one transaction:
-   a. Insert one `Workorder.ProductionEvent` header row carrying `OperationTemplateId` and the hot typed columns for fields that have been promoted (GoodCount, NoGoodCount, DieIdentifier, CavityNumber, WeightValue, WeightUomId).
+2. On submit, the Arc 2 Phase 1 `ProductionEvent_Record` stored procedure SHALL, in one transaction:
+   a. Insert one `Workorder.ProductionEvent` header row carrying `LotId`, `OperationTemplateId`, `EventAt`, cumulative `ShotCount` / `ScrapCount` (as-of-event), `ScrapSourceId` (only for scrap-driving checkpoints, per FDS-06-023a), optional `WeightValue` + `WeightUomId`, `AppUserId`, and `TerminalLocationId`.
    b. Insert one `Workorder.ProductionEventValue` child row per non-hot `DataCollectionField` configured on the template, keyed by `(ProductionEventId, DataCollectionFieldId)`, with both the string `Value` and the typed `NumericValue` / `UomId` where applicable.
    c. Reject the submission if any `IsRequired = 1` field on the template is missing from the payload.
-   d. Reject the submission if the payload duplicates a hot-column field in `ProductionEventValue` (hot columns are the sole home for promoted fields).
-3. `DieIdentifier` SHALL be captured from the machine's current `LocationAttribute` value at event time — it is the historical snapshot of the die mounted on the machine when the event occurred, not a reference to any die table (OI-10 pending).
+   d. Reject the submission if the payload duplicates a hot-column field (`ShotCount`, `ScrapCount`, `WeightValue`) in `ProductionEventValue`.
+3. **Tool + Cavity are NOT on `ProductionEvent`.** They live on `Lots.Lot` (`ToolId`, `ToolCavityId`) per FDS-05-035. Reports, exports, and Honda-trace queries derive tool context via `ProductionEvent.LotId → Lot.ToolId / Lot.ToolCavityId`.
+4. **Cell / location is NOT on `ProductionEvent`.** It is derivable from `LotMovement` at `EventAt` timestamp — no redundant column on the event.
 
 ### 3.5 Part-to-Location Eligibility
 
@@ -699,19 +702,53 @@ Each LOT SHALL carry:
 
 | Attribute | Source | Description |
 |---|---|---|
-| LotName | LTT barcode scan | Unique identifier |
+| LotName | LTT barcode scan | Unique identifier (minted from `Lots.IdentifierSequence`, `Code=Lot`, per §16) |
 | ItemId | Operator selection | Which part number |
 | LotOriginTypeId | System-determined | Manufactured, RECEIVED, or RECEIVED_OFFSITE |
 | LotStatusId | System-managed | Current quality status (GOOD, HOLD, SCRAP, CLOSED) |
 | PieceCount | Operator entry | Current count (decremented by consumption, adjusted at Trim) |
 | MaxPieceCount | From item master | Reasonability ceiling |
 | Weight | Operator entry or scale | Total weight |
-| DieNumber | Operator entry | Die cast LOTs only |
-| CavityNumber | Operator entry | Die cast LOTs only |
+| ToolId | System + operator confirm | FK → `Tools.Tool.Id`. Required for die-cast-origin LOTs per FDS-05-034. NULL elsewhere. |
+| ToolCavityId | System + operator confirm | FK → `Tools.ToolCavity.Id`. Required for die-cast-origin LOTs per FDS-05-034. NULL elsewhere. |
+| DieNumber | Legacy (v0.10) | Retained for cutover; superseded by `ToolId`. Slated for removal. |
+| CavityNumber | Legacy (v0.10) | Retained for cutover; superseded by `ToolCavityId`. Slated for removal. |
 | VendorLotNumber | Operator entry | Received LOTs only |
 | CurrentLocationId | System-tracked | Updated on every movement |
 
 (FRS 3.9.6, 2.2.2)
+
+#### FDS-05-034 — Die-Cast-Origin Tool + Cavity Required on Lot Create — `MVP` (v0.11)
+
+At `Lots.Lot_Create` for die-cast-origin LOTs, the caller SHALL supply `@ToolId` and `@ToolCavityId`. The proc SHALL validate:
+
+1. A `Tools.ToolAssignment` row exists for `@ToolId` with `CellLocationId = @CellLocationId` (from the scanned Cell) and `ReleasedAt IS NULL` — i.e., the Tool is currently mounted on the cell.
+2. `@ToolCavityId` references a `Tools.ToolCavity` row where `ToolId = @ToolId`.
+3. The cavity's `StatusCodeId` resolves to `Active` (not Closed, not Scrapped).
+
+Failure of any check SHALL reject with a specific error code. Non-die-cast origins (Received, Trim / Machining intermediate, Assembly, Serialized) SHALL pass NULL for both and the proc SHALL NOT require them. (OI-09 closed)
+
+#### FDS-05-035 — Tools System of Record — On Lot, Not On ProductionEvent — `MVP` (v0.11)
+
+Tool and Cavity SHALL live on `Lots.Lot`, never on `Workorder.ProductionEvent`. Reports and exports that need Tool context on an event SHALL derive it via `ProductionEvent.LotId → Lot.ToolId / Lot.ToolCavityId`.
+
+**Downstream LOTs SHALL NOT carry the Tool FKs.** A finished-goods LOT's `ToolId` / `ToolCavityId` are NULL even though its Die-Cast genealogy ancestors have them set. Honda-trace queries (every finished part that contains material from die ABC123) walk `Lots.LotGenealogy` recursively from the origin Die-Cast LOTs to their descendants — not a hot path, no denormalization needed:
+
+```sql
+WITH Origin AS (
+    SELECT Id FROM Lots.Lot WHERE ToolId = @HondaRecallToolId
+),
+Descendants AS (
+    SELECT ChildLotId FROM Lots.LotGenealogy WHERE ParentLotId IN (SELECT Id FROM Origin)
+    UNION ALL
+    SELECT g.ChildLotId FROM Lots.LotGenealogy g
+    INNER JOIN Descendants d ON d.ChildLotId = g.ParentLotId
+)
+SELECT DISTINCT ChildLotId FROM Descendants
+OPTION (MAXRECURSION 100);
+```
+
+(OI-09 closed)
 
 #### FDS-05-031 — LOT Computed Quantities (TotalInProcess, InventoryAvailable) — `MVP`
 
@@ -724,17 +761,20 @@ Both values are **derived, not stored**. The MES SHALL expose them via dedicated
 
 ### 5.2 LOT Creation Workflows
 
-#### FDS-05-004 — Manufactured LOT Creation (Die Cast)
+#### FDS-05-004 — Manufactured LOT Creation (Die Cast) — revised v0.11
 At Die Cast, the operator SHALL:
-1. Fill a basket with parts from the die cast machine
-2. Attach a **pre-printed LTT barcode sticker** to the basket (LTTs are printed in batches outside the MES per FRS 2.2.1)
-3. Scan the LTT barcode at the MES terminal — this scan creates the LOT record; the physical label already exists
-4. Manually enter: part number, die number, cavity number, piece count, and shot counts (total, good, warm-up) (FRS 2.2.2)
-5. The MES SHALL validate: piece count ≤ max lot size, part is eligible on this machine
-6. The MES SHALL create the LOT with origin type Manufactured, status Good, location = scanned machine (per FDS-02-009)
-7. The MES SHALL write a `ProductionEvent` recording the good count
-8. The MES SHALL **NOT** trigger an `Initial` label print — the label was pre-printed. (See FDS-05-020 for print reason policy)
-9. The MES SHALL log the creation to `Audit.OperationLog`
+1. Fill a basket with parts from the active cavity of the die cast machine.
+2. Attach a **pre-printed LTT barcode sticker** to the basket (LTTs are printed in batches outside the MES per FRS 2.2.1).
+3. Scan the LTT barcode at the MES terminal — this scan creates the LOT record; the physical label already exists.
+4. On Cell selection, the screen SHALL **auto-populate the currently mounted Tool** from `Tools.ToolAssignment_ListActiveByCell(@CellLocationId)`. Operator SHALL confirm the populated Tool matches the physical die. **Edit** (elevated action per FDS-04-007) SHALL trigger inline `Tools.ToolAssignment_Release` + `Tools.ToolAssignment_Assign` to correct the system of record when physical ≠ system.
+5. Operator SHALL select the active `ToolCavityId` producing this basket (cavity dropdown filtered to cavities where `Tool.Id = @ToolId` AND `StatusCode = Active`). Part number is implied by the current order / schedule; piece count is operator-entered.
+6. The MES SHALL validate: piece count ≤ `Item.MaxLotSize` (now labeled `PartsPerBasket` — basket capacity), part is eligible on this Cell, Tool + Cavity per FDS-05-034.
+7. The MES SHALL create the LOT with origin type Manufactured, status Good, location = scanned Cell (per FDS-02-009), `ToolId` and `ToolCavityId` set.
+8. The MES SHALL write a `Workorder.ProductionEvent` checkpoint row with cumulative `ShotCount` / `ScrapCount` as-of-this-basket-close (per FDS-03-017a checkpoint shape).
+9. The MES SHALL **NOT** trigger an `Initial` label print — the label was pre-printed. (See FDS-05-020 for print reason policy.)
+10. The MES SHALL log the creation to `Audit.OperationLog`.
+
+**Note:** Other areas (Trim, Machining, Assembly) do NOT require operator Tool validation at LOT create — their LOTs carry NULL `ToolId` / `ToolCavityId`.
 
 > 🔶 **PENDING CUSTOMER VALIDATION — UJ-02:** Confirms that LTT tags at Die Cast are pre-printed and the first scan creates the record. No in-MES print for Die Cast LOT creation.
 
@@ -770,25 +810,41 @@ The presence → scan location → scan lot sequence ensures that every movement
 
 **Implicit movement:** The system SHALL also infer a movement when a LOT is consumed or produced at a machine without a prior explicit scan. For example, if an assembly operator records consumption of a source LOT currently at the WIP staging area, the system SHALL implicitly write a `LotMovement` from WIP → the assembly Cell before writing the `ConsumptionEvent`. This keeps the traceability record complete without requiring redundant scans.
 
+#### FDS-05-036 — Lazy, Operator-Driven LOT Creation — `MVP` (v0.11)
+
+LOT creation SHALL be **lazy and operator-driven**. The MES SHALL NOT auto-create N LOTs at run start, nor prescribe when an operator must log a new LOT. Valid moments for `Lot_Create` include: on physical completion of a basket (operator goes to terminal to log + move it), after completing a prior LOT and before starting the next (pre-emptive creation), or any other moment the operator chooses.
+
+Physical-but-unlogged baskets exist until the operator logs them. The Arc 2 Phase 3 Die Cast UX and associated procs SHALL NOT require a LOT row to exist for an in-progress cavity. Tool + Cavity assignment happens at `Lot_Create` time, not at any abstract "run start" event.
+
+#### FDS-05-037 — LOT Close Semantics — `MVP` (v0.11)
+
+LOT close behavior SHALL vary by origin:
+
+| LOT origin | Close behavior |
+|---|---|
+| **Component LOTs** (Die Cast, Trim, intermediate Machining) | **Explicit operator-driven close.** "Complete + Move" SHALL be a combined UI action — status transition + movement in one atomic proc call. Cavity state changes (e.g., broken cavity → Closed) SHALL NOT auto-close the LOT; a partial basket sits at `Lot.LotStatusCode = Closed` only when the operator closes it. |
+| **Finished-goods LOTs** (Assembly end-products packed into shipping Containers) | MAY auto-close on container fill. The `Container_Complete` action SHALL close the associated LOT as part of its transaction. Detailed in §6 container workflow and §7 shipping. |
+
+No other close paths are defined. Scrapped material SHALL still move through either explicit Pattern-A reject (FDS-06-019) or Pattern-B split-to-scrap — not via auto-close.
+
 #### FDS-05-032 — Partial Start and Partial Complete — `MVP`
 
 **OI-21 (new v0.10):** Start and Complete at a workstation SHALL be independent operations with independent quantities. An operator MAY start N pieces at a workstation now and complete M of them (where M ≤ N) later — including across shift boundaries. The `Workorder.ProductionEvent_Record` proc SHALL accept independent Start and Complete event emission. Derivation of in-process quantities (FDS-05-031) and runtime workstation WIP grids SHALL work by event replay of Start / Complete / Scrap events, not by maintaining a running counter that assumes atomic start-and-complete. Legacy Flexware surfaces this as separate "Start lot quantity" and "Complete lot quantity" fields on the Move Lot screen. The implementation SHALL be verified against this requirement before Arc 2 screen design freezes.
 
 ### 5.4 Sub-LOT Splitting
 
-> 🔶 **REVISED — OI-09 addenda (2026-04-20):** Sublots are broader than just the Machining auto-split. They arise in three places: (1) **per-cavity sublots at Die Cast** — each cavity of a multi-cavity die produces a distinct sublot of the parent LOT running under one part number; (2) **basket-level sublots** — small baskets are broken out of a parent LOT as they're filled, each carrying its own label with a parent reference; (3) **machining auto-split** — the existing UJ-03 workflow. All three use the same data-model pattern: child `Lot` rows carry `ParentLotId` FK, `LotGenealogy` captures the split relationship, and labels reference the parent.
+> ✅ **REVISED — OI-09 closed (2026-04-23):** The 2026-04-20 addenda conflated two distinct workflows. Restated in v0.11:
+> - **Cavity-parallel LOTs at Die Cast are peers, NOT sublots.** A die with N active cavities produces **N parallel independent LOTs**. Each LOT has `ToolId` + `ToolCavityId` set at creation (FDS-05-034), fills at its own rate, closes independently. No parent/child FK between cavity peers. One LTT barcode per LOT. Genealogy is flat at Die Cast. See §5.2 FDS-05-004 for creation flow.
+> - **Machining sub-LOT split IS a sublot pattern.** The workflow below (FDS-05-022, -024, -009..011) remains authoritative for Machining OUT. Parent FK + split genealogy + sublot labels.
+> - **Basket-level sublots** from the 2026-04-20 addenda are absorbed by the Die Cast cavity-parallel-LOT model (one basket = one LOT = one label) or by the Machining sub-LOT split below.
 
-#### FDS-05-022 — Sublot Pattern
+#### FDS-05-022 — Sublot Pattern (Machining)
 A sublot SHALL be a `Lots.Lot` row with a non-NULL `ParentLotId` FK. Sublots carry an independent `LotNumber` (from the LTT barcode scanned at creation), their own piece count, status, and movement history, but trace back to the parent via the FK plus a `LotGenealogy` row with `RelationshipType = Split`. Sublots SHALL persist for the full LOT lifecycle — they are never re-merged back into the parent, and their labels travel with the physical container. The parent LOT's piece count SHALL be decremented by the total pieces split off; the parent reaches `LotStatusCode = Closed` when its piece count hits zero (all pieces split off to sublots or consumed).
 
-#### FDS-05-023 — Per-Cavity Sublots at Die Cast
-On a multi-cavity die, each cavity's output MAY be tracked as a distinct sublot of a single parent LOT (the parent representing the die's production run for a given shift or time window). When the operator opts into per-cavity sublots (configured per Part × Cell — see `Parts.ItemLocation` attributes), the MES SHALL:
+Sublots created under FDS-05-022 inherit the parent's `ToolId` / `ToolCavityId` (both typically NULL for Machining-origin parents). If the parent is unusually die-cast-origin and is split at Machining, the children SHALL carry `ToolId = NULL` and `ToolCavityId = NULL` — the Tool/Cavity identity is already recorded on the parent LOT's row and on the genealogy edge; sublots are Machining LOTs, not die cast.
 
-1. On parent LOT creation, create one child sublot per active cavity, pre-associated with `CavityNumber`.
-2. Apply each die cycle's piece output to the sublot matching the cavity that produced it (inferred from the machine tag namespace or explicit operator entry).
-3. Print a sublot LTT label for each cavity at container-close time.
-
-This does NOT contradict FDS-03-017 "one part at a time" — all cavities produce the same part number. Cavities producing from a `ToolCavity` row in `StatusCode = Closed` or `Scrapped` SHALL NOT produce a sublot; the die runs on remaining cavities. (FRS 2.1.4, 3.9.12; OI-09 addenda; couples to Phase B Tools schema.)
+#### FDS-05-023 — [Superseded v0.11]
+~~Per-cavity sublots at Die Cast~~ — superseded by the cavity-parallel-LOT-as-peer pattern. Each cavity produces a first-class LOT with its own `ToolId`/`ToolCavityId` per FDS-05-034. See §5.2 FDS-05-004 for creation. This requirement slot is retained empty to avoid renumbering downstream requirements.
 
 #### FDS-05-024 — Sublot Labels
 Every sublot LTT label SHALL display both the sublot's own `LotNumber` and the `ParentLotNumber`. The `Lots.LotLabel` row SHALL carry a `ParentLotId` reference column (nullable — non-sublot labels have no parent) for label-regeneration and audit purposes. The operator-visible genealogy view SHALL let a user enter either number and see the other. Label reprint workflows (FDS-05-020) for a sublot SHALL preserve the parent reference.
@@ -852,7 +908,11 @@ Until MPP Quality delivers the full `DieRankCompatibility` matrix (seeded empty 
 `Lots.Lot_Merge` SHALL reject any merge where the source LOTs do not share the same `LotStatusCode` value, except that `Closed` LOTs SHALL never participate in a merge (they are already fully consumed). Specifically: merging a `Hold` LOT with a `Good` LOT SHALL be rejected. Supervisor override via FDS-04-007 is NOT allowed for mixed quality status — a held LOT must be released via the hold-release workflow (§8.2) before it can be merged. (OI-05 revised)
 
 #### FDS-05-029 — Machining Is Not a Merge — FIFO-by-Cavity
-The machining workflow SHALL NOT issue merge events. When multiple sublots of a multi-cavity parent LOT arrive at a machining cell, the cell SHALL process them first-in-first-out (FIFO) keyed by sublot `CreatedAt`, grouped by `CavityNumber`. Each sublot retains its identity through the machining operation; no `LotGenealogy` `Merge` row is written. (OI-05 revised; FRS 3.13.1)
+The machining workflow SHALL NOT issue merge events. When multiple cavity-parallel LOTs (`Lot.ToolCavityId` set) arrive at a machining cell, the cell SHALL process them first-in-first-out (FIFO) keyed by LOT `CreatedAt`, grouped by `ToolCavityId`. Each LOT retains its identity through the machining operation; no `LotGenealogy` `Merge` row is written. (OI-05 revised; FRS 3.13.1)
+
+#### FDS-05-030 — Post-Merge LOT Has NULL Tool / Cavity — `MVP` (v0.11)
+
+After a successful `Lots.Lot_Merge`, the resulting merged LOT SHALL have `ToolId = NULL` and `ToolCavityId = NULL` — blended-origin material from multiple source LOTs cannot be denormalized into a single Tool/Cavity FK pair. Tool-specific trace SHALL be reconstructed via `Lots.LotGenealogy` traversal of the pre-merge source LOTs (each of which retains its own Tool/Cavity FKs immutably). The merge proc SHALL NOT attempt to pick a "representative" Tool. (OI-09 closed; Decision 10)
 
 ### 5.6 LOT Status Transitions
 
@@ -980,12 +1040,14 @@ Before recording production, the system SHALL validate:
 - The piece count does not exceed the item's max lot size
 - If any validation fails, the system SHALL display a clear error and prevent the recording
 
-#### FDS-06-003 — Die Cast Production Event
-On submission, the system SHALL (per FDS-03-017a, in one transaction):
-1. Write an immutable `Workorder.ProductionEvent` header carrying `OperationTemplateId`, `LotId`, `LocationId`, `ItemId`, `GoodCount`, `NoGoodCount`, `DieIdentifier` (from the machine's `LocationAttribute`), `CavityNumber`, `WeightValue` + `WeightUomId`, `OperatorId`, `TerminalLocationId`, and `RecordedAt`.
+#### FDS-06-003 — Die Cast Production Event — revised v0.11 (checkpoint shape)
+On operator submission at a Die Cast checkpoint (e.g., basket close, end-of-shift handoff, scrap-from-location action), the system SHALL (per FDS-03-017a, in one transaction):
+1. Write an immutable `Workorder.ProductionEvent` row carrying `LotId`, `OperationTemplateId`, `EventAt`, cumulative `ShotCount` / `ScrapCount` as-of-this-moment, optional `ScrapSourceId` (non-NULL only when this checkpoint is a scrap-driving action), optional `WeightValue` + `WeightUomId`, `AppUserId`, `TerminalLocationId`.
 2. Write one `Workorder.ProductionEventValue` child row per non-hot `DataCollectionField` configured on the active operation template.
-3. Update the LOT's `PieceCount` to reflect the good count.
+3. Update the LOT's `PieceCount` to reflect the current good count (derivation: `ShotCount - ScrapCount` since last event, plus any adjustments).
 4. Log to `Audit.OperationLog`.
+
+Reports that need per-event good-count deltas SHALL compute `ShotsSinceLast = ShotCount - LAG(ShotCount) OVER (PARTITION BY LotId ORDER BY EventAt)`. Reports that need Tool/Cavity context SHALL join to `Lots.Lot` on `ProductionEvent.LotId` and read `Lot.ToolId` / `Lot.ToolCavityId` (per FDS-05-035).
 
 > 🔶 **PENDING INTERNAL REVIEW — UJ-14:** Warm-up shots are tracked as a downtime sub-category rather than on the production event. The Die Cast operator logs warm-up time as a `DowntimeEvent` with `ReasonType` = Setup and records the warm-up shot count in the `ShotCount` column on that downtime event. Good/bad production shot counts remain on the `ProductionEvent`. This separates warm-up activity (time + shots wasted) from production activity (good parts made). Needs review with Ben.
 
@@ -1184,6 +1246,25 @@ Legacy Flexware surfaces this as the "Camera system automatic processing options
 #### FDS-06-029 — Tray-Divisibility Validation on WO Close — `MVP`
 
 **OI-17 (new v0.10):** At WO Close (whether manual or via FDS-06-028 auto-finish), the MES SHALL verify that cumulative `GoodCount` is evenly divisible by `PartsPerTray` from the Item's `ContainerConfig`. A non-divisible result SHALL block the close with error *"Work order target quantity exceeded. Ensure target quantity is evenly divisible by the tray quantity"* (matching the legacy Flexware wording). Supervisor AD elevation per FDS-04-007 overrides the block (reason logged to `Audit.OperationLog`). Also validated at WO Create per FDS-03-021; re-validated at Close because `ProductionEvent` writes can push actual count below or past the planned target.
+
+> **Note (v0.11):** "Cumulative `GoodCount` across the WO" is computed by summing `ShotCount - ScrapCount` deltas across all `ProductionEvent` rows whose `LotId` is associated with the WO (via `WorkOrderOperationId` or, when that is NULL, via LOT-WO matching on `ItemId` + time window). The v0.11 ProductionEvent reshape removed the per-event `GoodCount` column — it is derived from the cumulative counters.
+
+#### FDS-06-030 — WorkOrder BIT-Flag Enumeration at Phase 0 — `MVP` (Arc 2 Phase 0 input, v0.11)
+
+The legacy Flexware `WorkOrder` table carries a set of BIT / attribute flags whose MVP status is unknown. Arc 2 Phase 0 SHALL confirm with MPP which of the following are live in production; live flags become columns on `Workorder.WorkOrder` at the Arc 2 Phase 1 `CREATE`; dead flags do not ship:
+
+| Flexware flag / field | Proposed home if live |
+|---|---|
+| `IsCameraProcessingEnabled` | `Workorder.WorkOrder` (configurable per FDS-06-028) |
+| `IsScaleProcessingEnabled` | `Workorder.WorkOrder` (configurable per FDS-06-028) |
+| `GroupTargetWeight`, `GroupTargetWeightTolerance`, `TargetWeightUnitOfMeasureID` | `Workorder.WorkOrder` (subsumed by OI-02 resolution when that closes) |
+| `RecipeNumber` | `Workorder.WorkOrder` (`WorkOrderType = Recipe`) |
+| `TrayQuantity` | `Workorder.WorkOrder` (couples to `Parts.ContainerConfig.PartsPerTray` — one source of truth required) |
+| `ReturnableDunnageCode` | `Workorder.WorkOrder` OR `Parts.ContainerConfig` — scope decision at Phase 0 |
+| `Customer` | `Workorder.WorkOrder` — if Honda-only, redundant |
+| `IsActive` | implied by `WorkOrderStatus` — likely redundant |
+
+Most of these appear to be weight-based container-closure flags that OI-02 resolution subsumes. Phase 0 confirms live-vs-dead; Phase 1 CREATE includes only live columns.
 
 ---
 
@@ -1877,6 +1958,43 @@ The MES replaces the legacy pattern of paper-first, clerk-entry-later with real-
 
 #### FDS-15-008 — Operator Training
 Each area SHALL receive operator training before shadow commissioning begins. Training SHALL cover: terminal login, LOT creation, production recording, reject entry, downtime logging, and the screens specific to that area's operation templates.
+
+---
+
+## 16. Identifier Sequences — `MVP` (new in v0.11, OI-31)
+
+Flexware's `IdentifierFormat` table drives two MPP-internal counters (Lot LTT barcode + SerializedItem ID) that are critical to cutover continuity. The replacement MES SHALL provide equivalent functionality via a dedicated sequence table.
+
+#### FDS-16-001 — IdentifierSequence Table
+
+The MES SHALL own a `Lots.IdentifierSequence` table with the column contract defined in Data Model v1.9 §3. Seeded sequences:
+
+| Code | FormatString | StartingValue | EndingValue | Purpose |
+|---|---|---|---|---|
+| `Lot` | `MESL{0:D7}` | 1 | 9,999,999 | LOT LTT barcode — printed on every basket, scanned at every movement |
+| `SerializedItem` | `MESI{0:D7}` | 1 | 9,999,999 | Serialized-part ID for finished goods (5G0 Fronts/Rears etc.) |
+
+Additional sequences MAY be added via Configuration Tool (Admin-elevated per FDS-04-007) as MPP business needs emerge. Honda AIM shipper IDs are explicitly OUT of scope — those are issued by `AIM.GetNextNumber` and recorded on `Lots.ShippingLabel` / `Lots.Container`, not minted by the MES.
+
+#### FDS-16-002 — IdentifierSequence_Next Proc
+
+`Lots.IdentifierSequence_Next @Code` SHALL:
+
+1. Start a transaction, atomically `UPDATE Lots.IdentifierSequence SET LastValue = LastValue + 1, UpdatedAt = SYSUTCDATETIME() OUTPUT inserted.LastValue, inserted.FormatString INTO #Result WHERE Code = @Code`.
+2. Raise a business-rule error if no rows match (`@Code` unknown).
+3. Raise a business-rule error if `LastValue > EndingValue` (rollover breach without explicit reset policy).
+4. Format the result using the `.NET`-style format string — e.g., `string.Format('MESL{0:D7}', 1710933) = 'MESL1710933'`. Implemented as `CONCAT(prefix, RIGHT(REPLICATE('0', width) + CAST(value AS NVARCHAR(20)), width))` or equivalent in T-SQL.
+5. Return a single result set `(Value NVARCHAR(50))` per the Ignition JDBC single-result-set convention (FDS-11-011). No OUTPUT parameter.
+
+All identifier-minting paths (Lot create, SerializedItem create, future counters) SHALL go through this proc — no ad-hoc counter maintenance.
+
+#### FDS-16-003 — Cutover-Day Seeding
+
+The Arc 2 Phase 1 migration SHALL include a seeding step that fetches `LastCounterValue` from the Flexware `IdentifierFormat` table at cutover and seeds `Lots.IdentifierSequence.LastValue` at **or above** the Flexware value for each sequence, preventing LTT collisions with in-circulation LOTs.
+
+Baseline values sampled 2026-04-23 (subject to drift — re-sample on cutover day): `Lot=1,710,932`, `SerializedItem=2,492`.
+
+**Open items (OI-31):** Format carry-forward (keep `MESL`/`MESI`, or mint new prefixes in the replacement MES?), additional counters in use at MPP we haven't seen (container barcodes, shipping print sequences, anything non-AIM), reset policy (currently none), rollover policy at 9,999,999 (~30+ years at current burn rate for Lots).
 
 ---
 
