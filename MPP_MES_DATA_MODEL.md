@@ -607,7 +607,7 @@ Added v1.9 (OI-31). Replaces Flexware's `IdentifierFormat` table and drives all 
 | Lot | `MESL{0:D7}` | 1,710,932 (drift expected; re-sample at cutover) |
 | SerializedItem | `MESI{0:D7}` | 2,492 (drift expected; re-sample at cutover) |
 
-**Open questions (OI-31):** format carry-forward (keep `MESL`/`MESI`, or mint new?), additional counters in use at MPP we haven't seen, reset policy, rollover policy at 9,999,999. See `MPP_MES_Open_Issues_Register.md` OI-31.
+**Open questions (OI-31):** format carry-forward (keep `MESL`/`MESI`, or mint new?), reset policy, rollover policy at 9,999,999. Counter inventory is the two rows shown above — the Flexware `IdentifierFormat` export is the authoritative list. See `MPP_MES_Open_Issues_Register.md` OI-31.
 
 ### LotLabel
 

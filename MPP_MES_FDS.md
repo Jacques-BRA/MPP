@@ -1994,7 +1994,9 @@ The Arc 2 Phase 1 migration SHALL include a seeding step that fetches `LastCount
 
 Baseline values sampled 2026-04-23 (subject to drift — re-sample on cutover day): `Lot=1,710,932`, `SerializedItem=2,492`.
 
-**Open items (OI-31):** Format carry-forward (keep `MESL`/`MESI`, or mint new prefixes in the replacement MES?), additional counters in use at MPP we haven't seen (container barcodes, shipping print sequences, anything non-AIM), reset policy (currently none), rollover policy at 9,999,999 (~30+ years at current burn rate for Lots).
+**Open items (OI-31):** Format carry-forward (keep `MESL`/`MESI`, or mint new prefixes in the replacement MES?), reset policy (currently none in Flexware; any line/shift-specific rules MPP wants honored going forward?), rollover policy at 9,999,999 (~30+ years at current burn rate for Lots).
+
+**Counter inventory confirmed:** The Flexware `IdentifierFormat` table is the authoritative list. MPP's export shows exactly two rows — Lot (`MESL{0:D7}`) and SerializedItem (`MESI{0:D7}`). Other Flexware tables that reference `IdentifierFormat` via FK do so without populated format rows. No additional counters in scope.
 
 ---
 

@@ -181,8 +181,8 @@
 
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
-    <p>Madison Precision Products — MES Database Schema (8 schemas, ~73 tables)</p>
-    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-24 — <strong>v1.9 Arc 2 model revisions — per-schema diagrams fully updated</strong>. Lots tab: <code>Lot.ToolId</code> + <code>Lot.ToolCavityId</code> added to the Lot diagram box (system of record for die-cast-origin LOTs; NULL elsewhere; NULL after merge); new <code>IdentifierSequence</code> table card + diagram box (replaces Flexware <code>IdentifierFormat</code>; <code>Lot</code> <code>MESL{0:D7}</code> + <code>SerializedItem</code> <code>MESI{0:D7}</code> counters seeded at cutover per OI-31); pre-v1.9 <code>DieNumber</code> / <code>CavityNumber</code> NVARCHAR columns marked legacy. Workorder tab: <code>ProductionEvent</code> diagram box reshaped to checkpoint form (cumulative <code>ShotCount</code> / <code>ScrapCount</code>; dropped <code>LocationId</code>, <code>ItemId</code>, <code>DieIdentifier</code>, <code>CavityNumber</code>, per-event <code>GoodCount</code> / <code>NoGoodCount</code>; renamed <code>RecordedAt</code>→<code>EventAt</code>, <code>OperatorId</code>→<code>AppUserId</code>). Tools tab: new cross-schema relationships <code>Tool ||..o{ Lot</code> and <code>ToolCavity ||..o{ Lot</code> (die-cast origin); Cross-schema Relationships callout block added below the Tool diagram documenting the v1.9 FK picture. OI-09 closed — N cavities produce N parallel peer LOTs, not sublots. <code>Parts.Item.MaxLotSize</code> repurposed as <code>PartsPerBasket</code> (semantic only, no schema change). Earlier v1.8 Phase E additions: <code>Parts.Item.CountryOfOrigin</code> (OI-19), <code>Parts.ItemLocation</code> + consumption metadata (OI-18), <code>Parts.ContainerConfig.MaxParts</code> (OI-12), <code>Workorder.ScrapSource</code> + <code>ProductionEvent.ScrapSourceId</code> (OI-20), OI-11 via 1-line BOM. Earlier v1.7: Phase B Tool Management (§7 Tools), <code>Workorder.WorkOrderType</code> + nullable <code>ToolId</code>, <code>AppUser</code> initials-based security (OI-06). Master ERD tab still reflects v1.5 — full regeneration queued.</p>
+    <p>Madison Precision Products — MES Database Schema (8 schemas, 73 tables)</p>
+    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-24 — <strong>full v1.9 pass: every schema tab and the Master ERD tab regenerated end-to-end</strong>. (1) Lots tab: <code>Lot.ToolId</code> + <code>Lot.ToolCavityId</code> added (die-cast-origin system of record; NULL elsewhere / after merge); new <code>IdentifierSequence</code> table + diagram (replaces Flexware <code>IdentifierFormat</code>; 2 counters — <code>Lot</code> <code>MESL{0:D7}</code> + <code>SerializedItem</code> <code>MESI{0:D7}</code>). (2) Workorder tab: <code>ProductionEvent</code> reshaped to checkpoint form (cumulative <code>ShotCount</code>/<code>ScrapCount</code>; dropped <code>LocationId</code>, <code>ItemId</code>, <code>DieIdentifier</code>, <code>CavityNumber</code>, per-event <code>GoodCount</code>/<code>NoGoodCount</code>; renamed <code>RecordedAt</code>→<code>EventAt</code>, <code>OperatorId</code>→<code>AppUserId</code>). (3) Tools tab: cross-schema <code>Tool</code>/<code>ToolCavity</code>→<code>Lot</code> relationships + Cross-schema callout. (4) OEE tab: <code>ShiftSchedule</code> fixed (DaysOfWeekBitmask INT + 5 missing columns); <code>Shift</code> fixed (ShiftDate removed + CreatedAt/Remarks added); <code>DowntimeReasonType.Code</code> + <code>DowntimeReasonCode</code> extended with SourceCode/user-attribution/etc. per v1.5. (5) Audit tab: four "bigbigint" typos corrected to "bigint". (6) Master ERD tab: full rebuild — 73 tables in 8 schemas with complete cross-schema FK summary table (44 rows) + comprehensive mermaid diagram covering all intra- and inter-schema relationships including v1.7 Tools, v1.8 ScrapSource / ItemLocation consumption metadata / Item.CountryOfOrigin / ContainerConfig.MaxParts, and v1.9 Lot.Tool*/ProductionEvent reshape / IdentifierSequence. OI-09 closed — N cavities → N parallel peer LOTs, not sublots. <code>Parts.Item.MaxLotSize</code> repurposed as <code>PartsPerBasket</code> (semantic only).</p>
     <div class="conventions">
         <span>UpperCamelCase</span>
         <span>singular nouns</span>
@@ -1157,23 +1157,31 @@ erDiagram
     <div class="table-list">
         <div class="table-card">
             <h4>DowntimeReasonType <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>Top-level categorization: Equipment, Miscellaneous, Mold, Quality, Setup, Unscheduled.</p>
+            <p>Read-only code table seeded in migration 0009 with 6 rows: <code>Equipment</code>, <code>Miscellaneous</code>, <code>Mold</code>, <code>Quality</code>, <code>Setup</code>, <code>Unscheduled</code>. Drives the two-tier downtime categorization alongside <code>DowntimeReasonCode</code>.</p>
         </div>
         <div class="table-card">
             <h4>DowntimeReasonCode <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>~660 specific reasons by area and type. <code>IsExcused</code> determines OEE availability impact.</p>
+            <p>~353 active seed rows from <code>downtime_reason_codes.csv</code> (DC=86, MS=239, TS=25), loaded via the <code>DowntimeReasonCode_BulkLoadFromSeed</code> JSON proc. Auto-generated code format <code>{DeptCode}-{NNNN}</code>. Carries FKs to the owning Area Location, the reason type, and an optional <code>DowntimeSourceCode</code>. Full user-attribution columns (CreatedBy/UpdatedBy). <code>IsExcused</code> drives OEE availability impact. <code>DowntimeReasonTypeId</code> is nullable — CSV rows with missing <code>TypeDesc</code> load as NULL and engineering backfills via <code>_Update</code> before go-live.</p>
         </div>
         <div class="table-card">
-            <h4>ShiftSchedule / Shift <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>Named shift patterns and actual shift instances. Time boundaries for downtime context and production reporting.</p>
+            <h4>ShiftSchedule <span class="scope-badge scope-mvp">MVP v1.5</span></h4>
+            <p>Named shift patterns (e.g., First Shift 6a–2p M-F, Second Shift 2p–10p, Weekend OT). Time boundaries carried as <code>TIME(0)</code> — shift spans midnight when <code>EndTime &lt; StartTime</code>. <strong>Days-of-week bitmask</strong>: <code>DaysOfWeekBitmask INT</code> CHECK 1–127 with Mon=1, Tue=2, Wed=4, Thu=8, Fri=16, Sat=32, Sun=64 (Mon–Fri = 31; Sat+Sun = 96). Full user-attribution. Written via Configuration Tool.</p>
+        </div>
+        <div class="table-card">
+            <h4>Shift <span class="scope-badge scope-mvp">MVP v1.5</span></h4>
+            <p>Runtime shift instances — written by Arc 2 (plant-floor shift controller) when a scheduled shift starts. Carries <code>ActualStart</code> / <code>ActualEnd</code>, optional <code>Remarks</code>, <code>CreatedAt</code>. Append-only with update-on-end semantics. The Config Tool only reads via <code>Shift_List</code> for admin visibility.</p>
+        </div>
+        <div class="table-card">
+            <h4>DowntimeSourceCode <span class="scope-badge scope-mvp">MVP</span></h4>
+            <p>Read-only code table distinguishing how a downtime event was recorded: <code>Manual</code> (operator entered it on the downtime screen) vs <code>PLC</code> (Gateway script observed the machine stop and created the event for an operator to classify later per convention B7).</p>
         </div>
         <div class="table-card">
             <h4>DowntimeEvent <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>Append-only. Machine, reason code, start/end, source (manual/PLC), operator. Open events have null <code>EndedAt</code>. <code>ShotCount</code> captures warm-up/setup shots when ReasonType = Setup (per UJ-14).</p>
+            <p>Append-only with update-on-end. Machine Location, reason code (nullable — PLC-created events classify later per B7), shift (nullable — context at event time), start/end, source (<code>Manual</code> / <code>PLC</code>), operator. Open events have NULL <code>EndedAt</code>. <code>ShotCount</code> captures warm-up/setup shots when the associated reason's <code>ReasonType = Setup</code> (per UJ-14).</p>
         </div>
         <div class="table-card">
             <h4>OeeSnapshot <span class="scope-badge scope-future">Future</span></h4>
-            <p>Materialized Availability &times; Performance &times; Quality per machine per shift. Recalculated by scheduled job, never the system of record. <em>Not in current scope &mdash; retained as a natural derivative of MVP downtime and production data.</em></p>
+            <p>Materialized Availability &times; Performance &times; Quality per machine per shift. Recalculated by a scheduled job, never the system of record. <em>Not in current scope — retained as a natural derivative of MVP downtime and production data; activation requires only a scheduled calculation job, no new data capture.</em></p>
         </div>
     </div>
 
@@ -1184,6 +1192,7 @@ erDiagram
 erDiagram
     DowntimeReasonType {
         bigint Id PK
+        nvarchar Code
         nvarchar Name
     }
 
@@ -1192,46 +1201,56 @@ erDiagram
         nvarchar Code
         nvarchar Description
         bigint AreaLocationId FK
-        bigint DowntimeReasonTypeId FK
+        bigint DowntimeReasonTypeId FK "NULL"
+        bigint DowntimeSourceCodeId FK "NULL"
         bit IsExcused
         datetime2 CreatedAt
+        bigint CreatedByUserId FK
+        datetime2 UpdatedAt
+        bigint UpdatedByUserId FK
         datetime2 DeprecatedAt
     }
 
     ShiftSchedule {
         bigint Id PK
         nvarchar Name
+        nvarchar Description
         time StartTime
         time EndTime
-        nvarchar DaysOfWeek
-        datetime2 EffectiveFrom
+        int DaysOfWeekBitmask "1-127 Mon=1..Sun=64"
+        date EffectiveFrom
+        datetime2 CreatedAt
+        bigint CreatedByUserId FK
+        datetime2 UpdatedAt
+        bigint UpdatedByUserId FK
         datetime2 DeprecatedAt
     }
 
     Shift {
         bigint Id PK
         bigint ShiftScheduleId FK
-        date ShiftDate
         datetime2 ActualStart
-        datetime2 ActualEnd
+        datetime2 ActualEnd "NULL while open"
+        nvarchar Remarks
+        datetime2 CreatedAt
     }
 
     DowntimeSourceCode {
         bigint Id PK
-        nvarchar Code
+        nvarchar Code "Manual / PLC"
         nvarchar Name
     }
 
     DowntimeEvent {
         bigint Id PK
         bigint LocationId FK
-        bigint DowntimeReasonCodeId FK
-        bigint ShiftId FK
+        bigint DowntimeReasonCodeId FK "NULL - classify later"
+        bigint ShiftId FK "NULL"
         datetime2 StartedAt
-        datetime2 EndedAt
+        datetime2 EndedAt "NULL while open"
         bigint DowntimeSourceCodeId FK
-        bigint OperatorId FK
-        int ShotCount
+        bigint OperatorId FK "NULL"
+        int ShotCount "Setup-type only"
         nvarchar Remarks
         datetime2 CreatedAt
     }
@@ -1256,6 +1275,7 @@ erDiagram
 
     DowntimeReasonType ||--o{ DowntimeReasonCode : typed
     DowntimeReasonCode ||--o{ DowntimeEvent : reason
+    DowntimeSourceCode ||--o{ DowntimeReasonCode : "default source"
     ShiftSchedule ||--o{ Shift : defines
     Shift ||--o{ DowntimeEvent : during
     Shift ||--o{ OeeSnapshot : summarized
@@ -1513,7 +1533,7 @@ erDiagram
     }
 
     OperationLog {
-        bigbigint Id PK
+        bigint Id PK
         datetime2 LoggedAt
         bigint UserId FK
         bigint TerminalLocationId FK
@@ -1528,7 +1548,7 @@ erDiagram
     }
 
     ConfigLog {
-        bigbigint Id PK
+        bigint Id PK
         datetime2 LoggedAt
         bigint UserId FK
         bigint LogSeverityId FK
@@ -1540,7 +1560,7 @@ erDiagram
     }
 
     InterfaceLog {
-        bigbigint Id PK
+        bigint Id PK
         datetime2 LoggedAt
         nvarchar SystemName
         nvarchar Direction
@@ -1554,7 +1574,7 @@ erDiagram
     }
 
     FailureLog {
-        bigbigint Id PK
+        bigint Id PK
         datetime2 AttemptedAt
         bigint AppUserId FK
         bigint LogEntityTypeId FK
@@ -1582,40 +1602,74 @@ erDiagram
 <div id="tab-master" class="tab-content">
     <div class="schema-desc">
         <h2>Master ERD — All Schemas</h2>
-        <p>All tables and cross-schema relationships. Table names prefixed with schema abbreviations. Scroll horizontally to explore.</p>
-        <p class="scope-note"><strong>⚠ Stale as of v1.7 (2026-04-21).</strong> This tab still reflects the v1.5 data model — the FK summary below uses pre-v0.3 <code>snake_case</code> column names (e.g., <code>lot.item_id</code>) and the full diagram does not yet include the new <strong>Tools</strong> schema, <code>Workorder.WorkOrderType</code>, or the v1.6 <code>AppUser</code> security realignment. For accurate per-schema information see the dedicated tabs above; full Master ERD regeneration is queued for <strong>Phase F</strong> of the 2026-04-20 OI review refactor.</p>
+        <p>All 73 tables across 8 schemas with cross-schema foreign-key relationships. Table names are prefixed with schema abbreviations (<code>loc__</code>, <code>parts__</code>, <code>lots__</code>, <code>wo__</code>, <code>qual__</code>, <code>oee__</code>, <code>tools__</code>, <code>audit__</code>). Scroll horizontally to explore. Regenerated 2026-04-24 for Data Model v1.9.</p>
+        <p class="scope-note">Per-schema tabs above carry column-level detail; this tab shows tables as boxes with only their PK, plus the complete cross-schema FK picture. Use per-schema tabs for column lookups, this tab for architecture-level review.</p>
     </div>
 
     <h3>Cross-Schema Foreign Key Summary</h3>
     <table class="fk-table">
         <thead>
-            <tr><th>From Schema</th><th>Table.Column</th><th>To Schema</th><th>Table.Column</th></tr>
+            <tr><th>From Schema</th><th>Table.Column</th><th>To Schema</th><th>Table.Column</th><th>Notes</th></tr>
         </thead>
         <tbody>
-            <tr><td>parts</td><td>operation_template.AreaLocationId</td><td>location</td><td>location.id</td></tr>
-            <tr><td>parts</td><td>item_Location.Location_id</td><td>location</td><td>location.id</td></tr>
-            <tr><td>lots</td><td>lot.item_id</td><td>parts</td><td>item.id</td></tr>
-            <tr><td>lots</td><td>lot.current_location_id</td><td>location</td><td>location.id</td></tr>
-            <tr><td>lots</td><td>lot_movement.from/to_location_id</td><td>location</td><td>location.id</td></tr>
-            <tr><td>lots</td><td>lot_status_history.changed_by_user_id</td><td>location</td><td>app_user.id</td></tr>
-            <tr><td>lots</td><td>container.container_config_id</td><td>parts</td><td>container_config.id</td></tr>
-            <tr><td>lots</td><td>container.item_id</td><td>parts</td><td>item.id</td></tr>
-            <tr><td>workorder</td><td>work_order.item_id</td><td>parts</td><td>item.id</td></tr>
-            <tr><td>workorder</td><td>work_order.route_template_id</td><td>parts</td><td>route_template.id</td></tr>
-            <tr><td>workorder</td><td>work_order_operation.location_id</td><td>location</td><td>location.id</td></tr>
-            <tr><td>workorder</td><td>production_event.lot_id</td><td>lots</td><td>lot.id</td></tr>
-            <tr><td>workorder</td><td>consumption_event.source_lot_id</td><td>lots</td><td>lot.id</td></tr>
-            <tr><td>workorder</td><td>reject_event.defect_code_id</td><td>quality</td><td>defect_code.id</td></tr>
-            <tr><td>quality</td><td>quality_spec.item_id</td><td>parts</td><td>item.id</td></tr>
-            <tr><td>quality</td><td>quality_sample.lot_id</td><td>lots</td><td>lot.id</td></tr>
-            <tr><td>quality</td><td>hold_event.lot_id</td><td>lots</td><td>lot.id</td></tr>
-            <tr><td>quality</td><td>defect_code.AreaLocationId</td><td>location</td><td>location.id</td></tr>
-            <tr><td>oee</td><td>downtime_event.location_id</td><td>location</td><td>location.id</td></tr>
-            <tr><td>oee</td><td>downtime_reason_code.AreaLocationId</td><td>location</td><td>location.id</td></tr>
-            <tr><td>oee</td><td>downtime_event.operator_id</td><td>location</td><td>app_user.id</td></tr>
-            <tr><td>audit</td><td>operation_log.user_id</td><td>location</td><td>app_user.id</td></tr>
-            <tr><td>audit</td><td>operation_log.terminal_location_id</td><td>location</td><td>location.id (Terminal)</td></tr>
-            <tr><td>audit</td><td>operation_log.location_id</td><td>location</td><td>location.id</td></tr>
+            <tr><td colspan="5" style="background:#1a1d27; padding:0.5rem; font-weight:bold;">Location schema is the target of most cross-schema FKs (AppUser.Id, Location.Id)</td></tr>
+            <tr><td>parts</td><td>OperationTemplate.AreaLocationId</td><td>location</td><td>Location.Id (Area tier)</td><td>Defect / downtime code filtering</td></tr>
+            <tr><td>parts</td><td>ItemLocation.LocationId</td><td>location</td><td>Location.Id (Cell tier)</td><td>Eligibility + consumption metadata (v1.8)</td></tr>
+            <tr><td>parts</td><td>Item.CreatedByUserId / UpdatedByUserId</td><td>location</td><td>AppUser.Id</td><td>User attribution</td></tr>
+            <tr><td>parts</td><td>Bom.CreatedByUserId / QualitySpec*.*</td><td>location</td><td>AppUser.Id</td><td>User attribution</td></tr>
+            <tr><td>lots</td><td>Lot.ItemId</td><td>parts</td><td>Item.Id</td><td></td></tr>
+            <tr><td>lots</td><td>Lot.WeightUomId</td><td>parts</td><td>Uom.Id</td><td></td></tr>
+            <tr><td>lots</td><td>Lot.CurrentLocationId</td><td>location</td><td>Location.Id</td><td></td></tr>
+            <tr><td>lots</td><td><strong>Lot.ToolId</strong></td><td>tools</td><td>Tool.Id</td><td><strong>v1.9</strong> — die-cast-origin system of record</td></tr>
+            <tr><td>lots</td><td><strong>Lot.ToolCavityId</strong></td><td>tools</td><td>ToolCavity.Id</td><td><strong>v1.9</strong> — die-cast-origin system of record</td></tr>
+            <tr><td>lots</td><td>Lot.CreatedByUserId / UpdatedByUserId</td><td>location</td><td>AppUser.Id</td><td>User attribution</td></tr>
+            <tr><td>lots</td><td>Lot.CreatedAtTerminalId</td><td>location</td><td>Location.Id (Terminal)</td><td></td></tr>
+            <tr><td>lots</td><td>LotMovement.From/ToLocationId</td><td>location</td><td>Location.Id</td><td></td></tr>
+            <tr><td>lots</td><td>LotStatusHistory.ChangedByUserId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
+            <tr><td>lots</td><td>Container.ItemId / ContainerConfigId</td><td>parts</td><td>Item.Id / ContainerConfig.Id</td><td></td></tr>
+            <tr><td>lots</td><td>Container.CurrentLocationId</td><td>location</td><td>Location.Id</td><td></td></tr>
+            <tr><td>lots</td><td>SerializedPart.ItemId</td><td>parts</td><td>Item.Id</td><td></td></tr>
+            <tr><td colspan="5" style="background:#1a1d27; padding:0.5rem; font-weight:bold;">Workorder schema cross-references</td></tr>
+            <tr><td>workorder</td><td>WorkOrder.WorkOrderTypeId</td><td>workorder</td><td>WorkOrderType.Id</td><td><strong>v1.7</strong> — Demand / Maintenance / Recipe discriminator</td></tr>
+            <tr><td>workorder</td><td>WorkOrder.ItemId</td><td>parts</td><td>Item.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>WorkOrder.RouteTemplateId</td><td>parts</td><td>RouteTemplate.Id</td><td></td></tr>
+            <tr><td>workorder</td><td><strong>WorkOrder.ToolId</strong></td><td>tools</td><td>Tool.Id</td><td><strong>v1.7</strong> — Maintenance WO target (nullable)</td></tr>
+            <tr><td>workorder</td><td>WorkOrderOperation.LocationId / RouteStepId</td><td>location / parts</td><td>Location.Id / RouteStep.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>ProductionEvent.LotId</td><td>lots</td><td>Lot.Id</td><td><strong>v1.9</strong> — Tool/Cavity derived via Lot</td></tr>
+            <tr><td>workorder</td><td>ProductionEvent.OperationTemplateId</td><td>parts</td><td>OperationTemplate.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>ProductionEvent.ScrapSourceId</td><td>workorder</td><td>ScrapSource.Id</td><td><strong>v1.8</strong> — Inventory / Location (OI-20), NULL for non-scrap</td></tr>
+            <tr><td>workorder</td><td>ProductionEvent.WeightUomId</td><td>parts</td><td>Uom.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>ProductionEvent.AppUserId / TerminalLocationId</td><td>location</td><td>AppUser.Id / Location.Id</td><td><strong>v1.9</strong> — renamed from OperatorId</td></tr>
+            <tr><td>workorder</td><td>ProductionEventValue.DataCollectionFieldId</td><td>parts</td><td>DataCollectionField.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>ConsumptionEvent.SourceLotId / ProducedLotId</td><td>lots</td><td>Lot.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>ConsumptionEvent.ProducedContainerId</td><td>lots</td><td>Container.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>ConsumptionEvent.Consumed/ProducedItemId</td><td>parts</td><td>Item.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>RejectEvent.DefectCodeId</td><td>quality</td><td>DefectCode.Id</td><td></td></tr>
+            <tr><td>workorder</td><td>RejectEvent.LotId</td><td>lots</td><td>Lot.Id</td><td></td></tr>
+            <tr><td colspan="5" style="background:#1a1d27; padding:0.5rem; font-weight:bold;">Quality schema cross-references</td></tr>
+            <tr><td>quality</td><td>QualitySpec.ItemId / OperationTemplateId</td><td>parts</td><td>Item.Id / OperationTemplate.Id</td><td></td></tr>
+            <tr><td>quality</td><td>QualitySample.LotId</td><td>lots</td><td>Lot.Id</td><td></td></tr>
+            <tr><td>quality</td><td>HoldEvent.LotId</td><td>lots</td><td>Lot.Id</td><td></td></tr>
+            <tr><td>quality</td><td>DefectCode.AreaLocationId</td><td>location</td><td>Location.Id (Area tier)</td><td></td></tr>
+            <tr><td>quality</td><td>NonConformance.ItemId</td><td>parts</td><td>Item.Id</td><td>FUTURE scope</td></tr>
+            <tr><td colspan="5" style="background:#1a1d27; padding:0.5rem; font-weight:bold;">OEE schema cross-references</td></tr>
+            <tr><td>oee</td><td>DowntimeEvent.LocationId</td><td>location</td><td>Location.Id (Cell tier)</td><td></td></tr>
+            <tr><td>oee</td><td>DowntimeEvent.OperatorId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
+            <tr><td>oee</td><td>DowntimeReasonCode.AreaLocationId</td><td>location</td><td>Location.Id (Area tier)</td><td></td></tr>
+            <tr><td>oee</td><td>DowntimeReasonCode.CreatedByUserId / UpdatedByUserId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
+            <tr><td>oee</td><td>ShiftSchedule.CreatedByUserId / UpdatedByUserId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
+            <tr><td>oee</td><td>OeeSnapshot.LocationId</td><td>location</td><td>Location.Id</td><td>FUTURE scope</td></tr>
+            <tr><td colspan="5" style="background:#1a1d27; padding:0.5rem; font-weight:bold;">Tools schema cross-references (v1.7, v1.9 back-refs)</td></tr>
+            <tr><td>tools</td><td>Tool.CreatedByUserId / UpdatedByUserId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
+            <tr><td>tools</td><td>ToolAssignment.CellLocationId</td><td>location</td><td>Location.Id (Cell tier)</td><td></td></tr>
+            <tr><td>tools</td><td>ToolAssignment.AssignedByUserId / ReleasedByUserId</td><td>location</td><td>AppUser.Id</td><td>Elevated action per FDS-04-007</td></tr>
+            <tr><td>tools</td><td>ToolCavity.CreatedByUserId / UpdatedByUserId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
+            <tr><td colspan="5" style="background:#1a1d27; padding:0.5rem; font-weight:bold;">Audit schema cross-references</td></tr>
+            <tr><td>audit</td><td>OperationLog.UserId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
+            <tr><td>audit</td><td>OperationLog.TerminalLocationId</td><td>location</td><td>Location.Id (Terminal)</td><td></td></tr>
+            <tr><td>audit</td><td>OperationLog.LocationId</td><td>location</td><td>Location.Id (machine context)</td><td></td></tr>
+            <tr><td>audit</td><td>ConfigLog.UserId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
+            <tr><td>audit</td><td>FailureLog.UserId</td><td>location</td><td>AppUser.Id</td><td></td></tr>
         </tbody>
     </table>
 
@@ -1624,84 +1678,106 @@ erDiagram
     <div class="erd-container">
         <div class="mermaid">
 erDiagram
-    loc__LocationType { bigint id PK }
-    loc__LocationTypeDefinition { bigint id PK }
-    loc__LocationAttributeDefinition { bigint id PK }
-    loc__Location { bigint id PK }
-    loc__LocationAttribute { bigint id PK }
-    %% terminal table removed — terminals are location records with LocationTypeDefinition = Terminal
-    loc__AppUser { bigint id PK }
+    %% ═══ LOCATION SCHEMA ═══
+    loc__LocationType { bigint Id PK }
+    loc__LocationTypeDefinition { bigint Id PK }
+    loc__LocationAttributeDefinition { bigint Id PK }
+    loc__Location { bigint Id PK }
+    loc__LocationAttribute { bigint Id PK }
+    loc__AppUser { bigint Id PK }
 
-    parts__ItemType { bigint id PK }
-    parts__Uom { bigint id PK }
-    parts__Item { bigint id PK }
-    parts__Bom { bigint id PK }
-    parts__BomLine { bigint id PK }
-    parts__RouteTemplate { bigint id PK }
-    parts__RouteStep { bigint id PK }
-    parts__OperationTemplate { bigint id PK }
-    parts__ItemLocation { bigint id PK }
-    parts__ContainerConfig { bigint id PK }
-    parts__DataCollectionField { bigint id PK }
-    parts__OperationTemplateField { bigint id PK }
+    %% ═══ PARTS SCHEMA ═══
+    parts__ItemType { bigint Id PK }
+    parts__Uom { bigint Id PK }
+    parts__Item { bigint Id PK }
+    parts__Bom { bigint Id PK }
+    parts__BomLine { bigint Id PK }
+    parts__RouteTemplate { bigint Id PK }
+    parts__RouteStep { bigint Id PK }
+    parts__OperationTemplate { bigint Id PK }
+    parts__DataCollectionField { bigint Id PK }
+    parts__OperationTemplateField { bigint Id PK }
+    parts__ItemLocation { bigint Id PK }
+    parts__ContainerConfig { bigint Id PK }
 
-    lots__LotOriginType { bigint id PK }
-    lots__LotStatusCode { bigint id PK }
-    lots__GenealogyRelType { bigint id PK }
-    lots__Lot { bigint id PK }
-    lots__LotGenealogy { bigint id PK }
-    lots__LotStatusHistory { bigint id PK }
-    lots__LotMovement { bigint id PK }
-    lots__LotAttributeChange { bigint id PK }
-    lots__ContainerStatusCode { bigint id PK }
-    lots__Container { bigint id PK }
-    lots__ContainerTray { bigint id PK }
-    lots__SerializedPart { bigint id PK }
-    lots__ContainerSerial { bigint id PK }
-    lots__LotLabel { bigint id PK }
-    lots__ShippingLabel { bigint id PK }
-    lots__PrintReasonCode { bigint id PK }
-    lots__LabelTypeCode { bigint id PK }
+    %% ═══ LOTS SCHEMA ═══
+    lots__LotOriginType { bigint Id PK }
+    lots__LotStatusCode { bigint Id PK }
+    lots__GenealogyRelationshipType { bigint Id PK }
+    lots__Lot { bigint Id PK }
+    lots__LotGenealogy { bigint Id PK }
+    lots__LotStatusHistory { bigint Id PK }
+    lots__LotMovement { bigint Id PK }
+    lots__LotAttributeChange { bigint Id PK }
+    lots__PrintReasonCode { bigint Id PK }
+    lots__LabelTypeCode { bigint Id PK }
+    lots__IdentifierSequence { bigint Id PK }
+    lots__LotLabel { bigint Id PK }
+    lots__ContainerStatusCode { bigint Id PK }
+    lots__Container { bigint Id PK }
+    lots__ContainerTray { bigint Id PK }
+    lots__SerializedPart { bigint Id PK }
+    lots__ContainerSerial { bigint Id PK }
+    lots__ShippingLabel { bigint Id PK }
 
-    wo__WorkOrderStatus { bigint id PK }
-    wo__OperationStatus { bigint id PK }
-    wo__WorkOrder { bigint id PK }
-    wo__WorkOrderOperation { bigint id PK }
-    wo__ProductionEvent { bigint id PK }
-    wo__ProductionEventValue { bigint id PK }
-    wo__ConsumptionEvent { bigint id PK }
-    wo__RejectEvent { bigint id PK }
+    %% ═══ WORKORDER SCHEMA ═══
+    wo__WorkOrderStatus { bigint Id PK }
+    wo__WorkOrderType { bigint Id PK }
+    wo__ScrapSource { bigint Id PK }
+    wo__OperationStatus { bigint Id PK }
+    wo__WorkOrder { bigint Id PK }
+    wo__WorkOrderOperation { bigint Id PK }
+    wo__ProductionEvent { bigint Id PK }
+    wo__ProductionEventValue { bigint Id PK }
+    wo__ConsumptionEvent { bigint Id PK }
+    wo__RejectEvent { bigint Id PK }
 
-    qual__DefectCode { bigint id PK }
-    qual__QualitySpec { bigint id PK }
-    qual__QualitySpecVersion { bigint id PK }
-    qual__QualitySpecAttribute { bigint id PK }
-    qual__QualitySample { bigint id PK }
-    qual__QualityResult { bigint id PK }
-    qual__QualityAttachment { bigint id PK }
-    qual__NonConformance { bigint id PK }
-    qual__HoldEvent { bigint id PK }
-    qual__InspectionResultCode { bigint id PK }
-    qual__SampleTriggerCode { bigint id PK }
-    qual__HoldTypeCode { bigint id PK }
-    qual__DispositionCode { bigint id PK }
+    %% ═══ QUALITY SCHEMA ═══
+    qual__DefectCode { bigint Id PK }
+    qual__QualitySpec { bigint Id PK }
+    qual__QualitySpecVersion { bigint Id PK }
+    qual__QualitySpecAttribute { bigint Id PK }
+    qual__QualitySample { bigint Id PK }
+    qual__QualityResult { bigint Id PK }
+    qual__QualityAttachment { bigint Id PK }
+    qual__InspectionResultCode { bigint Id PK }
+    qual__SampleTriggerCode { bigint Id PK }
+    qual__HoldTypeCode { bigint Id PK }
+    qual__DispositionCode { bigint Id PK }
+    qual__NonConformance { bigint Id PK }
+    qual__HoldEvent { bigint Id PK }
 
-    oee__DowntimeReasonType { bigint id PK }
-    oee__DowntimeReasonCode { bigint id PK }
-    oee__ShiftSchedule { bigint id PK }
-    oee__Shift { bigint id PK }
-    oee__DowntimeEvent { bigint id PK }
-    oee__OeeSnapshot { bigint id PK }
-    oee__DowntimeSourceCode { bigint id PK }
+    %% ═══ OEE SCHEMA ═══
+    oee__DowntimeReasonType { bigint Id PK }
+    oee__DowntimeReasonCode { bigint Id PK }
+    oee__ShiftSchedule { bigint Id PK }
+    oee__Shift { bigint Id PK }
+    oee__DowntimeSourceCode { bigint Id PK }
+    oee__DowntimeEvent { bigint Id PK }
+    oee__OeeSnapshot { bigint Id PK }
 
-    audit__LogSeverity { bigint id PK }
-    audit__LogEventType { bigint id PK }
-    audit__LogEntityType { bigint id PK }
-    audit__OperationLog { bigint id PK }
-    audit__ConfigLog { bigint id PK }
-    audit__InterfaceLog { bigint id PK }
-    audit__FailureLog { bigint id PK }
+    %% ═══ TOOLS SCHEMA (v1.7) ═══
+    tools__ToolType { bigint Id PK }
+    tools__ToolAttributeDefinition { bigint Id PK }
+    tools__Tool { bigint Id PK }
+    tools__ToolAttribute { bigint Id PK }
+    tools__ToolCavity { bigint Id PK }
+    tools__ToolAssignment { bigint Id PK }
+    tools__ToolStatusCode { bigint Id PK }
+    tools__ToolCavityStatusCode { bigint Id PK }
+    tools__DieRank { bigint Id PK }
+    tools__DieRankCompatibility { bigint Id PK }
 
+    %% ═══ AUDIT SCHEMA ═══
+    audit__LogSeverity { bigint Id PK }
+    audit__LogEventType { bigint Id PK }
+    audit__LogEntityType { bigint Id PK }
+    audit__OperationLog { bigint Id PK }
+    audit__ConfigLog { bigint Id PK }
+    audit__InterfaceLog { bigint Id PK }
+    audit__FailureLog { bigint Id PK }
+
+    %% ═══ LOCATION intra-schema ═══
     loc__LocationType ||--o{ loc__LocationTypeDefinition : categorizes
     loc__LocationTypeDefinition ||--o{ loc__LocationAttributeDefinition : "defines attrs"
     loc__LocationTypeDefinition ||--o{ loc__Location : classifies
@@ -1709,6 +1785,7 @@ erDiagram
     loc__Location ||--o{ loc__LocationAttribute : values
     loc__LocationAttributeDefinition ||--o{ loc__LocationAttribute : "typed by"
 
+    %% ═══ PARTS intra-schema ═══
     parts__ItemType ||--o{ parts__Item : classifies
     parts__Uom ||--o{ parts__Item : measures
     parts__Item ||--o{ parts__Bom : parent
@@ -1717,90 +1794,154 @@ erDiagram
     parts__Item ||--o{ parts__RouteTemplate : routed
     parts__RouteTemplate ||--o{ parts__RouteStep : steps
     parts__OperationTemplate ||--o{ parts__RouteStep : performs
+    parts__OperationTemplate ||--o{ parts__OperationTemplateField : requires
+    parts__DataCollectionField ||--o{ parts__OperationTemplateField : field
     parts__Item ||--o{ parts__ItemLocation : eligible
     parts__Item ||--o{ parts__ContainerConfig : packed
 
-    loc__Location ||--o{ parts__OperationTemplate : dept
-    loc__Location ||--o{ parts__ItemLocation : location
+    %% ═══ PARTS → LOCATION ═══
+    loc__Location ||--o{ parts__OperationTemplate : "Area context"
+    loc__Location ||--o{ parts__ItemLocation : "Cell eligibility"
+    loc__AppUser ||--o{ parts__Item : "created/updated by"
+    loc__AppUser ||--o{ parts__Bom : "created by"
+    loc__AppUser ||--o{ parts__RouteTemplate : "created by"
 
+    %% ═══ LOTS intra-schema ═══
     lots__LotOriginType ||--o{ lots__Lot : origin
     lots__LotStatusCode ||--o{ lots__Lot : status
-    lots__Lot ||--o{ lots__Lot : parent
+    lots__Lot ||--o{ lots__Lot : "parent (Machining sub-LOT)"
     lots__Lot ||--o{ lots__LotGenealogy : genealogy
-    lots__GenealogyRelType ||--o{ lots__LotGenealogy : typed
+    lots__GenealogyRelationshipType ||--o{ lots__LotGenealogy : typed
     lots__Lot ||--o{ lots__LotStatusHistory : tracked
+    lots__LotStatusCode ||--o{ lots__LotStatusHistory : "old/new status"
     lots__Lot ||--o{ lots__LotMovement : moved
     lots__Lot ||--o{ lots__LotAttributeChange : changed
+    lots__PrintReasonCode ||--o{ lots__LotLabel : reason
+    lots__Lot ||--o{ lots__LotLabel : labeled
+    lots__IdentifierSequence ||..o{ lots__Lot : "mints LotName"
+    lots__IdentifierSequence ||..o{ lots__SerializedPart : "mints SerialNumber"
     lots__ContainerStatusCode ||--o{ lots__Container : status
     lots__Container ||--o{ lots__ContainerTray : trays
     lots__Container ||--o{ lots__ContainerSerial : serials
-    lots__Lot ||--o{ lots__LotLabel : labeled
-    lots__Lot ||--o{ lots__SerializedPart : serialized
-    lots__SerializedPart ||--o{ lots__ContainerSerial : packed
+    lots__Lot ||--o{ lots__SerializedPart : "from LOT"
+    lots__SerializedPart ||--o{ lots__ContainerSerial : "packed in"
     lots__Container ||--o{ lots__ShippingLabel : labeled
+    lots__LabelTypeCode ||--o{ lots__ShippingLabel : type
 
+    %% ═══ LOTS → LOCATION / PARTS / TOOLS ═══
     parts__Item ||--o{ lots__Lot : item
+    parts__Uom ||--o{ lots__Lot : weight_uom
     parts__Item ||--o{ lots__Container : item
-    parts__Item ||--o{ lots__SerializedPart : item
     parts__ContainerConfig ||--o{ lots__Container : config
-    loc__Location ||--o{ lots__Lot : location
-    loc__Location ||--o{ lots__Container : location
+    parts__Item ||--o{ lots__SerializedPart : item
+    loc__Location ||--o{ lots__Lot : "current location"
+    loc__Location ||--o{ lots__Container : "current location"
     loc__Location ||--o{ lots__LotMovement : "from/to"
+    loc__Location ||--o{ lots__Lot : "created at terminal"
+    loc__Location ||--o{ lots__LotLabel : "printed at terminal"
+    loc__AppUser ||--o{ lots__Lot : "created/updated by"
     loc__AppUser ||--o{ lots__LotStatusHistory : user
     loc__AppUser ||--o{ lots__LotMovement : user
+    loc__AppUser ||--o{ lots__LotAttributeChange : user
+    loc__AppUser ||--o{ lots__LotLabel : printer
+    tools__Tool ||..o{ lots__Lot : "cast by (v1.9, die-cast origin)"
+    tools__ToolCavity ||..o{ lots__Lot : "cast from (v1.9, die-cast origin)"
 
+    %% ═══ WORKORDER intra-schema ═══
     wo__WorkOrderStatus ||--o{ wo__WorkOrder : status
+    wo__WorkOrderType ||--o{ wo__WorkOrder : "type (Demand/Maint/Recipe)"
     wo__WorkOrder ||--o{ wo__WorkOrderOperation : ops
     wo__OperationStatus ||--o{ wo__WorkOrderOperation : status
-    wo__WorkOrderOperation ||--o{ wo__ProductionEvent : produces
+    wo__WorkOrderOperation ||--o{ wo__ProductionEvent : "executed at (NULL)"
     wo__WorkOrderOperation ||--o{ wo__ConsumptionEvent : consumes
     wo__ProductionEvent ||--o{ wo__RejectEvent : rejected
     wo__ProductionEvent ||--o{ wo__ProductionEventValue : captures
+    wo__ScrapSource ||--o{ wo__ProductionEvent : "scrap source (NULL except scrap)"
+
+    %% ═══ WORKORDER → PARTS / LOTS / LOCATION / TOOLS / QUALITY ═══
+    parts__Item ||--o{ wo__WorkOrder : item
+    parts__RouteTemplate ||--o{ wo__WorkOrder : route
+    tools__Tool ||--o{ wo__WorkOrder : "Maintenance WO target (v1.7)"
+    parts__RouteStep ||--o{ wo__WorkOrderOperation : step
     parts__OperationTemplate ||--o{ wo__ProductionEvent : executed
     parts__DataCollectionField ||--o{ wo__ProductionEventValue : field
     parts__Uom ||--o{ wo__ProductionEvent : weight_uom
     parts__Uom ||--o{ wo__ProductionEventValue : uom
-
-    parts__Item ||--o{ wo__WorkOrder : item
-    parts__RouteTemplate ||--o{ wo__WorkOrder : route
-    parts__RouteStep ||--o{ wo__WorkOrderOperation : step
+    parts__Item ||--o{ wo__ConsumptionEvent : "consumed/produced item"
     loc__Location ||--o{ wo__WorkOrderOperation : machine
-    loc__Location ||--o{ wo__ProductionEvent : machine
-    lots__Lot ||--o{ wo__ProductionEvent : lot
-    lots__Lot ||--o{ wo__ConsumptionEvent : source
+    loc__Location ||--o{ wo__ProductionEvent : "terminal location"
+    loc__Location ||--o{ wo__ConsumptionEvent : "cell + terminal"
+    lots__Lot ||--o{ wo__ProductionEvent : "checkpoint for"
+    lots__Lot ||--o{ wo__ConsumptionEvent : "source/produced"
     lots__Lot ||--o{ wo__RejectEvent : lot
-    loc__AppUser ||--o{ wo__ProductionEvent : operator
-    loc__Location ||--o{ wo__ProductionEvent : "terminal_location"
+    lots__Container ||--o{ wo__ConsumptionEvent : "produced container"
+    lots__ContainerTray ||--o{ wo__ConsumptionEvent : "placed in tray"
+    loc__AppUser ||--o{ wo__ProductionEvent : "AppUser (v1.9)"
+    loc__AppUser ||--o{ wo__ConsumptionEvent : operator
+    loc__AppUser ||--o{ wo__RejectEvent : operator
+    qual__DefectCode ||--o{ wo__RejectEvent : defect
 
+    %% ═══ QUALITY intra-schema ═══
     qual__QualitySpec ||--o{ qual__QualitySpecVersion : versioned
     qual__QualitySpecVersion ||--o{ qual__QualitySpecAttribute : defines
     qual__QualitySpecVersion ||--o{ qual__QualitySample : governs
     qual__QualitySample ||--o{ qual__QualityResult : records
+    qual__InspectionResultCode ||--o{ qual__QualitySample : result
+    qual__SampleTriggerCode ||--o{ qual__QualitySample : trigger
     qual__QualitySample ||--o{ qual__QualityAttachment : attached
     qual__NonConformance ||--o{ qual__QualityAttachment : attached
     qual__DefectCode ||--o{ qual__NonConformance : classified
+    qual__DispositionCode ||--o{ qual__NonConformance : dispositioned
     qual__NonConformance ||--o{ qual__HoldEvent : triggers
+    qual__HoldTypeCode ||--o{ qual__HoldEvent : type
 
+    %% ═══ QUALITY → LOTS / PARTS / LOCATION ═══
     lots__Lot ||--o{ qual__QualitySample : sampled
     lots__Lot ||--o{ qual__NonConformance : against
     lots__Lot ||--o{ qual__HoldEvent : held
     loc__AppUser ||--o{ qual__QualitySample : sampler
-    loc__Location ||--o{ qual__DefectCode : dept
+    loc__AppUser ||--o{ qual__HoldEvent : "placed/released by"
+    loc__Location ||--o{ qual__DefectCode : "Area scope"
     parts__Item ||--o{ qual__QualitySpec : item
     parts__OperationTemplate ||--o{ qual__QualitySpec : operation
-    qual__DefectCode ||--o{ wo__RejectEvent : defect
+    parts__Item ||--o{ qual__NonConformance : item
 
+    %% ═══ OEE intra-schema ═══
     oee__DowntimeReasonType ||--o{ oee__DowntimeReasonCode : typed
     oee__DowntimeReasonCode ||--o{ oee__DowntimeEvent : reason
+    oee__DowntimeSourceCode ||--o{ oee__DowntimeReasonCode : "default source"
+    oee__DowntimeSourceCode ||--o{ oee__DowntimeEvent : source
     oee__ShiftSchedule ||--o{ oee__Shift : defines
     oee__Shift ||--o{ oee__DowntimeEvent : during
     oee__Shift ||--o{ oee__OeeSnapshot : summarized
 
+    %% ═══ OEE → LOCATION ═══
     loc__Location ||--o{ oee__DowntimeEvent : machine
     loc__Location ||--o{ oee__OeeSnapshot : machine
-    loc__Location ||--o{ oee__DowntimeReasonCode : dept
+    loc__Location ||--o{ oee__DowntimeReasonCode : "Area scope"
     loc__AppUser ||--o{ oee__DowntimeEvent : operator
+    loc__AppUser ||--o{ oee__DowntimeReasonCode : "created/updated by"
+    loc__AppUser ||--o{ oee__ShiftSchedule : "created/updated by"
 
+    %% ═══ TOOLS intra-schema (v1.7) ═══
+    tools__ToolType ||--o{ tools__ToolAttributeDefinition : "defines attrs"
+    tools__ToolType ||--o{ tools__Tool : classifies
+    tools__ToolStatusCode ||--o{ tools__Tool : status
+    tools__DieRank ||--o{ tools__Tool : "ranks (Die-only)"
+    tools__Tool ||--o{ tools__ToolAttribute : "has values"
+    tools__ToolAttributeDefinition ||--o{ tools__ToolAttribute : "typed by"
+    tools__Tool ||--o{ tools__ToolCavity : "has cavities"
+    tools__ToolCavityStatusCode ||--o{ tools__ToolCavity : status
+    tools__Tool ||--o{ tools__ToolAssignment : "mounted as"
+    tools__DieRank ||--o{ tools__DieRankCompatibility : "rank A / B"
+
+    %% ═══ TOOLS → LOCATION ═══
+    loc__Location ||--o{ tools__ToolAssignment : "mounted on Cell"
+    loc__AppUser ||--o{ tools__Tool : "created/updated by"
+    loc__AppUser ||--o{ tools__ToolCavity : "created/updated by"
+    loc__AppUser ||--o{ tools__ToolAssignment : "assigned/released by (elevated)"
+
+    %% ═══ AUDIT intra-schema ═══
     audit__LogSeverity ||--o{ audit__OperationLog : severity
     audit__LogSeverity ||--o{ audit__ConfigLog : severity
     audit__LogEventType ||--o{ audit__OperationLog : event
@@ -1810,11 +1951,12 @@ erDiagram
     audit__LogEntityType ||--o{ audit__OperationLog : entity
     audit__LogEntityType ||--o{ audit__ConfigLog : entity
     audit__LogEntityType ||--o{ audit__FailureLog : entity
+
+    %% ═══ AUDIT → LOCATION ═══
     loc__AppUser ||--o{ audit__OperationLog : user
     loc__AppUser ||--o{ audit__ConfigLog : user
     loc__AppUser ||--o{ audit__FailureLog : user
-    loc__Location ||--o{ audit__OperationLog : "terminal_location"
-    loc__Location ||--o{ audit__OperationLog : machine
+    loc__Location ||--o{ audit__OperationLog : "terminal + machine context"
         </div>
     </div>
 </div>
