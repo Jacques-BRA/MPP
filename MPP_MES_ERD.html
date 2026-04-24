@@ -182,7 +182,7 @@
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
     <p>Madison Precision Products — MES Database Schema (8 schemas, ~73 tables)</p>
-    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-24 — <strong>v1.9 Arc 2 model revisions</strong>: <code>Lots.Lot.ToolId</code> + <code>Lots.Lot.ToolCavityId</code> added (system of record for die-cast-origin LOTs — NULL elsewhere, NULL after merge; pre-v1.9 <code>DieNumber</code> / <code>CavityNumber</code> NVARCHAR columns legacy; OI-09 closed — N cavities produce N parallel peer LOTs, not sublots), <code>Workorder.ProductionEvent</code> reshaped to checkpoint form (cumulative <code>ShotCount</code> / <code>ScrapCount</code>; drops <code>LocationId</code>, <code>ItemId</code>, <code>DieIdentifier</code>, <code>CavityNumber</code>, per-event <code>GoodCount</code> / <code>NoGoodCount</code>; renames <code>RecordedAt</code>→<code>EventAt</code>, <code>OperatorId</code>→<code>AppUserId</code>), new <code>Lots.IdentifierSequence</code> table (OI-31 — replaces Flexware <code>IdentifierFormat</code>; <code>Lot</code> <code>MESL{0:D7}</code> + <code>SerializedItem</code> <code>MESI{0:D7}</code> counters seeded at cutover), <code>Parts.Item.MaxLotSize</code> repurposed as <code>PartsPerBasket</code> (semantic only, no schema change). <strong>Diagram boxes below still reflect the v1.8 shape for Lots.Lot, Workorder.ProductionEvent, and do not yet include Lots.IdentifierSequence</strong> — per-schema diagram update pass queued. Earlier v1.8 Phase E additions: <code>Parts.Item.CountryOfOrigin</code> (OI-19), <code>Parts.ItemLocation</code> + consumption metadata (OI-18), <code>Parts.ContainerConfig.MaxParts</code> (OI-12), <code>Workorder.ScrapSource</code> + <code>ProductionEvent.ScrapSourceId</code> (OI-20), OI-11 via 1-line BOM. Earlier v1.7: Phase B Tool Management (§7 Tools), <code>Workorder.WorkOrderType</code> + nullable <code>ToolId</code>, <code>AppUser</code> initials-based security (OI-06). Master ERD tab still reflects v1.5 — full regeneration queued.</p>
+    <p style="font-size: 0.85em; opacity: 0.7;">Last updated: 2026-04-24 — <strong>v1.9 Arc 2 model revisions — per-schema diagrams fully updated</strong>. Lots tab: <code>Lot.ToolId</code> + <code>Lot.ToolCavityId</code> added to the Lot diagram box (system of record for die-cast-origin LOTs; NULL elsewhere; NULL after merge); new <code>IdentifierSequence</code> table card + diagram box (replaces Flexware <code>IdentifierFormat</code>; <code>Lot</code> <code>MESL{0:D7}</code> + <code>SerializedItem</code> <code>MESI{0:D7}</code> counters seeded at cutover per OI-31); pre-v1.9 <code>DieNumber</code> / <code>CavityNumber</code> NVARCHAR columns marked legacy. Workorder tab: <code>ProductionEvent</code> diagram box reshaped to checkpoint form (cumulative <code>ShotCount</code> / <code>ScrapCount</code>; dropped <code>LocationId</code>, <code>ItemId</code>, <code>DieIdentifier</code>, <code>CavityNumber</code>, per-event <code>GoodCount</code> / <code>NoGoodCount</code>; renamed <code>RecordedAt</code>→<code>EventAt</code>, <code>OperatorId</code>→<code>AppUserId</code>). Tools tab: new cross-schema relationships <code>Tool ||..o{ Lot</code> and <code>ToolCavity ||..o{ Lot</code> (die-cast origin); Cross-schema Relationships callout block added below the Tool diagram documenting the v1.9 FK picture. OI-09 closed — N cavities produce N parallel peer LOTs, not sublots. <code>Parts.Item.MaxLotSize</code> repurposed as <code>PartsPerBasket</code> (semantic only, no schema change). Earlier v1.8 Phase E additions: <code>Parts.Item.CountryOfOrigin</code> (OI-19), <code>Parts.ItemLocation</code> + consumption metadata (OI-18), <code>Parts.ContainerConfig.MaxParts</code> (OI-12), <code>Workorder.ScrapSource</code> + <code>ProductionEvent.ScrapSourceId</code> (OI-20), OI-11 via 1-line BOM. Earlier v1.7: Phase B Tool Management (§7 Tools), <code>Workorder.WorkOrderType</code> + nullable <code>ToolId</code>, <code>AppUser</code> initials-based security (OI-06). Master ERD tab still reflects v1.5 — full regeneration queued.</p>
     <div class="conventions">
         <span>UpperCamelCase</span>
         <span>singular nouns</span>
@@ -545,8 +545,13 @@ erDiagram
             <p>How a LOT entered the system: <code>Manufactured</code> (created at die cast), <code>Received</code> (pass-through parts received on-site), <code>ReceivedOffsite</code> (pass-through parts received at a remote warehouse). Enables filtering and reporting by origin path.</p>
         </div>
         <div class="table-card">
-            <h4>Lot</h4>
-            <p>The central entity. Unique lot name (LTT barcode), links to item and origin type, carries piece count, weight, die/cavity info, vendor LOT reference, quality status, and current location. <code>ParentLotId</code> provides the adjacency-list link for sub-LOTs.</p>
+            <h4>Lot <span class="scope-badge scope-mvp">MVP v1.9</span></h4>
+            <p>The central entity. Unique <code>LotName</code> (minted from <code>Lots.IdentifierSequence</code>, <code>Code=Lot</code>, format <code>MESL{0:D7}</code>), links to item and origin type, carries piece count, weight, vendor LOT reference, quality status, current location. <code>ParentLotId</code> is the adjacency-list link for <strong>Machining sub-LOTs only</strong> (cavity-parallel LOTs at Die Cast are peers, not sublots — OI-09 closed).</p>
+            <p><strong>v1.9 additions:</strong> <code>ToolId BIGINT NULL FK → Tools.Tool</code> and <code>ToolCavityId BIGINT NULL FK → Tools.ToolCavity</code> — system of record for die-cast-origin LOTs (validated against active <code>ToolAssignment</code> on the Cell at <code>Lot_Create</code>; cavity must belong to tool and be Active). NULL for non-die-cast origins. NULL after <code>Lot_Merge</code> on blended-origin LOTs. Downstream LOTs do NOT carry — Honda-trace via <code>LotGenealogy</code> walk. Pre-v1.9 <code>DieNumber</code> / <code>CavityNumber</code> NVARCHAR columns are legacy (retained for cutover; scheduled for removal).</p>
+        </div>
+        <div class="table-card">
+            <h4>IdentifierSequence <span class="scope-badge scope-mvp">MVP v1.9</span></h4>
+            <p>Replaces Flexware's <code>IdentifierFormat</code> (OI-31). Drives all MPP-internal identifier minting via <code>Lots.IdentifierSequence_Next @Code</code>: Lot LTT barcodes (<code>MESL{0:D7}</code>) and SerializedItem IDs (<code>MESI{0:D7}</code>). Honda AIM shipper IDs are out of scope — those come from <code>AIM.GetNextNumber</code>. Cutover migration seeds <code>LastValue</code> at or above Flexware's live counter values. <code>EndingValue</code> defaults to 9,999,999; the proc raises on rollover without an explicit reset policy.</p>
         </div>
         <div class="table-card">
             <h4>LotStatusCode</h4>
@@ -604,7 +609,7 @@ erDiagram
 
     Lot {
         bigint Id PK
-        nvarchar LotName
+        nvarchar LotName "minted via IdentifierSequence v1.9"
         bigint ItemId FK
         bigint LotOriginTypeId FK
         bigint LotStatusId FK
@@ -612,18 +617,34 @@ erDiagram
         int MaxPieceCount
         decimal Weight
         bigint WeightUomId FK
-        nvarchar DieNumber
-        nvarchar CavityNumber
+        bigint ToolId FK "v1.9 die-cast origin only"
+        bigint ToolCavityId FK "v1.9 die-cast origin only"
+        nvarchar DieNumber "legacy v1.9"
+        nvarchar CavityNumber "legacy v1.9"
         nvarchar VendorLotNumber
         int MinSerialNumber
         int MaxSerialNumber
-        bigint ParentLotId FK
+        bigint ParentLotId FK "Machining sub-LOTs only"
         bigint CurrentLocationId FK
         bigint CreatedByUserId FK
         bigint CreatedAtTerminalId FK
         datetime2 CreatedAt
         datetime2 UpdatedAt
         bigint UpdatedByUserId FK
+    }
+
+    IdentifierSequence {
+        bigint Id PK
+        nvarchar Code "Lot / SerializedItem"
+        nvarchar Name
+        nvarchar Description
+        nvarchar FormatString ".NET format e.g. MESL{0:D7}"
+        bigint StartingValue
+        bigint EndingValue
+        bigint LastValue
+        int ResetIntervalMinutes
+        datetime2 LastResetAt
+        datetime2 UpdatedAt
     }
 
     LotGenealogy {
@@ -750,7 +771,7 @@ erDiagram
 
     LotOriginType ||--o{ Lot : "originated as"
     LotStatusCode ||--o{ Lot : "status of"
-    Lot ||--o{ Lot : "parent of"
+    Lot ||--o{ Lot : "parent of (Machining sub-LOT only)"
     Lot ||--o{ LotGenealogy : genealogy
     GenealogyRelationshipType ||--o{ LotGenealogy : "typed as"
     Lot ||--o{ LotStatusHistory : "tracked by"
@@ -758,6 +779,8 @@ erDiagram
     Lot ||--o{ LotAttributeChange : changed
     Lot ||--o{ LotLabel : "labeled with"
     Lot ||--o{ SerializedPart : "serialized from"
+    IdentifierSequence ||..o{ Lot : "mints LotName (v1.9)"
+    IdentifierSequence ||..o{ SerializedPart : "mints SerialNumber (v1.9)"
     ContainerStatusCode ||--o{ Container : "status of"
     Container ||--o{ ContainerTray : contains
     Container ||--o{ ContainerSerial : holds
@@ -792,8 +815,11 @@ erDiagram
             <p>Individual operation execution within a work order. Links a route step to a specific machine, tracks start/completion times and operator.</p>
         </div>
         <div class="table-card">
-            <h4>ProductionEvent <span class="scope-badge scope-mvp">MVP</span></h4>
-            <p>Immutable record of a LOT passing through an operation. Header carries <code>OperationTemplateId</code> plus hot typed columns: good/no-good counts, <code>DieIdentifier</code> (snapshot of the machine's current die), <code>CavityNumber</code>, <code>WeightValue</code>/<code>WeightUomId</code>, operator, terminal location, timestamp. v1.8 adds nullable <code>ScrapSourceId FK → ScrapSource</code> populated only when the event represents a scrap action (Inventory vs Location, OI-20). Additional <code>DataCollectionField</code> values configured on the template land in <code>ProductionEventValue</code> children.</p>
+            <h4>ProductionEvent <span class="scope-badge scope-mvp">MVP v1.9 (reshaped)</span></h4>
+            <p><strong>Checkpoint-shape event table (v1.9).</strong> Per FRS §2.1.2 operator-driven capture: each row is one checkpoint — a discrete moment when an operator logs something (basket close, area handoff, complete + move, scrap action, quality transition). Operators are not at the terminal per shot.</p>
+            <p>Header carries <code>LotId</code>, <code>OperationTemplateId</code>, <code>EventAt</code>, cumulative <code>ShotCount</code>/<code>ScrapCount</code>, optional <code>ScrapSourceId</code> (populated only for scrap-driving checkpoints, OI-20), optional <code>WeightValue</code>/<code>WeightUomId</code>, <code>AppUserId</code>, <code>TerminalLocationId</code>. Deltas between checkpoints are derived by the reader via <code>LAG()</code> window over <code>(LotId, EventAt)</code>. Required index <code>(LotId, EventAt DESC)</code>.</p>
+            <p><strong>Deliberately NOT on this table (v1.9 reshape):</strong> no <code>LocationId</code> (derive from <code>LotMovement</code>), no <code>ItemId</code> (derive from <code>Lot.ItemId</code>), no <code>DieIdentifier</code>/<code>CavityNumber</code> (derive from <code>Lot.ToolId</code>/<code>Lot.ToolCavityId</code>), no per-event <code>GoodCount</code>/<code>NoGoodCount</code> (replaced by cumulative <code>ShotCount</code>/<code>ScrapCount</code> with <code>LAG()</code>-derived deltas), no <code>StartedAt</code>/<code>EndedAt</code> (interval start is the previous event for the same LOT).</p>
+            <p>Additional <code>DataCollectionField</code> values configured on the template land in <code>ProductionEventValue</code> children.</p>
         </div>
         <div class="table-card">
             <h4>ScrapSource <span class="scope-badge scope-mvp">MVP v1.8</span></h4>
@@ -870,21 +896,17 @@ erDiagram
 
     ProductionEvent {
         bigint Id PK
-        bigint WorkOrderOperationId FK
-        bigint OperationTemplateId FK
         bigint LotId FK
-        bigint LocationId FK
-        bigint ItemId FK
-        int GoodCount
-        int NoGoodCount
-        bigint ScrapSourceId FK "NULL - v1.8 scrap only"
-        nvarchar DieIdentifier
-        int CavityNumber
+        bigint OperationTemplateId FK
+        bigint WorkOrderOperationId FK "NULL"
+        datetime2 EventAt
+        int ShotCount "cumulative v1.9"
+        int ScrapCount "cumulative v1.9"
+        bigint ScrapSourceId FK "NULL scrap only v1.8"
         decimal WeightValue
         bigint WeightUomId FK
-        bigint OperatorId FK
+        bigint AppUserId FK "v1.9 (was OperatorId)"
         bigint TerminalLocationId FK
-        datetime2 RecordedAt
         nvarchar Remarks
     }
 
@@ -1411,8 +1433,19 @@ erDiagram
     Tool ||--o{ ToolAssignment : "mounted as"
     DieRank ||--o{ DieRankCompatibility : "rank A"
     DieRank ||--o{ DieRankCompatibility : "rank B"
+    Tool ||..o{ Lot : "cast by (v1.9, die-cast origin)"
+    ToolCavity ||..o{ Lot : "cast from (v1.9, die-cast origin)"
+    Tool ||..o{ WorkOrder : "Maintenance WO target"
         </div>
     </div>
+
+    <h3>Cross-schema relationships (v1.9)</h3>
+    <ul>
+        <li><strong><code>Tools.Tool.Id</code> ←—— <code>Lots.Lot.ToolId</code></strong> — system of record for die-cast-origin LOTs. Required at <code>Lot_Create</code> when the Cell has an active <code>ToolAssignment</code>. NULL for non-die-cast origins. NULL after <code>Lot_Merge</code> on blended-origin LOTs. Downstream LOTs do NOT carry.</li>
+        <li><strong><code>Tools.ToolCavity.Id</code> ←—— <code>Lots.Lot.ToolCavityId</code></strong> — same rules. Cavity must belong to the tool and be in <code>Active</code> status at <code>Lot_Create</code>.</li>
+        <li><strong><code>Workorder.ProductionEvent</code> does NOT carry Tool or Cavity</strong> — v1.9 reshape. Reports derive via <code>ProductionEvent.LotId → Lot.ToolId / Lot.ToolCavityId</code>. Honda-trace queries walk <code>LotGenealogy</code> back to origin Die-Cast LOTs.</li>
+        <li><strong><code>Tools.Tool.Id</code> ←—— <code>Workorder.WorkOrder.ToolId</code></strong> — Maintenance WO target. NULL for Demand and Recipe WOs. Enforced at proc layer (no CHECK — Recipe WOs legitimately leave it NULL).</li>
+    </ul>
 </div>
 
 <!-- ═══════════════════ AUDIT ═══════════════════ -->
