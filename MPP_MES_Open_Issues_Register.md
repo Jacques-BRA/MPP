@@ -1,7 +1,7 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.7 — Working Draft
+**Version:** 2.8 — Working Draft
 **Date:** 2026-04-24
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
@@ -20,6 +20,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | 2.4 | 2026-04-21 | Blue Ridge Automation | **Phase A of the 2026-04-20 OI review refactor.** Closed OI-03 (shift runtime derived from events) and OI-06 (initials-based operator identity — see Phase C / FDS v0.8). Revised OI-04 (line-stop, not LOT-hold; 10-fail escalation; CRT 200% inspect), OI-05 (die-rank compatibility merge rules), OI-07 (three WO types, Maintenance targets Tools), OI-08 addenda (terminal locked to machine context; part↔machine validity map; mobile consideration), OI-09 addenda (sublot pattern with parent FK), OI-10 (superseded by Phase B Tool Management design). Added four new items: OI-11 (part rename at Casting → Trim), OI-12 (lineside inventory caps), OI-13 (BOM source = Flexware app @ IP .919), OI-14 (admin remove-item). Structural change: each OI and UJ now has its own subsection instead of living inside a giant grid table — easier to read, diff, and update. Source meeting notes at `Meeting_Notes/2026-04-20_OI_Review.md`. Running plan in `memory/project_mpp_oi_refactor.md`. |
 | 2.5 | 2026-04-22 | Blue Ridge Automation | **Legacy MES screenshot review gap analysis.** 36 screenshots of the Flexware Madison MES reviewed against the current FDS / Data Model. 16 new Part A items added (OI-15 through OI-30): 9 concrete design additions (Track screen, auto-finish-on-target WO, tray-divisibility rule, ItemLocation consumption metadata, Country of Origin, scrap source enum, partial start/complete, Hold Management screen, Lot computed fields) and 7 discovery items to confirm with MPP (Automation tile scope, Notifications, per-workstation scripting, Supply Part flag, cast-override cell flag, Workstation Category grouping, Reports tile contents). Source summary at `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Legacy screenshots at `reference/MPP_Current_MES_screenshots.docx`. |
 | 2.6 | 2026-04-22 | Blue Ridge Automation | **OI-11 resolved — Casting → Trim rename modelled via 1-line BOM, not `Parts.ItemTransform`.** Review of the v2.5 design surfaced that the proposed `Parts.ItemTransform` table duplicated every column of `Workorder.ConsumptionEvent`. The rename is a degenerate 1-line BOM consumption: trim part has cast part as its sole component at QtyPer=1; existing ConsumptionEvent + LotGenealogy machinery handles the flow and the Honda backward trace. OI-11 moves ⬜ Open → ✅ Resolved. Downstream corrections: Data Model v1.8-rev (ItemTransform table section replaced with a ✅ Resolved callout; `Audit.LogEntityType` seed shrinks from 10 to 9 rows; table count "~73" → "~72"), FDS v0.10-rev (§5.10 retained, rewritten around FDS-05-033 BOM-driven scan-in; FDS-05-034/-035 retired), User Journeys v0.7-rev (Trim Shop narrative simplified to normal consumption), Phase G migration `0010_phase9_tools_and_workorder.sql` (ItemTransform LogEntityType row dropped; ScrapSource shifted from Id=40 to Id=39; re-run green, 779/779 tests still pass). |
+| 2.8 | 2026-04-24 | Blue Ridge Automation | **Legacy MES Storyboards review additions.** Review of `reference/NewInput/Madison MES - Storyboards.pdf` (2012 Flexware) + `5GO-AP4 IPAddresses.xlsx` against v1.9 / v0.11 / v0.8 / v2.7 design: 43/52 legacy capabilities covered (83%), 5 partial (10%), 4 gaps (7%), 0 out-of-scope. Three register updates: (1) **OI-31 extended** — Flexware `IdentifierFormat` FK is referenced from `WorkOrder` and `ProductionOrder` in addition to Lot and SerializedItem per `reference/Flexware_MES_OrderDiagram.png`. Phase 0 now needs `SELECT * FROM IdentifierFormat` from Flexware to enumerate ALL live counters, not just the two sampled. (2) **OI-32 NEW / ⬜ Open** — Material Allocation operator screen. Flexware has a dedicated pre-PLC allocation workflow (`MaterialAllocationMenuView` / `CreateView` / `UpdateView`) gated by `Workstation.MaterialAllocationRequired` BIT; we have the data (OI-18 ItemLocation metadata) but no operator screen. Phase 6 Assembly gates on resolving this. Couples to UJ-09. (3) **OI-32b NEW / ⬜ Open (discovery)** — Material Classes as a first-class entity. Flexware's `Material.MaterialClassID` FK may cover Honda-customer groupings our `Parts.ItemType` misses. Phase 0 confirmation of live usage needed. Full review report at `reference/NewInput/REVIEW_2026-04-24.md`. Design confirmations: DashboardConfiguration / UserInterfaceScript / clock# + PIN rejections validated — no functional loss. |
 | 2.7 | 2026-04-24 | Blue Ridge Automation | **Arc 2 model revisions (2026-04-23 session) landed.** OI-09 ✅ Closed — Die Cast cavity-parallel LOTs codified into Data Model v1.9 via `Lot.ToolId` + `Lot.ToolCavityId` (N active cavities → N parallel independent LOTs, not sublots). Machining sub-LOT split remains a separate concept in FDS §5.4. **OI-26 DELETED** (not Resolved, not Superseded — removed entirely). Flexware's `UserInterfaceScript` DB-stored-runtime-code pattern is not reproduced: LocationAttribute on Terminal/Workstation tier + Perspective session-scoped scripts cover every legitimate use case; runtime code lives in Ignition project files, version-controlled. **OI-31 NEW / ⬜ Open** — `Lots.IdentifierSequence` table (Flexware `IdentifierFormat` equivalent, carries `MESL{0:D7}` Lot and `MESI{0:D7}` SerializedItem counters). Schema locked; seed values pending Flexware cutover snapshot. OI-05 confirmed — post-merge LOT has NULL Tool / Cavity (blended-origin can't denormalize). Source decisions: `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md`. Downstream commits in the same refresh pass: Data Model v1.9, FDS v0.11, User Journeys v0.8, Arc 2 phased plan refresh. |
 
 ---
@@ -31,10 +32,10 @@ This register consolidates all open items and design decisions that gate Perspec
 | Priority | ✅ Resolved | 🔶 In Review | ⬜ Open | Superseded | **Total** |
 |---|---|---|---|---|---|
 | HIGH | 1 (OI-01) | 3 (OI-02, OI-05, OI-07) | 2 (OI-13, OI-15) | 0 | **6** |
-| MEDIUM | 4 (OI-03, OI-06, OI-09, OI-11) | 3 (OI-04, OI-08, OI-12) | 9 (OI-16, OI-17, OI-18, OI-21, OI-22, OI-24, OI-28, OI-30, OI-31) | 0 | **16** |
-| LOW | 0 | 0 | 7 (OI-14, OI-19, OI-20, OI-23, OI-25, OI-27, OI-29) | 0 | **7** |
+| MEDIUM | 4 (OI-03, OI-06, OI-09, OI-11) | 3 (OI-04, OI-08, OI-12) | 10 (OI-16, OI-17, OI-18, OI-21, OI-22, OI-24, OI-28, OI-30, OI-31, OI-32) | 0 | **17** |
+| LOW | 0 | 0 | 8 (OI-14, OI-19, OI-20, OI-23, OI-25, OI-27, OI-29, OI-32b) | 0 | **8** |
 | — | 0 | 0 | 0 | 1 (OI-10) | **1** |
-| **Total** | **5** | **6** | **18** | **1** | **30** |
+| **Total** | **5** | **6** | **20** | **1** | **32** |
 
 **Part B counts (19 items):**
 
@@ -45,7 +46,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | LOW | 1 (UJ-06) | 0 | 0 | **1** |
 | **Total** | **4** | **3** | **12** | **19** |
 
-**Grand total:** 49 items (30 Part A + 19 Part B). 9 resolved, 9 in review, 30 open, 1 superseded.
+**Grand total:** 51 items (32 Part A + 19 Part B). 9 resolved, 9 in review, 32 open, 1 superseded.
 
 ---
 
@@ -574,11 +575,51 @@ Companion proc `Lots.IdentifierSequence_Next @Code` atomically increments `LastV
 
 **Open questions for MPP (Phase 0):**
 1. **Format continuity** — keep `MESL{0:D7}` / `MESI{0:D7}`, or mint new prefixes in the replacement MES? (Default: keep.)
-2. **Additional counters** — any other identifier sequences in use (container barcodes, shipping print sequences, anything non-AIM) that we haven't seen?
+2. **Full counter enumeration** — the 2012 Flexware storyboards ERD (`reference/Flexware_MES_OrderDiagram.png`) shows `IdentifierFormat` FKed from `ProductionOrder` and `WorkOrder` in addition to `Lot` and `SerializedItem`. MPP IT to run `SELECT * FROM IdentifierFormat` from the current Flexware DB at cutover so the full counter list is known and `LastValue` is seeded for every live sequence (not just the two sampled). Possibly 4+ counters total.
 3. **Reset policy** — currently none; any line-specific or shift-specific counter-reset rules MPP wants honored?
 4. **Rollover policy at 9,999,999** — at current burn rate, Lots hit rollover in ~30+ years. Planned for, or do we want a warning/error mechanism earlier?
 
-**Proposed direction:** Implement schema as shown in Arc 2 Phase 1. Phase 0 resolves the four open questions before cutover-day seeding. `Lots.IdentifierSequence_Next` replaces ad-hoc identifier generation everywhere (LOT create, serialized-part create, any future counters).
+**Proposed direction:** Implement schema as shown in Arc 2 Phase 1. Phase 0 resolves the four open questions before cutover-day seeding. `Lots.IdentifierSequence_Next` replaces ad-hoc identifier generation everywhere (LOT create, serialized-part create, WorkOrder-number minting if confirmed in place, any future counters).
+
+---
+
+### OI-32 — Material Allocation operator screen — ⬜ Open (new, 2026-04-24)
+
+**Priority:** MEDIUM
+**Owner:** Blue Ridge / Ben
+**FDS §:** 5.11 or §6.6a (new section — Allocate Material workflow)
+**References:** Legacy Storyboards PDF screen-map family (`MaterialAllocationMenuView` / `MaterialAllocationView` / `MaterialAllocationCreateView` / `MaterialAllocationUpdateView` / `BomComponentDetailsView`); `reference/Flexware_MES_DashboardConfiguration.png` (`Workstation.MaterialAllocationRequired BIT`); Review report §4 Gap 1 at `reference/NewInput/REVIEW_2026-04-24.md`; couples to UJ-09 (material verification at assembly) and OI-18 (ItemLocation consumption metadata)
+
+**Description:** Flexware has a dedicated pre-production **Material Allocation** capability separate from scan-time material verification. An operator (or changeover technician) pre-allocates N baskets of a BOM component to a specific Cell; the allocation shows up on a grid at the workstation; the PLC handshake consumes **against** the allocation rather than against raw LOT scans. Flexware `Workstation.MaterialAllocationRequired BIT` gates whether this is mandatory per terminal.
+
+Our current design has the **data** for allocation via OI-18 (`Parts.ItemLocation.MinQuantity` / `MaxQuantity` / `DefaultQuantity` / `IsConsumptionPoint`) but **no explicit operator screen** and no `Workorder.MaterialAllocation` lifecycle table. FDS-06-011 covers verify-on-scan but not pre-allocate.
+
+**Options considered:**
+- (a) Build `Workorder.MaterialAllocation` table (Cell, Item, AllocatedQuantity, ConsumedQuantity, AppUserId, AllocatedAt, ReleasedAt) + Perspective Allocate Material screen + consumption gate in `ConsumptionEvent_Record`.
+- (b) Confirm MPP doesn't use the step and close as "intentionally not reproduced."
+- (c) Allocate implicitly on first scan (current FDS posture) but expose a read-only "current allocations at this cell" grid on the Assembly view for operator awareness.
+
+**Proposed direction:** Phase 0 question to Ben: *"Do operators pre-allocate baskets of material to Assembly / Machining cells before production begins, or is allocation implicit in the first LTT scan?"* If yes → Option (a), gates Phase 6 Assembly design. If no → Option (b) or (c) documented and closed.
+
+**Impact if unresolved:** Arc 2 Plan Phase 6 (Assembly + MIP + Container) cannot finalize design.
+
+---
+
+### OI-32b — Material Classes — ⬜ Open (new, 2026-04-24, discovery)
+
+**Priority:** LOW
+**Owner:** MPP Engineering / Blue Ridge
+**FDS §:** 3 (Master Data) — addendum if retained
+**References:** Legacy Storyboards PDF Configuration Menu; `reference/Flexware_MES_ContainerTracking.png` (`Material.MaterialClassID` FK); Review report §4 Gap 2 at `reference/NewInput/REVIEW_2026-04-24.md`
+
+**Description:** Flexware has a `Material` → `MaterialClassID` FK driving a "Material Classes" tile in Configuration. Our data model has `Parts.ItemType` (Cast / Machined / Assembled / Received) which is coarser. `MaterialClass` in Flexware could hold Honda-customer-specific categorisation or finer ItemType granularity — purpose unclear from the 2012 storyboards.
+
+**Options:**
+- (a) If Honda-customer groupings → add `Parts.Item.CustomerCode NVARCHAR(50) NULL`.
+- (b) If finer ItemType slice → add `Parts.ItemSubType` code table + FK.
+- (c) Legacy residue — document the deliberate omission and close.
+
+**Proposed direction:** Phase 0 discovery-only question to MPP Engineering. Low-effort phone call. Resolution drives a small schema delta at most.
 
 ---
 
