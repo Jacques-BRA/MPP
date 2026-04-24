@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2d
+**Document ID:** MPP-PLAN-ARC2-v0.2e
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2d (2026-04-24)
+**Version:** 0.2e (2026-04-24)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2e | 2026-04-24 | Blue Ridge Automation | **OI-16 PLC confirm BIT + `RequiresCompletionConfirm` LocationAttribute propagated.** Phase 1 migration gains an additional LocationAttributeDefinition seed row (`RequiresCompletionConfirm` BIT on Terminal tier). Phase 6 Assembly Gateway script gains `CompletionConfirmed` MIP tag read; auto-close gates on BOTH target-crossing AND BIT. Perspective Assembly view conditionally renders a large "Confirm Completion" button vs passive popup based on session's derived RequiresCompletionConfirm value. |
 | 0.2d | 2026-04-24 | Blue Ridge Automation | **OI-23 Lot derived quantities as a view.** Phase 2 (LOT Lifecycle) SQL migration gains `CREATE VIEW Lots.v_LotDerivedQuantities (LotId, TotalInProcess, InventoryAvailable)` — joins `Lots.Lot.PieceCount` with aggregations over `Workorder.ProductionEvent` (checkpoint counters) and `Workorder.ConsumptionEvent` (consumed quantities). No materialized columns; no on-write update paths. Read procs (Lot_Get, Lot_List) join the view at read time. Companion FDS v0.11f, Data Model v1.9e. |
 | 0.2c | 2026-04-24 | Blue Ridge Automation | **OI-08 terminal-mode-by-assignment propagated.** `TerminalMode` is no longer a separate `LocationAttribute` — it is derived from the Terminal Location's parent tier (WorkCenter/Cell → Dedicated; Area → Shared). v0.2 overlay §A, Data Model Changes, Open Items table, State & Workflow, Gateway Scripts, Test Coverage, and Phase-1-complete checklist all updated to drop the `TerminalMode` seed + stash path and describe the tier-derivation rule instead. Companion FDS v0.11e + ERD Location tab scope note. No data-model schema change. |
 | 0.2b | 2026-04-24 | Blue Ridge Automation | **OI-07 WorkOrderType correction propagated.** Removed OI-07 from the gating and body Phase-0 open-items tables (maintenance engine is a separate future project; not gating this MES). Added OI-07 to the "Already closed" list in the v0.2 Alignment Overlay. Updated the Phase 1 Data Model Changes entry for `Workorder.WorkOrder` — `WorkOrderTypeId` now defaults to the single-seeded `Production` row; `ToolId` is a future-Maintenance schema hook only. Companion FDS v0.11b, Data Model v1.9b, OIR v2.9 in the same commit. |
@@ -428,6 +429,7 @@ No test suite additions.
 **LocationAttributeDefinition seeds on the `Terminal` `LocationTypeDefinition`:**
 
 - `DefaultScreen` (NVARCHAR — Perspective route path, e.g., `'/shop-floor/die-cast-entry'`).
+- `RequiresCompletionConfirm` (BIT — per OI-16 additions, v0.2e) — when set on a Dedicated Terminal, the auto-finish completion flow shows a large "Confirm Completion" button instead of a passive popup. NULL = 0 = passive popup.
 - ~~`TerminalMode`~~ **(dropped v0.2c)** — mode is now derived from the Terminal Location's parent tier in the ISA-95 hierarchy per OI-08 correction. No seed row needed for this attribute.
 
 **What is NOT seeded (per Phase C security rewrite):**
