@@ -1,8 +1,8 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.6 — Working Draft
-**Date:** 2026-04-22
+**Version:** 2.7 — Working Draft
+**Date:** 2026-04-24
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
 
@@ -20,6 +20,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | 2.4 | 2026-04-21 | Blue Ridge Automation | **Phase A of the 2026-04-20 OI review refactor.** Closed OI-03 (shift runtime derived from events) and OI-06 (initials-based operator identity — see Phase C / FDS v0.8). Revised OI-04 (line-stop, not LOT-hold; 10-fail escalation; CRT 200% inspect), OI-05 (die-rank compatibility merge rules), OI-07 (three WO types, Maintenance targets Tools), OI-08 addenda (terminal locked to machine context; part↔machine validity map; mobile consideration), OI-09 addenda (sublot pattern with parent FK), OI-10 (superseded by Phase B Tool Management design). Added four new items: OI-11 (part rename at Casting → Trim), OI-12 (lineside inventory caps), OI-13 (BOM source = Flexware app @ IP .919), OI-14 (admin remove-item). Structural change: each OI and UJ now has its own subsection instead of living inside a giant grid table — easier to read, diff, and update. Source meeting notes at `Meeting_Notes/2026-04-20_OI_Review.md`. Running plan in `memory/project_mpp_oi_refactor.md`. |
 | 2.5 | 2026-04-22 | Blue Ridge Automation | **Legacy MES screenshot review gap analysis.** 36 screenshots of the Flexware Madison MES reviewed against the current FDS / Data Model. 16 new Part A items added (OI-15 through OI-30): 9 concrete design additions (Track screen, auto-finish-on-target WO, tray-divisibility rule, ItemLocation consumption metadata, Country of Origin, scrap source enum, partial start/complete, Hold Management screen, Lot computed fields) and 7 discovery items to confirm with MPP (Automation tile scope, Notifications, per-workstation scripting, Supply Part flag, cast-override cell flag, Workstation Category grouping, Reports tile contents). Source summary at `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Legacy screenshots at `reference/MPP_Current_MES_screenshots.docx`. |
 | 2.6 | 2026-04-22 | Blue Ridge Automation | **OI-11 resolved — Casting → Trim rename modelled via 1-line BOM, not `Parts.ItemTransform`.** Review of the v2.5 design surfaced that the proposed `Parts.ItemTransform` table duplicated every column of `Workorder.ConsumptionEvent`. The rename is a degenerate 1-line BOM consumption: trim part has cast part as its sole component at QtyPer=1; existing ConsumptionEvent + LotGenealogy machinery handles the flow and the Honda backward trace. OI-11 moves ⬜ Open → ✅ Resolved. Downstream corrections: Data Model v1.8-rev (ItemTransform table section replaced with a ✅ Resolved callout; `Audit.LogEntityType` seed shrinks from 10 to 9 rows; table count "~73" → "~72"), FDS v0.10-rev (§5.10 retained, rewritten around FDS-05-033 BOM-driven scan-in; FDS-05-034/-035 retired), User Journeys v0.7-rev (Trim Shop narrative simplified to normal consumption), Phase G migration `0010_phase9_tools_and_workorder.sql` (ItemTransform LogEntityType row dropped; ScrapSource shifted from Id=40 to Id=39; re-run green, 779/779 tests still pass). |
+| 2.7 | 2026-04-24 | Blue Ridge Automation | **Arc 2 model revisions (2026-04-23 session) landed.** OI-09 ✅ Closed — Die Cast cavity-parallel LOTs codified into Data Model v1.9 via `Lot.ToolId` + `Lot.ToolCavityId` (N active cavities → N parallel independent LOTs, not sublots). Machining sub-LOT split remains a separate concept in FDS §5.4. **OI-26 DELETED** (not Resolved, not Superseded — removed entirely). Flexware's `UserInterfaceScript` DB-stored-runtime-code pattern is not reproduced: LocationAttribute on Terminal/Workstation tier + Perspective session-scoped scripts cover every legitimate use case; runtime code lives in Ignition project files, version-controlled. **OI-31 NEW / ⬜ Open** — `Lots.IdentifierSequence` table (Flexware `IdentifierFormat` equivalent, carries `MESL{0:D7}` Lot and `MESI{0:D7}` SerializedItem counters). Schema locked; seed values pending Flexware cutover snapshot. OI-05 confirmed — post-merge LOT has NULL Tool / Cavity (blended-origin can't denormalize). Source decisions: `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md`. Downstream commits in the same refresh pass: Data Model v1.9, FDS v0.11, User Journeys v0.8, Arc 2 phased plan refresh. |
 
 ---
 
@@ -30,8 +31,8 @@ This register consolidates all open items and design decisions that gate Perspec
 | Priority | ✅ Resolved | 🔶 In Review | ⬜ Open | Superseded | **Total** |
 |---|---|---|---|---|---|
 | HIGH | 1 (OI-01) | 3 (OI-02, OI-05, OI-07) | 2 (OI-13, OI-15) | 0 | **6** |
-| MEDIUM | 4 (OI-03, OI-06, OI-09, OI-11) | 3 (OI-04, OI-08, OI-12) | 8 (OI-16, OI-17, OI-18, OI-21, OI-22, OI-24, OI-28, OI-30) | 0 | **15** |
-| LOW | 0 | 0 | 8 (OI-14, OI-19, OI-20, OI-23, OI-25, OI-26, OI-27, OI-29) | 0 | **8** |
+| MEDIUM | 4 (OI-03, OI-06, OI-09, OI-11) | 3 (OI-04, OI-08, OI-12) | 9 (OI-16, OI-17, OI-18, OI-21, OI-22, OI-24, OI-28, OI-30, OI-31) | 0 | **16** |
+| LOW | 0 | 0 | 7 (OI-14, OI-19, OI-20, OI-23, OI-25, OI-27, OI-29) | 0 | **7** |
 | — | 0 | 0 | 0 | 1 (OI-10) | **1** |
 | **Total** | **5** | **6** | **18** | **1** | **30** |
 
@@ -145,6 +146,8 @@ Supervisor elevation uses the per-action AD prompt from FDS-04-007 (no PIN). Req
 - Machining is **FIFO by cavity**.
 - An "IPP tag" is attached when a die arrives; IPP is an identifier only (details modelled as flexible Tool attributes under OI-10 → Phase B).
 
+**Addendum (2026-04-23):** Post-merge LOT has **NULL `ToolId` + `ToolCavityId`** on `Lots.Lot` — blended-origin material cannot denormalize multiple Tool origins into a single FK pair. Tool-specific trace reconstructed via genealogy of the pre-merge source LOTs (`Lots.LotGenealogy` walk).
+
 Implementation couples to the Phase B Tool Management design because die rank lives on the Tool / Cavity entity. Data model will grow a `Tools.DieRankCompatibility` lookup seeded from the MPP matrix. FDS §5.5 rewrite in Phase D.
 
 ---
@@ -215,22 +218,32 @@ Work lands in Phase D (FDS §2.5 addenda pass).
 
 ---
 
-### OI-09 — Multi-part lines & sublots — 🔶 In Review (addenda after resolution)
+### OI-09 — Multi-part lines & cavity-parallel LOTs — ✅ Closed (2026-04-23)
 
 **Priority:** MEDIUM
 **Owner:** MPP Engineering
-**FDS §:** 3.6, 5.4
+**FDS §:** 3.6, 5.1, 5.3, 5.4
 **References:** FDS-03-016, FDS-03-017; FRS 3.9.7, 3.16.1, 3.16.2; MS1FM-1028 (multi-part line example)
 
-**Description:** On lines that run multiple part numbers (MS1FM-1028 → 59B / 5PA / 6NA), how are containers handled? Mixed containers? Part-at-a-time?
+**Description:** On lines that run multiple part numbers (MS1FM-1028 → 59B / 5PA / 6NA), how are containers handled? And separately: how do cavity-parallel LOTs at die cast work?
 
-**Earlier decision (2026-04-09, retained):** One part at a time. Operator selects the active LOT for consumption, which determines the part number. No mixed-part containers. Changeover is an operator action.
+**Earlier decision (2026-04-09, retained):** One part at a time per line. Operator selects the active LOT for consumption, which determines the part number. No mixed-part containers. Changeover is an operator action.
 
-**Addenda (2026-04-20):** Meeting notes revealed a **sublot pattern** that needs explicit treatment:
-- Each **cavity can produce a distinct lot simultaneously** (not contradictory to "one part at a time" because it's the same part number from different cavities).
-- **Small baskets are broken down from a parent lot into sublots.** Each sublot has its own label with a parent-lot reference and persists through the process.
+**Decision (2026-04-23) — cavity-parallel LOTs codified:** A die-cast machine mounting a Tool with N active cavities produces **N parallel independent LOTs, not sublots**:
 
-Schema impact: `Lots.Lot` adjacency-list parent FK likely already supports this (parent `Lot.Id` on `Lot` via `ParentLotId`), but the **label pattern** and **sublot workflows** are new — label printing and sublot-aware scan-in flows need explicit journey coverage. Work lands in Phase D (FDS §5.4 sublot addenda) and Phase E (Plant Floor phased plan sublot steps).
+- Each LOT is created **lazily** at operator logging time with `ToolId` + `ToolCavityId` set (new FKs on `Lots.Lot` in Data Model v1.9).
+- Each LOT fills at its own rate (scrap + cavity health + shutdowns vary).
+- Each LOT closes independently via explicit operator action (Complete + Move).
+- **No parent/child FK** between them — they're peers. Genealogy is flat at die cast.
+- One LTT barcode per LOT (one physical basket = one LOT = one label).
+
+**Distinct from Machining sub-LOT split (remains in FDS §5.4):**
+- Machining OUT sometimes breaks a parent LOT into N child sub-LOTs at `Item.DefaultSubLotQty`.
+- Parent→children recorded in `LotGenealogy` as SPLIT rows; parent transitions to CLOSED via `Lot_UpdateStatus`.
+
+The 2026-04-20 meeting note conflated cavity-parallel LOTs with sub-LOT splitting — they are two distinct workflows. Cavity-parallel LOTs at die cast are peers, not sublots. Machining sub-LOT split is a legitimate sublot pattern.
+
+Implementation lands in Data Model v1.9 (Lot.ToolId / Lot.ToolCavityId), FDS v0.11 (§§5.1, 5.3, 5.4 revisions), User Journeys v0.8 (Carlos Die Cast scene), and Arc 2 Plan Phase 3 (Die Cast terminal UX).
 
 ---
 
@@ -475,19 +488,6 @@ Exceeding either limit should reject the scan-in.
 
 ---
 
-### OI-26 — Per-workstation dashboard scripting hook — ⬜ Open (new, discovery)
-
-**Priority:** LOW
-**Owner:** Blue Ridge
-**FDS §:** Out-of-MVP (design choice)
-**References:** Screenshot review 2026-04-22 (image 26, Lot creation dashboard "Edit Script" button for save-button click)
-
-**Description:** Legacy workstation dashboards allow per-terminal custom scripting attached to button clicks. Ignition Perspective handles scripted behaviour at the project level via views / transforms — a one-to-one port is not idiomatic.
-
-**Proposed direction:** Confirm no current script logic is load-bearing on production flow. If any exists, port the behaviour into Perspective project scripts or view-level event handlers rather than reproducing per-workstation script editing. Discovery only.
-
----
-
 ### OI-27 — Material "Supply part" flag purpose — ⬜ Open (new, discovery)
 
 **Priority:** LOW
@@ -537,6 +537,48 @@ Exceeding either limit should reject the scan-in.
 **Description:** Legacy home page has a Reports tile. UJ-19 flags the four Productivity DB reports as a known requirement but the full Reports menu has not been enumerated — there may be additional reports MPP considers baseline.
 
 **Proposed direction:** Walk through the legacy Reports tile with MPP and list every report, then match against our MVP reporting scope. Couples directly to UJ-19 closure.
+
+---
+
+### OI-31 — Identifier sequence table + format carry-forward — ⬜ Open (new, 2026-04-23)
+
+**Priority:** MEDIUM
+**Owner:** MPP IT / Blue Ridge
+**FDS §:** New § (Identifier Sequences) + §1.4 interfaces
+**References:** Arc 2 model revisions spec (`docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` §3); Flexware `IdentifierFormat` table (sampled values `MESL{0:D7}`=1,710,932 for Lot and `MESI{0:D7}`=2,492 for SerializedItem); FRS 3.9.6 (LTT barcode format)
+
+**Description:** Flexware `IdentifierFormat` drives two counters critical to cutover continuity: the Lot LTT barcode (`MESL{0:D7}`) and the serialized-item ID (`MESI{0:D7}`). Both are **MPP-internal identifiers** (not Honda AIM shipper IDs — those come from `AIM.GetNextNumber`). Our current design has no equivalent table; identifiers have been treated as ad-hoc.
+
+**Schema (Arc 2 Phase 1 migration, Data Model v1.9):**
+
+```sql
+CREATE TABLE Lots.IdentifierSequence (
+    Id                   BIGINT       NOT NULL IDENTITY(1,1) PRIMARY KEY,
+    Code                 NVARCHAR(30) NOT NULL,
+    Name                 NVARCHAR(100) NOT NULL,
+    Description          NVARCHAR(500) NULL,
+    FormatString         NVARCHAR(50) NOT NULL,    -- .NET string.Format, e.g., 'MESL{0:D7}'
+    StartingValue        BIGINT       NOT NULL DEFAULT 1,
+    EndingValue          BIGINT       NOT NULL DEFAULT 9999999,
+    LastValue            BIGINT       NOT NULL DEFAULT 0,
+    ResetIntervalMinutes INT          NULL,        -- unused at MPP today; nullable for future
+    LastResetAt          DATETIME2(3) NULL,
+    UpdatedAt            DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT UQ_IdentifierSequence_Code UNIQUE (Code)
+);
+```
+
+Companion proc `Lots.IdentifierSequence_Next @Code` atomically increments `LastValue`, formats the result using the `.NET`-style format string, and raises a business-rule error if `EndingValue` would be breached.
+
+**Cutover seeding:** Migration script fetches Flexware `LastCounterValue` on cutover day and seeds at or above those values to avoid LTT collisions with in-circulation LOTs. Sampled baseline values (subject to drift): `Lot=1,710,932`, `SerializedItem=2,492`.
+
+**Open questions for MPP (Phase 0):**
+1. **Format continuity** — keep `MESL{0:D7}` / `MESI{0:D7}`, or mint new prefixes in the replacement MES? (Default: keep.)
+2. **Additional counters** — any other identifier sequences in use (container barcodes, shipping print sequences, anything non-AIM) that we haven't seen?
+3. **Reset policy** — currently none; any line-specific or shift-specific counter-reset rules MPP wants honored?
+4. **Rollover policy at 9,999,999** — at current burn rate, Lots hit rollover in ~30+ years. Planned for, or do we want a warning/error mechanism earlier?
+
+**Proposed direction:** Implement schema as shown in Arc 2 Phase 1. Phase 0 resolves the four open questions before cutover-day seeding. `Lots.IdentifierSequence_Next` replaces ad-hoc identifier generation everywhere (LOT create, serialized-part create, any future counters).
 
 ---
 
