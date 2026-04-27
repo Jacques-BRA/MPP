@@ -1,7 +1,7 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.12 — Working Draft
+**Version:** 2.13 — Working Draft
 **Date:** 2026-04-27
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
@@ -20,6 +20,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | 2.4 | 2026-04-21 | Blue Ridge Automation | **Phase A of the 2026-04-20 OI review refactor.** Closed OI-03 (shift runtime derived from events) and OI-06 (initials-based operator identity — see Phase C / FDS v0.8). Revised OI-04 (line-stop, not LOT-hold; 10-fail escalation; CRT 200% inspect), OI-05 (die-rank compatibility merge rules), OI-07 (three WO types, Maintenance targets Tools), OI-08 addenda (terminal locked to machine context; part↔machine validity map; mobile consideration), OI-09 addenda (sublot pattern with parent FK), OI-10 (superseded by Phase B Tool Management design). Added four new items: OI-11 (part rename at Casting → Trim), OI-12 (lineside inventory caps), OI-13 (BOM source = Flexware app @ IP .919), OI-14 (admin remove-item). Structural change: each OI and UJ now has its own subsection instead of living inside a giant grid table — easier to read, diff, and update. Source meeting notes at `Meeting_Notes/2026-04-20_OI_Review.md`. Running plan in `memory/project_mpp_oi_refactor.md`. |
 | 2.5 | 2026-04-22 | Blue Ridge Automation | **Legacy MES screenshot review gap analysis.** 36 screenshots of the Flexware Madison MES reviewed against the current FDS / Data Model. 16 new Part A items added (OI-15 through OI-30): 9 concrete design additions (Track screen, auto-finish-on-target WO, tray-divisibility rule, ItemLocation consumption metadata, Country of Origin, scrap source enum, partial start/complete, Hold Management screen, Lot computed fields) and 7 discovery items to confirm with MPP (Automation tile scope, Notifications, per-workstation scripting, Supply Part flag, cast-override cell flag, Workstation Category grouping, Reports tile contents). Source summary at `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Legacy screenshots at `reference/MPP_Current_MES_screenshots.docx`. |
 | 2.6 | 2026-04-22 | Blue Ridge Automation | **OI-11 resolved — Casting → Trim rename modelled via 1-line BOM, not `Parts.ItemTransform`.** Review of the v2.5 design surfaced that the proposed `Parts.ItemTransform` table duplicated every column of `Workorder.ConsumptionEvent`. The rename is a degenerate 1-line BOM consumption: trim part has cast part as its sole component at QtyPer=1; existing ConsumptionEvent + LotGenealogy machinery handles the flow and the Honda backward trace. OI-11 moves ⬜ Open → ✅ Resolved. Downstream corrections: Data Model v1.8-rev (ItemTransform table section replaced with a ✅ Resolved callout; `Audit.LogEntityType` seed shrinks from 10 to 9 rows; table count "~73" → "~72"), FDS v0.10-rev (§5.10 retained, rewritten around FDS-05-033 BOM-driven scan-in; FDS-05-034/-035 retired), User Journeys v0.7-rev (Trim Shop narrative simplified to normal consumption), Phase G migration `0010_phase9_tools_and_workorder.sql` (ItemTransform LogEntityType row dropped; ScrapSource shifted from Id=40 to Id=39; re-run green, 779/779 tests still pass). |
+| 2.13 | 2026-04-27 | Blue Ridge Automation | **Part B UJ enrichment pass — 13 of 19 UJ entries restructured to match OI-entry depth (Description → Options A/B/C with impact analysis → Recommended direction → What's needed to decide).** Per Jacques's 2026-04-24 flag that UJ entries lacked options/impact framing. Two In-Review entries (UJ-03 sublot trigger, UJ-14 warm-up shots) and 11 Open entries (UJ-05, UJ-07, UJ-08, UJ-09, UJ-10, UJ-11, UJ-13, UJ-16, UJ-17, UJ-18, UJ-19) now carry Blue Ridge's recommended direction with reasoning and the explicit input needed to lock each. Six already-Resolved entries (UJ-01, UJ-02, UJ-04, UJ-06, UJ-12, UJ-15) left as-is — their resolution narratives already carry the depth. No status changes; this is a structure / readability refinement to make the next MPP review more actionable. |
 | 2.12 | 2026-04-27 | Blue Ridge Automation | **UJ-04 design locked — AIM Shipper ID local pool (zero-latency container closure).** Follow-up to v2.10's "queue async" Decision-with-addition. The Claude-proposed async-queue model (container completes in pending state, queue drains and back-fills `AimShipperId`) was rejected by Jacques on 2026-04-27 because it still introduces latency at close time. Replaced with a **pre-fetched local pool**: a background Gateway script keeps `Lots.AimShipperIdPool` topped up to a configurable target depth; `Container_Complete` claims one row FIFO synchronously inside its own transaction — sub-millisecond, never blocked on AIM. Empty pool = **hard fail** (close rejects, operator sees error, line stops; no soft fallback). Once consumed, IDs are permanently terminal — no return-to-pool on void / re-pack (Honda treats every issued ID as consumed regardless). Honda does not expire IDs. Two new tables (`Lots.AimShipperIdPool` + single-row `Lots.AimPoolConfig`) and four supporting procs (`_Claim` / `_Topup` / `_GetDepth` / `_GetByContainer` plus Config `_Get` / `_Update`). Configuration Tool exposes the four configurable thresholds (TargetBufferDepth=50, TopupThreshold=30, AlarmWarningDepth=20, AlarmCriticalDepth=10). Two-tier alarm: supervisor wallboard tile at Warning, supervisor alarm + IT notification at Critical. Downstream commits in this revision: Data Model v1.9h, FDS v0.11i (FDS-07-005 rewrite, FDS-07-008 amendment, FDS-07-010 rewrite, FDS-07-010a/b/c NEW), ERD Lots tab. SQL deferred to Arc 2 Phase 7 alongside the Container schema CREATE. No count changes (UJ-04 was already counted Resolved in v2.10 — this is a body refinement closing the design). |
 | 2.11 | 2026-04-27 | Blue Ridge Automation | **OI-21 design locked — Pausable LOT at Workstation as `Lots.PauseEvent`, not a `WorkOrderStatus` extension.** Follow-up to the v2.10 Decision-with-addition that left four open questions for Claude + Jacques. Decision body rewritten with the locked design: pause is a `(Lot, Location)` event recorded in a new append-only `Lots.PauseEvent` table mirroring `Quality.HoldEvent`. Pause is orthogonal to `WorkOrderStatus`, `OperationStatus`, and `LotStatusCode` — no enum extension on any of those. The same LOT MAY be paused at multiple Cells simultaneously (Machining + Assembly partial-progress); filtered UNIQUE blocks duplicate **open** pauses for `(LotId, LocationId)` only. **No auto-prompt** when starting a different LOT at the same Cell (rationale: Assembly auto-loads from upstream Machining FIFO — an unconditional resume prompt would interrupt the normal flow). Every workstation screen surfaces a **Paused-LOT indicator** (count + tap-through to detail list) for explicit operator-driven resume. **No TTL** — paused LOTs persist across shifts and operators; resume MAY be performed by a different operator from the one who paused. PausedReason and ResumedRemarks both optional. WO/Operation/Lot status do not transition on pause; no DowntimeEvent is written. Downstream commits in this revision: Data Model v1.9g (new `Lots.PauseEvent` table contract), FDS v0.11h (FDS-05-038 NEW under §5.3), ERD Lots tab. SQL deferred to Arc 2 Phase 1 alongside the rest of the Lots schema CREATE — procs `Lots.LotPause_Place / _Resume / _GetByLocation / _GetCountsByLocation`. No count changes to the Resolved/InReview/Open totals (OI-21 was already counted Resolved in v2.10 — this is a body refinement that closes the four open design questions). |
 | 2.10 | 2026-04-24 | Blue Ridge Automation | **Jacques OIR review annotations applied.** Jacques annotated v2.8 of this register and returned it; this revision folds every inline "Decision (4/24/2026):" note back into the register source with matching status changes. 17 items moved Resolved (OI-02, -04, -05, -08, -12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -32b). 2 UJs closed (UJ-02, UJ-04). Several carry modifications that trigger downstream data-model / FDS / ERD updates: **OI-12** — `MaxParts` reclassified as a `Parts.Item` attribute (not `ContainerConfig`). **OI-17** — tray-divisibility reclassified as a Finished-Good Part attribute. **OI-18** — `Parts.ItemLocation` extended to support Area / WorkCenter / Cell hierarchy (not Cell-only) with compatibility validation cascading up the hierarchy at check-in. **OI-16** — adds expected PLC confirmation BIT and a new Terminal-scoped `LocationAttribute` toggling a "Confirm Completion" button style (large button on designated lines vs passive popup). **OI-21** — adds a **Pausable WorkOrder** concept (resume prompt on starting a new job while one is paused). **OI-23** — derivation implemented as a view (not materialized columns). **OI-32b** closed: `Parts.ItemType` suffices; no Material Classes table. **OI-32** remains open — Jacques challenged the framing; clarification response logged in Decision narrative. **OI-08** closes with new terminal-mode-by-assignment rule: Terminal assigned to a WorkCenter → Dedicated + no location scan; Terminal assigned to an Area → Shared + location selection is the first step of every interaction. Count shifts: Resolved 5 → 22, In Review 6 → 1 (OI-07 only, mid-revision), Open 20 → 8, Part B Resolved 4 → 6, Part B In Review 3 → 2, Part B Open 12 → 10 (UJ-02 and UJ-04 closed). **UJ insufficiency noted but not addressed this revision** — Jacques flagged that the UJ entries lack the options/impact depth of the OI entries; a separate enrichment pass is queued. **Downstream doc integration queued as a list (data model, FDS, ERD, Arc 2 Plan) but not executed in this commit** — each "Section needs Integrated into other Docs" note from Jacques becomes its own targeted commit. |
@@ -833,7 +834,21 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 **Maps to:** (interacts with OI-09 sublot addenda)
 **References:** FDS-05-008 through FDS-05-011; FRS 3.9.12, 2.1.4, 2.2.5
 
-**Decision:** Auto-split on arrival at machining, defaulting to 50/50, with operator override. Sublots treated via `Lots.LotGenealogy` (relationship = Split). Needs review with Ben, and reconciliation with the sublot pattern now in OI-09 addenda.
+**Description:** When a LOT arrives at Machining IN, the sublot pattern (FDS-05-022) lets the operator split the parent into N machining sublots that fill independently from there. The open question is the **trigger** — does the system auto-prompt the split on every arrival, or wait for the operator to explicitly initiate one when they decide they need it?
+
+**Options:**
+
+| Option | Behavior | Impact |
+|---|---|---|
+| **A — Auto-prompt 50/50** (current proposed direction) | Every Machining IN scan opens a split confirmation dialog with an editable 50/50 default. Operator confirms, adjusts, or cancels. | Simplest if most parts split. Adds friction for parts that never do. Aligns with FDS-05-009 auto-split workflow as written. |
+| **B — Operator-triggered only** | No auto-prompt. Operator selects "Split" from a menu when needed. | Cleaner UX for parts that don't split. Risk of forgetting to split. |
+| **C — Per-Item conditional** | `Parts.Item` carries a `MachiningAutoSplit BIT` flag. Per-Item determines whether the dialog auto-opens. | Most flexible but introduces a new per-Item config field — adds engineering setup burden. |
+
+**Recommended direction:** A initially (already coded into FDS-05-009). Evolve to C if Ben's feedback shows certain parts never split.
+
+**What's needed to decide:** Ben's input on which Machining workflows split vs run through whole. Specifically: does every part that hits Machining IN get split, or only some? If only some, by what rule?
+
+**Decision (existing):** Auto-split on arrival at machining, defaulting to 50/50, with operator override. Sublots treated via `Lots.LotGenealogy` (relationship = Split). Needs review with Ben, and reconciliation with the sublot pattern now in OI-09 addenda.
 
 ---
 
@@ -890,7 +905,21 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 **Blocks:** Sort Cage screen
 **References:** FDS-07-018; FRS 2.1.10, 2.2.7
 
-**Decision:** Highest traceability-loss risk of any sort scenario. Needs customer discussion. Schema supports update-in-place via `ContainerSerialHistory` but the business rule is undefined.
+**Description:** At the Sort Cage, parts from one container can be re-sorted into a new container — for example, a held container is opened, parts are re-inspected, and good parts move to a fresh container while bad parts route to scrap. The serialized parts (those with laser-etched serial numbers) need to keep their original LOT/genealogy provenance while gaining new container associations. This is the highest traceability-loss risk in the system: getting it wrong loses Honda's part-by-part trace.
+
+**Options:**
+
+| Option | Storage shape | Impact |
+|---|---|---|
+| **A — Update-in-place + history table** (current direction, schema in place) | `Lots.SerializedPart.ContainerId` is updated to point at the new container. A `Lots.ContainerSerialHistory` row records the old `ContainerId` + the move event (`MovedAt`, `MovedByUserId`, reason). | Cleanest for "where is serial X now?" queries — the SerializedPart row always reflects current position. Audit trail in append-only ContainerSerialHistory. Schema already supports this. |
+| **B — Soft-end + re-create** | The original `SerializedPart` row gets `DeprecatedAt`; a new row is INSERTed with the same `SerialNumber` but a new `ContainerId`. Both rows persist. | Preserves immutability of the original row. Query "where is serial X now?" becomes "give me the active row." Adds complexity — every read query must filter `DeprecatedAt IS NULL`. |
+| **C — Cascading bulk move** | `Lots.Container_Resort` proc moves all serials from container A to container B in a single transaction; same A pattern at the row level but operationally batched. | Faster operationally for bulk re-sorts. Same row-level semantics as A. |
+
+**Recommended direction:** A (update-in-place + ContainerSerialHistory). Already supported by schema. The `SerializedPart.UpdatedAt` + the append-only history table preserves the audit trail without splitting the SerializedPart row into multiple lifecycle records. C is a minor proc-layer optimization — `Container_Resort` can be added in Arc 2 Phase 7 if bulk re-sorts prove common.
+
+**What's needed to decide:** MPP Quality + Honda compliance affirmation that update-in-place satisfies traceability requirements (the typical Honda question is "show me every container this serial has ever been in" — answerable via `ContainerSerialHistory` join). Operational walk-through: confirm Sort Cage operators understand what re-sort does to the serial trail. Edge case: serial moves to a container, then that destination container is voided — what's the right next step? (Likely: another move event + container void event.)
+
+**Decision (existing):** Highest traceability-loss risk of any sort scenario. Needs customer discussion. Schema supports update-in-place via `ContainerSerialHistory` but the business rule is undefined.
 
 ---
 
@@ -908,10 +937,25 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **Priority:** HIGH
 **Blocks:** Production tracking architecture
-**Maps to:** OI-07
+**Maps to:** OI-07 (corrected 2026-04-24 — single `Production` WO type)
 **References:** FDS-06-022 through FDS-06-024; FRS 3.1.5, 3.10.1, 3.10.2, 3.10.5; Spark Dep. B.5
 
-**Decision:** Pending Ben's input on WO triggers, span (per-operation vs. per-route), and optional ERP derivation path. Now coupled to the three-WO-type model from OI-07 revised.
+**Description:** When does a `Production` WO get auto-created, what does it span, and does it ever surface to the operator? OI-07's correction (2026-04-24) settled that there's only one active WO type (`Production`, MVP-LITE, invisible to operators). What remains open is the **trigger** and **span**.
+
+**Options:**
+
+| Option | Trigger | Span | Impact |
+|---|---|---|---|
+| **A — Per-LOT** (current proposed) | Auto-create at `Lot_Create` | One WO per LOT, covers the LOT's full route | Matches MVP-LITE. Simplest. WO is purely bookkeeping — never queried by operators. ProductionEvents reference `WorkOrderOperationId` for the route step they ran under. |
+| **B — Per-route-run** | Auto-create at the start of a Cell-level Production run | One WO covers all LOTs of a part on a single route during one continuous run | Closer to ERP-style WO. Easier ERP integration. Harder to attribute individual LOTs to individual WOs (becomes 1:N). |
+| **C — Per-operation** | Auto-create per LOT per RouteStep | One WO per (LOT, RouteStep) | Cardinality explosion. ProductionEvent already captures this granularity via `WorkOrderOperationId`. WO becomes redundant. |
+| **D — ERP-derived** | Macola pushes WOs into MES on a queue | One WO per ERP work order | Tight ERP coupling. Adds an integration we don't currently need. Requires MPP IT engagement. |
+
+**Recommended direction:** A. Already in design (FDS-06-022 / FDS-06-024). Operators never see WOs; they exist for ProductionEvent attribution and future Maintenance/Demand WO hooks (OI-07 corrected). If MPP later wants ERP-derived WOs, B or D can be added without breaking A — `Workorder.WorkOrder.WorkOrderTypeId` is a discriminator the future taxonomy slots into.
+
+**What's needed to decide:** Ben's confirmation that operators truly do not need WO visibility (which OI-07 already implies but was originally pending UJ-07). Confirmation from MPP IT that Macola does not push or expect to receive `Production` WOs from the MES — if it does, A may need to coexist with D.
+
+**Decision (existing):** Pending Ben's input on WO triggers, span (per-operation vs. per-route), and optional ERP derivation path. Now coupled to the three-WO-type model from OI-07 revised.
 
 ---
 
@@ -920,9 +964,23 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 **Priority:** HIGH
 **Blocks:** LOT merge screen
 **Maps to:** OI-05
-**References:** FDS-05-012; FRS 3.9.13
+**References:** FDS-05-012, FDS-05-025..030; FRS 3.9.13
 
-**Decision:** Configurable per part or die / cavity. Rules now partially supplied (rank compatibility, post-sort only, FIFO-by-cavity). Full die-rank matrix owed by MPP Quality.
+**Description:** Two LOTs of the same part can sometimes be merged into one (combining piece counts). The rules for *when* this is allowed are partially defined in OI-05 (post-sort only, same part, die-rank compatibility). The remaining open question is **how the rules are encoded** (proc-enforced vs configurable) and **what happens at the supervisor-override edge case** (when rank matrix incomplete).
+
+**Options:**
+
+| Option | Encoding | Impact |
+|---|---|---|
+| **A — Hard-coded rules + supervisor override** (current direction) | Rules in `Lots.Lot_Merge` proc: same `ItemId`, post-sort only (FDS-05-025), `Tools.DieRankCompatibility` lookup or supervisor AD elevation (FDS-05-027), no `Hold` × `Good` mixing (FDS-05-026), piece counts additive. | Simplest. Enforcement at proc layer, not UX. Supervisor override per FDS-04-007 unblocks edge cases without code change. Awaits S-08 die rank matrix from MPP Quality. |
+| **B — Per-Item configurable rules** | New `Parts.Item.MergeRules` JSON column or junction table. Each Item carries its own merge eligibility flags. | Maximum flexibility. Per-Item engineering setup burden. Most rules are universal (post-sort, same part), so per-Item granularity is overkill for them. |
+| **C — Per-route configurable** | `RouteTemplate` row carries merge-eligible flag per RouteStep. | Couples merge to route. Awkward — merge is a LOT operation, not a route step. |
+
+**Recommended direction:** A — already in design (OI-05 v0.9 FDS rewrite). Universal rules in proc; per-pair compatibility in `Tools.DieRankCompatibility`; supervisor override for edge cases. Empty-matrix behavior: cross-die merges reject with a clear message until matrix populated; supervisor override always works as the escape hatch.
+
+**What's needed to decide:** S-08 die rank compatibility matrix from MPP Quality (now tracked in seeding registry — not a build blocker). Operator validation of supervisor-override workflow UX (Sort Cage scenario where supervisor approves the cross-die merge while operator waits at terminal). MPP Quality + supervisor walkthrough.
+
+**Decision (existing):** Configurable per part or die / cavity. Rules now partially supplied (rank compatibility, post-sort only, FIFO-by-cavity). Full die-rank matrix owed by MPP Quality (S-08).
 
 ---
 
@@ -930,9 +988,24 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **Priority:** MEDIUM
 **Blocks:** Assembly material ID screen
+**Maps to:** OI-32 (Material Allocation operator screen — currently challenged by Jacques, in clarification)
 **References:** FDS-06-011; FRS 3.10.6, 3.16.1; FRS 3.4.2 (BOM structure)
 
-**Decision:** BOM check on scan-in — reject substitutes. Pending customer validation.
+**Description:** When an operator at an Assembly Cell scans a component LOT into the workstation, the MES must validate that the part is a legitimate component on the BOM for the parent Assembly being built. The intent is to prevent substitution errors — wrong sub-assembly going into the finished product. The open question is the **strictness** of the check.
+
+**Options:**
+
+| Option | Validation rule | Impact |
+|---|---|---|
+| **A — Strict BOM check, no override** (current direction) | Only the exact `ChildItemId` on the active BOM passes. Wrong-part scans are rejected outright. Substitutions require an explicit BOM revision (`Bom_CreateNewVersion` → `Bom_Publish`). | Cleanest, lowest substitution risk. Honda compliance wins. Operator friction if substitutions are routine — BOM revision is heavyweight for a temporary substitute. |
+| **B — Strict + substitute table** | New `Parts.ItemSubstitute` junction (`PrimaryItemId`, `SubstituteItemId`, `EffectiveFrom`, `DeprecatedAt`). Scan validates against `BomLine.ChildItemId` OR matching `ItemSubstitute` row. | Per-part substitution flexibility without BOM revision. Adds engineering setup burden — someone maintains the substitute list. Potentially abused — substitutes added "temporarily" become permanent. |
+| **C — Strict + supervisor override** | Strict by default; on a wrong-part scan, supervisor AD elevation (FDS-04-007) unlocks a one-shot override that records the substitution event in `Audit.OperationLog` for traceability. | Catches abuse via audit trail — every substitution has a supervisor name attached. No persistent config. Honda likely accepts this if the override events are reviewable. |
+
+**Recommended direction:** A initially (already in design). C as the escape hatch for legitimate emergencies (right part not available, supervisor approves substitute). Avoid B — substitution should be the BOM author's call (engineering / quality), not a runtime configuration. If MPP later confirms that certain parts have routine substitutes (rare in Honda Tier 2), revisit B.
+
+**What's needed to decide:** MPP confirmation that substitutions are rare and BOM revision is the right path for permanent substitutes. Honda compliance affirmation. If C accepted, design the supervisor-override UX (PIN entry mid-scan, override-event audit row).
+
+**Decision (existing):** BOM check on scan-in — reject substitutes. Pending customer validation.
 
 ---
 
@@ -940,10 +1013,25 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **Priority:** MEDIUM
 **Blocks:** Downtime, container, production screens
-**Maps to:** OI-03
+**Maps to:** OI-03 (resolved — event-derived runtime)
 **References:** FDS-09-009, FDS-09-010; FRS 3.15.2
 
-**Decision:** Pending customer discussion. Now partially addressed by OI-03's event-derived runtime model — shift boundaries become pure timestamps, downtime events can freely span them.
+**Description:** Production runs continuously across shift boundaries. Downtime events, container fills, and LOT progressions in flight at shift change need to be handled without forcing the operator (or the system) to artificially close and reopen them. The OI-03 resolution already establishes the underlying model (shift boundaries are pure timestamps; events span freely; OEE math slices post-hoc). What remains open is the **operator UX expectations** at the boundary itself.
+
+**Options:**
+
+| Option | UX behavior at boundary | Impact |
+|---|---|---|
+| **A — Events span naturally, no UX disruption** (current direction per OI-03) | Open downtime events / containers / LOTs persist across the boundary unchanged. Outgoing operator's session handover is per-terminal (initials re-confirmation per FDS-04-009). OEE reports slice events by `ShiftSchedule` windows at query time. | Cleanest — no artificial event splitting. Operators see continuous state. OEE math handles the slicing. Already in OI-03 closed model. |
+| **B — Auto-close + auto-reopen at boundary** | At shift transition, every open event is closed (`EndedAt = boundary`) and a new event auto-opened in the next shift with the same context. | Easier OEE math (events are pre-sliced). Loses event continuity — a 12-hour downtime becomes 2 events with awkward genealogy. Operator may see "new" event when nothing physically changed. |
+| **C — Operator-driven boundary close** | Operator must close any open events as part of their shift-end checklist; incoming operator opens new ones. | Operator burden. Doesn't match how shifts actually transition (operators leave the floor, machines keep running). |
+| **D — Hybrid: events span, but optional shift-end summary** | A still applies. At shift end, the outgoing operator gets a one-screen summary of in-flight events (downtimes, containers, LOTs) for handover-acknowledgement purposes. No auto-close. | Best of both worlds. Adds a UJ-level summary screen — small UX addition. Audit trail captures the handover acknowledgement. |
+
+**Recommended direction:** D — events span (A) plus an optional shift-end summary screen for handover. The summary screen reads `Workorder.ProductionEvent` + `Oee.DowntimeEvent` for the outgoing operator's terminal at shift close and presents a quick scan of state. No data model change required (purely a Perspective view); just a per-station summary query.
+
+**What's needed to decide:** Customer confirmation on OEE reporting expectations (slice-by-shift query is the OI-03 baseline). Operator + Supervisor walk-through on whether the shift-end summary screen has value (D enhancement) — if not, A suffices. Couples to UJ-11 (paper transition: legacy paper sheets are the current shift handover artifact).
+
+**Decision (existing):** Pending customer discussion. Now partially addressed by OI-03's event-derived runtime model — shift boundaries become pure timestamps, downtime events can freely span them.
 
 ---
 
@@ -951,9 +1039,25 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **Priority:** HIGH
 **Blocks:** All production screens
+**Maps to:** OI-08 addenda (tablet design input), OI-31 (single-line vs full-cutover rollout shape)
 **References:** FDS-15-007; FRS 5.6.6; Appendix F (Productivity DB)
 
-**Decision:** Pending discussion with Ben. Question is whether some stations stay paper-first until tablets are deployed (OI-08 addenda).
+**Description:** When MES go-live happens, does every station cut over from paper data entry on the same day, or do some stations stay on paper temporarily? The decision interacts with terminal availability (some Die Cast stations are pending tablet deployment per OI-08 addenda) and the rollout shape (OI-31 — Ben owes the call between single-line, full-cutover, or shadow).
+
+**Options:**
+
+| Option | Cutover shape | Impact |
+|---|---|---|
+| **A — All-at-once** | Every station goes digital on day 1. Paper sheets become invalid. | Cleanest data — single source of truth from go-live. Highest training and operations risk. Requires every terminal in place before flip. |
+| **B — Phased per station** | Stations not yet equipped (e.g., Die Cast pending tablets) stay on paper until terminal arrives; equipped stations go digital. Reconciliation tooling spans the gap. | Real-world — matches actual deployment readiness. Adds reconciliation complexity (paper logs vs MES events) for the transitional weeks. |
+| **C — Dual-write (parallel run)** | Every operator records on both paper AND MES for N weeks. Reconciliation report flags discrepancies. | Highest data confidence (catches MES bugs against paper truth). Doubles operator burden during transition — high training cost and potential operator pushback. |
+| **D — Single-line pilot** | One Assembly Line goes fully digital first; other lines stay on paper until pilot validates. (Ben's OI-31 single-line option.) | Lowest risk — bugs caught on a single line before plant-wide. Longest timeline to full benefit. Operationally fragile if pilot line operators can't visit other lines. |
+
+**Recommended direction:** B with a preferred D-then-B sequence — single-line pilot (per OI-31 if Ben picks single-line) followed by phased rollout to remaining stations as terminals are deployed. Paper-only stations get a short reconciliation tool to capture missed events post-hoc into MES.
+
+**What's needed to decide:** Ben's OI-31 rollout shape decision (single-line vs full-cutover vs shadow — memo at `Meeting_Notes/2026-04-24_OI-31_Single-Line_Deployment_Impact.md`). MPP IT joint deployment plan with station-by-station terminal-readiness timeline. Couples to UJ-19 (Productivity DB transition).
+
+**Decision (existing):** Pending discussion with Ben. Question is whether some stations stay paper-first until tablets are deployed (OI-08 addenda).
 
 ---
 
@@ -975,7 +1079,21 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 **Maps to:** OI-02
 **References:** FDS-06-014, FDS-03-017; FRS 3.6.6, 3.9.7; Appendix C
 
-**Decision:** Pending Ben — dual-mode closure logic per ContainerConfig (proposed: `ClosureMethod` + `TargetWeight`).
+**Description:** Container closure can be triggered by either piece count (operator confirms when N pieces reached) or scale weight (system reads weight from OmniServer scale, closes when target weight hit). Different parts use different methods. How does the MES determine which method applies?
+
+**Options:**
+
+| Option | Configuration | Impact |
+|---|---|---|
+| **A — Per-Item via ContainerConfig** (current direction, schema in place) | `Parts.ContainerConfig.ClosureMethod NVARCHAR ('Count' / 'Weight')` + nullable `TargetWeight DECIMAL`. Already added in v1.0 (Phase 4) proactively for OI-02. | Per-Part granularity matches how MPP defines container packing. Schema columns already present, just need procs and UX wired. Operator screen reads the flag and shows the appropriate UX (count vs weight readout). |
+| **B — Per-Cell** | Cell determines the method via LocationAttribute. Same part on different Cells could close differently. | Couples closure rule to physical Cell, not the part. Doesn't match how Honda specifies container packing rules (per part, not per location). |
+| **C — Operator selects at close time** | UI exposes both Count and Weight options; operator picks. | Operator burden + error risk. Counter-productive. |
+
+**Recommended direction:** A — schema already supports it from Phase 4 / OI-02 proactive addition. ContainerConfig is the natural home: it already captures `PartsPerTray` and `TraysPerContainer` for Count parts; `TargetWeight` extends it for Weight parts.
+
+**What's needed to decide:** MPP confirmation of which parts are weight-based vs count-based. This is part of S-05 (Parts master export — the MPP IT export should carry `ClosureMethod` + `TargetWeight` per part, or MPP supplies a separate two-column mapping). Engineering walk-through with Ben on weight-based UX (does the operator see live weight readout? auto-close on threshold? confirm-before-close?).
+
+**Decision (existing):** Pending Ben — dual-mode closure logic per ContainerConfig (proposed: `ClosureMethod` + `TargetWeight`).
 
 ---
 
@@ -985,7 +1103,21 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 **Blocks:** Die Cast production screen
 **References:** FDS-06-003; FRS 2.2.2; DCFM Paper Sheets
 
-**Decision:** Treat as downtime sub-category. `ShotCount` added to `DowntimeEvent`. Pending Ben's final confirmation.
+**Description:** Die Cast warm-up shots (the first N shots after a die change or extended downtime) are not production — they're scrap by design. The current paper-sheet practice records them as setup time + a shot count. The MES must capture both the time and the shot count without polluting `ProductionEvent` with non-production shots.
+
+**Options:**
+
+| Option | Storage | Impact |
+|---|---|---|
+| **A — DowntimeEvent + ShotCount** (current direction, v1.5 already shipped) | `Oee.DowntimeEvent` row with `DowntimeReasonTypeId = Setup` + `ShotCount INT NULL` column on the same row. | Reuses existing tables. Warm-up time stays in OEE downtime numerator. Shot count is queryable per setup event. Schema change already landed in Phase 8. |
+| **B — ProductionEvent + IsWarmup flag** | New `IsWarmup BIT` column on `ProductionEvent`; rows excluded from good-count aggregations. | Pollutes the production-event stream with non-production rows. Aggregation queries everywhere need a `WHERE IsWarmup = 0` filter. Pollution risk. |
+| **C — Dedicated WarmupEvent table** | New `Workorder.WarmupEvent` table — `LotId NULL`, `LocationId`, `ShotCount`, `StartedAt`, `EndedAt`, `OperatorId`. | Cleanest semantics. New table for a niche concept. Extra schema overhead. |
+
+**Recommended direction:** A — already shipped. Warm-up is operationally a setup downtime; the shot count is metadata on that downtime. No need for a separate event stream.
+
+**What's needed to decide:** Ben's final confirmation that warm-up tracking under `DowntimeEvent.ShotCount` matches operator practice. Edge case to validate: what happens if warm-up partially produces good shots (atypical but possible)? Currently those would be recorded on a separate `ProductionEvent` once production starts — the warm-up downtime closes when the operator transitions to production.
+
+**Decision (existing):** Treat as downtime sub-category. `ShotCount` added to `DowntimeEvent`. Pending Ben's final confirmation. Schema column shipped in Phase 8 migration `0009_phase8_oee_reference.sql`.
 
 ---
 
@@ -1006,7 +1138,22 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 **Blocks:** Serialized assembly screens
 **References:** FDS-06-009; Appendix C (OPC tag: `HardwareInterlockEnable`); Touchpoint Agreement §1.4
 
-**Decision:** Add a bypass flag to the data model and mark affected serials as "serial validation skipped." Pending discussion with Ben.
+**Description:** Serialized Assembly lines have a hardware interlock at the MIP (Machine Integration Panel) that gates the press cycle on a successful serial-validation handshake from the MES. Sometimes the operator needs to bypass the interlock — typical scenarios: vision-system fault recovery, MES connectivity loss, end-of-shift abandonment with parts mid-process. When bypass happens, those parts must be flagged for downstream traceability (Honda needs to know "this serial was made with validation skipped").
+
+**Options:**
+
+| Option | Storage | Impact |
+|---|---|---|
+| **A — BIT flag on `Lots.ContainerSerial`** (current direction, drafted v0.4.1) | `ContainerSerial.HardwareInterlockBypassed BIT NOT NULL DEFAULT 0`. Set to 1 by the production proc when bypass occurs. Per-serial precision. | Captures the affected serial directly. Aligns with the "this serial bypassed validation" semantic. Reports queryable per-serial. |
+| **B — BIT flag on `Workorder.ProductionEvent`** | `ProductionEvent.HardwareInterlockBypassed BIT`. Captures per-event (broader context — multiple serials may share an event). | Captures broader production context but fuzzier — if an event covers a batch of serials, a single bypass marks the whole batch ambiguously. |
+| **C — Both** | A + B; full traceability at both granularities. | Most defensive. Redundant — A is the authoritative per-serial mark, B's value is mainly for OEE downtime cross-reference (which `DowntimeEvent` already captures via `DowntimeReasonType = Equipment` if the bypass was triggered by an equipment fault). |
+| **D — Dedicated InterlockBypassEvent table** | New event table linking the bypass occurrence (operator, terminal, reason, affected serial range, bypass start/end timestamps). | Most expressive. New table for an edge-case concept — overhead high. |
+
+**Recommended direction:** A. Per-serial flag is the primary use case ("show me every serial made under bypass"). The trigger context (why bypass happened) is already capturable via existing `DowntimeEvent` + `Audit.OperationLog` writes — no need for a dedicated table.
+
+**What's needed to decide:** Ben's input on actual bypass triggering conditions and frequency. Specifically: (1) Is bypass operator-initiated, or supervisor-required? (2) Does it auto-clear after N events, or stays active until explicitly turned off? (3) What's the typical reason — vision fault, manual override, recovery? Couples to UJ-17 (vision/barcode confirmation conflicts can trigger bypass need). Honda compliance: confirm the serial-level flag satisfies their traceability requirement.
+
+**Decision (existing):** Add a bypass flag to the data model and mark affected serials as "serial validation skipped." Pending discussion with Ben.
 
 ---
 
@@ -1014,21 +1161,56 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **Priority:** MEDIUM
 **Blocks:** PLC-integrated production screens
-**Maps to:** OI-04
+**Maps to:** OI-04 (resolved — line-stop, 10-fail escalation, CRT workflow)
 **References:** FDS-10-003; FRS 3.16.9; Appendix C
 
-**Decision:** Pending Ben. Now coupled to OI-04 revised (line-stop, 10-fail escalation, CRT workflow).
+**Description:** Some Assembly stations confirm the part identity via Cognex vision OCR, others via barcode scan, and a few have both available. When both are present, what's the rule — both required (AND), either acceptable (OR), or single configured source per station? And how do conflicts resolve when one passes but the other fails?
+
+**Options:**
+
+| Option | Confirmation rule | Conflict handling | Impact |
+|---|---|---|---|
+| **A — Single configured source per Cell** (recommended) | Cell carries a `LocationAttribute` `ConfirmationMethod NVARCHAR ('Vision' / 'Barcode' / 'Both')`. Procs read the flag and validate per the configured source(s). | Edge cases (e.g., barcode unreadable but vision OK) require operator manual override (logged as bypass per UJ-16). | Simplest. One source of truth per Cell. Configured once at deployment. Matches actual line behavior — most lines have a single source available. |
+| **B — Both required when both available (AND)** | Cell with both vision and barcode requires both to confirm before the production event records. | Highest reliability — single fault hides nothing. Highest operator friction if either source is unreliable. Single sensor failure halts the line. |
+| **C — Either acceptable when both available (OR)** | If either vision or barcode confirms, the production event records. | Lowest friction. Lowest reliability — a single fault on one source hides issues from the other. |
+| **D — Vision authoritative + barcode reconciliation** | Vision is the primary; barcode is read on every cycle but only reconciled (logged for audit, not gating). Mismatches log a warning event. | Captures both sources' data without doubling the friction. Adds a reconciliation log entity. Useful only on lines where both are present and reliable. |
+
+**Recommended direction:** A — configured per Cell via LocationAttribute. Each line operator works with the source(s) actually present. Edge-case mismatches surface as 10-fail line stops per OI-04. If MPP later identifies lines where both sources are reliable and reconciliation is valuable, layer D on top of those specific Cells.
+
+**What's needed to decide:** Ben's input on actual line behavior — for each Assembly Cell with vision and/or barcode, which source(s) are present and operationally reliable. Walk-through for the few "both available" lines: would MPP value the AND rule (B) or accept the configured-source rule (A)? Couples to OI-04 (line-stop / 10-fail / CRT workflow already covers fail escalation).
+
+**Decision (existing):** Pending Ben. Now coupled to OI-04 revised (line-stop, 10-fail escalation, CRT workflow).
 
 ---
 
 ### UJ-18 — Event processing: sync vs. async — ⬜ Open
 
 **Priority:** HIGH
-**Blocks:** Every label-printing touchpoint
-**Maps to:** OI-01
+**Blocks:** Every label-printing touchpoint, all non-AIM external integrations
+**Maps to:** OI-01 (resolved — no outbox), UJ-04 (resolved — AIM uses pool pattern)
 **References:** FDS-01-006; FRS 3.17.4; Spark Dep. B.12
 
-**Decision:** FRS does not require the outbox pattern — just a log of all sent and received content (`Audit.InterfaceLog`). Pending Ben's validation of the direct-call-with-logging approach.
+**Description:** External integrations beyond AIM `GetNextNumber` (which is special-cased to the pool pattern per UJ-04) include: Zebra label printers, AIM `UpdateAim` (re-pack), AIM `PlaceOnHold` / `ReleaseFromHold`, future Macola pushes. What's the default integration pattern — synchronous direct call with logging, or asynchronous outbox with eventual consistency?
+
+**Options:**
+
+| Option | Pattern | Impact |
+|---|---|---|
+| **A — Sync direct call + InterfaceLog** (current direction per OI-01) | MES calls the external system inline; `Audit_LogInterfaceCall` writes the request/response to `Audit.InterfaceLog`; the calling proc waits for the response. | Simplest. Matches OI-01 resolution (no outbox). Single source of truth (InterfaceLog). Risk: slow integrations briefly block the calling operator. Acceptable for label print (fast) and Hold notifications (not on operator critical path). |
+| **B — Outbox pattern** | All outbound events written to a `Workorder.OutboxEvent` table; a background drain script picks them up and calls the external system. On failure, retry; on permanent failure, dead-letter. | Decouples MES from external availability. Adds operational complexity (outbox state machine, retry logic, dead-letter handling, drain monitoring). FRS does not require this. |
+| **C — Hybrid (per-integration choice)** | Sync for fast/critical-path (label print at container close); async outbox for slow/recoverable (AIM UpdateAim, Hold notifications). | Most operationally tuned. Adds inconsistency — two patterns in the codebase. Some calls already special-cased (UJ-04 AIM pool); piling more variants risks ad-hoc mess. |
+
+**Recommended direction:** A for everything except AIM `GetNextNumber` (which is already special-cased to the pool pattern via UJ-04). Sync direct call + InterfaceLog. The pool pattern is a *narrower* case of "buffered async" — applied surgically only where operator-blocking matters most (container close on the AIM line).
+
+**Per-integration confirmation:**
+- **Zebra label print:** Sync. Print failures (printer offline) surface as a clear operator error; reprint via FDS-07-009 once printer recovers.
+- **AIM `UpdateAim` (re-pack at Sort Cage):** Sync. Sort Cage operations are not time-critical to the same degree as Assembly close; brief AIM latency is acceptable.
+- **AIM `PlaceOnHold` / `ReleaseFromHold`:** Sync. Hold operations are quality-driven, not operator-critical.
+- **Future Macola pushes:** Sync, with InterfaceLog. If Macola becomes a critical-path integration later, revisit per integration.
+
+**What's needed to decide:** Ben's validation of A as the default. Confirm acceptable label-print latency budget. Confirm Hold operations can tolerate a few seconds of sync AIM call.
+
+**Decision (existing):** FRS does not require the outbox pattern — just a log of all sent and received content (`Audit.InterfaceLog`). Pending Ben's validation of the direct-call-with-logging approach.
 
 ---
 
@@ -1036,9 +1218,31 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **Priority:** HIGH
 **Blocks:** All production screens, reporting
+**Maps to:** UJ-11 (paper transition), OI-30 (Reports tile enumeration)
 **References:** FDS-15-007; FRS 5.6.6; Appendix F (Productivity DB); DCFM / MS1FM Paper Sheets
 
-**Decision:** Pending customer discussion. Four PD reports must be replicated; real-time entry at the machine is the default but some stations may need a paper-first-then-enter bridge.
+**Description:** The legacy Productivity Database (PD) is a custom Excel-and-flat-file system that operators / supervisors use today for production summaries, downtime aggregates, and shift reports. The MES replaces it. Four named PD reports must be reproduced. The open question is the **transition shape** — do operators dual-enter for a period, or hard-cut?
+
+**Options:**
+
+| Option | Transition shape | Impact |
+|---|---|---|
+| **A — Hard cutover** | PD shuts down on MES go-live; all entry shifts to terminals; PD reports recreated as MES reports. | Cleanest reporting from day 1. Highest training burden — no fallback if MES has gaps. Operator pushback risk. |
+| **B — Dual-run with reconciliation** | PD continues for N weeks alongside MES. Reconciliation tooling compares the two. Cutover when discrepancies hit acceptable threshold. | Risk reduction at cost of dual entry. Doubles operator burden during overlap. Validates MES data accuracy against the legacy ground truth. |
+| **C — Phased per station** | Each station cuts over individually as terminals deploy and operators are trained. Couples to UJ-11. | Real-world operational. Adds complexity — some stations on PD, others on MES, until full rollout completes. |
+| **D — Reports-first** | MES reporting layer goes live first (reading PD's data store), operators continue with paper/PD entry. Then operator-entry stations cut over. | Low-risk reporting validation. Doesn't address the entry-side transition (which is what UJ-11 is about). |
+
+**Recommended direction:** C, mirroring UJ-11's recommended phased rollout. PD lives at any given station as long as paper does at that station. The four PD reports get implemented in MES reporting as MES data accumulates per station; until each station is fully on MES, its PD report falls back to the paper source.
+
+**Four PD reports — needs enumeration from MPP** (couples to OI-30 Reports tile discovery item):
+1. _(Pending — MPP names the four)_
+2.
+3.
+4.
+
+**What's needed to decide:** Customer (likely Ben + Production Control) names the four PD reports + the data sources behind them; MES reporting subsystem replicates them. Couples to OI-30 (top-level Reports tile enumeration is itself a discovery item awaiting MPP input). Couples to UJ-11 (paper transition). Couples to OI-31 (rollout shape).
+
+**Decision (existing):** Pending customer discussion. Four PD reports must be replicated; real-time entry at the machine is the default but some stations may need a paper-first-then-enter bridge.
 
 ---
 
