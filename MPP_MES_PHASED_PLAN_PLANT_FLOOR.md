@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2m
+**Document ID:** MPP-PLAN-ARC2-v0.2n
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2m (2026-04-27)
+**Version:** 0.2n (2026-04-27)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2n | 2026-04-27 | Blue Ridge Automation | **VP-8: Plan Phase 8 (Downtime + Shift Boundary) — UJ-10 Option D closure + shift-end summary.** UJ-10 closed 2026-04-27 with Option D — events span shift boundaries naturally per OI-03 (event-derived availability). The v0.1 carryover-rule alternatives (CloseAtEnd / CarryOpen / AssociateWithStartShift) and the `DowntimeEvent_CarryAcrossShift` proc are **retired** — there is no auto-close, no carryover code table, no boundary-driven mutation. `Shift_End` simply updates `Oee.Shift.ActualEnd`; open `DowntimeEvent` rows remain open and end whenever the operator (or PLC) closes them. New: FDS-09-015 shift-end summary screen — read-only Perspective view binding three queries (open `DowntimeEvent`, open `Lots.PauseEvent`, in-process LOTs at the operator's Cell via `LotMovement` + `v_LotDerivedQuantities`); operator-acknowledgement logged to `Audit.OperationLog` as `ShiftHandoverAcknowledged`. UJ-14 closure (DowntimeEvent.ShotCount only — no ProductionEventValue.WarmupShotCount) confirmed throughout. Migration filename updated. |
 | 0.2m | 2026-04-27 | Blue Ridge Automation | **VP-7: Plan Phase 7 (Hold + Sort Cage + Shipping + AIM) — UJ-04 topup loop + UJ-18 safety sweep + UJ-05 default.** Phase 7 takes ownership of the AIM pool topup loop (Gateway timer ~30s per FDS-07-010), pool alarms (warning/critical/exhausted per FDS-07-010b), pool config CRUD (FDS-07-010c). Phase 7 also delivers the print-job safety sweep timer (every 5min, FDS-07-006b) and stranded-prints alarm at 5. UJ-05 default direction (update-in-place + `Lots.ContainerSerialHistory`) committed for the schema CREATE — table delivers in this phase; finalization waits on MPP Quality + Honda compliance affirmation. AIM `PlaceOnHold` / `ReleaseFromHold` / `UpdateAim` remain sync direct-call with `InterfaceLog` (per UJ-18 — sync still allowed for inter-MES DB calls and for AIM operations not on the operator critical path; the pool-pattern special case applies to `GetNextNumber` only). Open Items table refreshed. Migration filename updated. |
 | 0.2l | 2026-04-27 | Blue Ridge Automation | **VP-6: Plan Phase 6 (Assembly + MIP + Container Pack) — major rewrite for UJ-04 / UJ-09 / UJ-13 / UJ-16 / UJ-17 / UJ-18 / OI-16.** Container_Complete reframed for UJ-04 pool model — sync claim from `Lots.AimShipperIdPool` (no inline AIM call); empty-pool hard fail (FDS-07-010a). ShippingLabel_Print + LotLabel print path reframed for UJ-18 Gateway-script-async — atomic close writes ShippingLabel row with `PrintedAt=NULL` + sendMessageAsync('print-shipping-label', {ShippingLabelId}); 3 attempts × 2s gap inline retry; per-terminal banner on PrintFailedAt; safety sweep at 5min. OI-16 PLC `CompletionConfirmed` BIT + Terminal `RequiresCompletionConfirm` LocationAttribute drive auto-finish gate. UJ-09 strict-BOM + supervisor AD-elevated one-shot override at material scan-in (FDS-04-007 + FDS-06-011 extension). UJ-17 `ConfirmationMethod` LocationAttribute per Cell (Vision/Barcode/Both). UJ-13 ContainerConfig.ClosureMethod confirmed (already in Phase 4 schema; no new code table needed). UJ-16 `HardwareInterlockBypassed` BIT on `Lots.ContainerSerial` ONLY (Option A — single location, not both). Open Items table refreshed. Migration filename updated. |
 | 0.2k | 2026-04-27 | Blue Ridge Automation | **VP-5: Plan Phase 5 (Machining with Sub-LOT Split) — checkpoint-shape ProductionEvent + OI-18 cascade.** `IsPieceCountIncrement` flag on `Parts.OperationTemplate` retired — Lot piece count is now derived from `Lots.v_LotDerivedQuantities` view (OI-23 / Phase 2) at read time; no ALTER needed on `OperationTemplate`. `MachiningOut_Record` signature updated to use cumulative `ShotCount`/`ScrapCount` per v0.2i checkpoint shape (no `@GoodCount`/`@NoGoodCount`). Movement Scan Screen scan-in cascade (OI-18) applies at Machining IN — pulled from Phase 4 reusable pattern. Sublot split is the canonical pattern per OI-09 / FDS-05-022 (Machining-only — Die Cast cavity-parallel LOTs are peers, not sublots). UJ-03 sublot trigger still In Review (Ben pending). Migration filename updated. |
@@ -1948,20 +1949,20 @@ Target: 120–160 passing tests in suite 0019.
 
 ## Data Model Changes
 
-**Migration `sql/migrations/versioned/0017_phase8_downtime_shift.sql`:**
+**Migration `sql/migrations/versioned/<next_unclaimed>_arc2_phase8_downtime_shift.sql`** (number TBD — likely `0023` after VP-7 Phase 7 migration).
 
-- Seed `Audit.LogEventType` entries: `DowntimeStarted`, `DowntimeEnded`, `DowntimeReasonAssigned`, `ShiftBoundaryCarryover`.
-- If not already present from Arc 1: seed `Oee.DowntimeSourceCode` rows (`Manual`, `PLC`). (These were seeded in Arc 1 Phase 8; verify.)
-- If Phase 0 produced a `ShiftBoundaryCarryoverRuleCode` or similar code table, seed its rows here.
+- Seed `Audit.LogEventType` entries: `DowntimeStarted`, `DowntimeEnded`, `DowntimeReasonAssigned`, **`ShiftHandoverAcknowledged`** (UJ-10 Option D shift-end summary).
+- `Oee.DowntimeSourceCode` rows (`Manual`, `PLC`) already seeded in Arc 1 Phase 8 — verify.
+- **No `ShiftBoundaryCarryoverRuleCode` code table** — UJ-10 closed Option D (events span naturally; no carryover logic needed).
 
-**Tables used:** `Oee.DowntimeEvent`, `Oee.DowntimeSourceCode`, `Oee.DowntimeReasonCode`, `Oee.DowntimeReasonType`, `Oee.Shift`, `Oee.ShiftSchedule`, `Audit.OperationLog`, `Audit.InterfaceLog` (PLC events).
+**Tables used:** `Oee.DowntimeEvent`, `Oee.DowntimeSourceCode`, `Oee.DowntimeReasonCode`, `Oee.DowntimeReasonType`, `Oee.Shift`, `Oee.ShiftSchedule`, `Lots.PauseEvent` (Phase 2 — read for shift-end summary), `Lots.v_LotDerivedQuantities` (Phase 2 — read for in-process LOTs in summary), `Audit.OperationLog`, `Audit.InterfaceLog` (PLC events).
 
 ## Open Items Affecting This Phase
 
-| Item | Fallback / Resolution |
+| Item | Status |
 |---|---|
-| UJ-10 shift boundary carryover | Phase 0 decision applied in `Shift_End` and in the boundary ticker. Fallback: leave open `DowntimeEvent` rows open across shift boundaries (no auto-close); supervisor can manually close if stale. |
-| UJ-14 warm-up shots | Captured on `DowntimeEvent.ShotCount` when `DowntimeReasonType='Setup'`. Already seeded schema — Phase 8 ensures the procs honor it. |
+| **UJ-10** Shift boundary handling | **Closed (2026-04-27, Option D).** Events span boundaries naturally per OI-03 — `Shift_End` does NOT auto-close open `DowntimeEvent` rows; the v0.1 carryover-rule alternatives are retired. New: optional shift-end summary screen (FDS-09-015) — read-only Perspective view; operator-acknowledgement logged to OperationLog. |
+| **UJ-14** Warm-up shots | **Closed (2026-04-27, Option A).** Captured on `Oee.DowntimeEvent.ShotCount` when `DowntimeReasonType='Setup'` — schema already in v1.5 / Phase 8. **NOT** also captured on ProductionEventValue.WarmupShotCount (per UJ-14 closure — Option A is single-source). Phase 3's OperationTemplate seed list does NOT include `WarmupShotCount` as a DataCollectionField. |
 
 ## State & Workflow
 
@@ -2011,23 +2012,41 @@ The PLC on a machine exposes a `MachineStopped` tag. A per-machine Gateway scrip
 5. When operator selects a reason and submits: Perspective calls `DowntimeReasonCode_Assign(@DowntimeEventId, @DowntimeReasonCodeId, @ShotCount NULL, @AppUserId, @TerminalLocationId)`. Proc validates reason not already assigned; updates the row; audit.
 6. On `MachineStopped=0` edge: Gateway calls `DowntimeEvent_End`. Reason may still be NULL — that's allowed per B7.
 
-### Shift boundary carryover
+### Shift boundary handling — UJ-10 Option D (revised v0.2n)
 
-At shift boundary (e.g., 14:00 Mon–Fri), the `ShiftBoundaryTicker` (Phase 1) fires. Per Phase 0's UJ-10 rule, one of these behaviors applies:
+UJ-10 closed 2026-04-27 with **Option D — events span boundaries naturally, plus an optional shift-end summary screen.**
 
-- **Close open downtimes at shift end.** Any open `DowntimeEvent` rows have `EndedAt = shift's ActualEnd` written; new events started for the new shift if the machine is still down (the PLC watcher will restart on the next edge).
-- **Carry open downtimes across.** Open `DowntimeEvent` rows stay open. When they eventually end, they may span shift boundaries. OEE calculation (FUTURE) would proration by shift.
-- **Hybrid — open downtime associated with the starting shift.** Assign `ShiftId` on the DowntimeEvent when started; reports group by ShiftId regardless of clock time.
+At shift boundary (e.g., 14:00 Mon–Fri), the `ShiftBoundaryTicker` (Phase 1) fires:
 
-Phase 0 chooses. Plan text codifies. Phase 8 delivers the behavior the chosen rule specifies.
+- `Oee.Shift_End` updates `Oee.Shift.ActualEnd` for the outgoing shift instance.
+- `Oee.Shift_Start` creates a new `Oee.Shift` row for the incoming shift schedule.
+- **Open `Oee.DowntimeEvent` rows are NOT touched.** They remain open with `EndedAt IS NULL`. They end whenever the operator (or PLC) closes them — possibly hours into the next shift.
+- **Open `Lots.PauseEvent` rows are NOT touched** — same model (per OI-21 Option D).
+- OEE calculation (FUTURE) slices events by `ShiftSchedule` windows at query time, prorating across boundaries as needed.
 
-### Warm-up / setup shot capture
+The v0.1 carryover-rule alternatives (CloseAtEnd / CarryOpen / AssociateWithStartShift) are retired; the `Oee.DowntimeEvent_CarryAcrossShift` proc is **not delivered** — UJ-10 closure makes it moot.
 
-Setup-type downtime (tooling changeover) involves warm-up shots. Per UJ-14:
+### Shift-end summary screen (FDS-09-015, NEW v0.2n)
 
-1. When starting a Setup-type downtime, the operator may capture the initial `ShotCount` (or 0).
-2. Warm-up shots run during downtime. They're captured separately from production shots — either as `ProductionEventValue.WarmupShotCount` on the associated Die Cast template (Phase 3 provides the field), or as an incremented counter on the open DowntimeEvent.
-3. When ending the Setup downtime, the final `ShotCount` is recorded on the DowntimeEvent. Good production shots that follow are written via normal `ProductionEvent_Record` calls.
+At shift end (or when the outgoing operator triggers a "Handover" action from the terminal), the MES presents a one-screen summary of in-flight state at that Terminal. Read-only Perspective view binding three queries — no schema additions required:
+
+1. **Open downtime events** — `SELECT FROM Oee.DowntimeEvent WHERE EndedAt IS NULL AND LocationId IN (terminal's parent Cell + descendants)`. Display: started-at, reason, operator who placed.
+2. **Open LOT pauses** — `SELECT FROM Lots.PauseEvent WHERE ResumedAt IS NULL AND LocationId IN (terminal's parent Cell + descendants)`. Display: LOT, paused-at, paused-by.
+3. **In-process LOTs at this Terminal's Cell(s)** — derived via `LotMovement` joined to `Lots.v_LotDerivedQuantities`. Display: LOT, Part, in-process piece count.
+
+The view is read-only. Outgoing operator acknowledges the summary; system writes a single `Audit.OperationLog` row with `LogEventType='ShiftHandoverAcknowledged'` capturing the handover. Incoming operator's initials prompt is per Phase 1's terminal session re-confirmation.
+
+The shift-end summary is **optional** — operators MAY skip it. Open events / pauses / in-process LOTs persist regardless. The summary is purely a continuity / handover convenience.
+
+### Warm-up / setup shot capture — UJ-14 closure (revised v0.2n)
+
+UJ-14 closed 2026-04-27 with **Option A — `Oee.DowntimeEvent.ShotCount` ONLY.** Warm-up shots are tracked exclusively on the setup-type `DowntimeEvent` row that bracketed the warm-up period. **NOT** on `ProductionEvent` or `ProductionEventValue.WarmupShotCount`.
+
+Phase 8 honors this:
+
+1. When starting a Setup-type downtime (`DowntimeReasonType='Setup'`), the operator may capture the initial `ShotCount` (typically 0 — counter starts at the warm-up's first shot).
+2. Warm-up shots run during the downtime. Operator updates `ShotCount` on the open DowntimeEvent (via the operator screen) as the count advances; or the PLC's cumulative shot counter is read by the Gateway script if available.
+3. When ending the Setup downtime via `DowntimeEvent_End`, the final `ShotCount` is captured. Good production shots that follow the downtime close are written via normal `Workorder.ProductionEvent_Record` calls — those are checkpoint events on the LOT (per Phase 3 v0.2i), not on the DowntimeEvent.
 
 ### Supervisor dashboard
 
@@ -2049,7 +2068,9 @@ Drill-down from dashboard opens event lists for export / review. (Full OEE calcu
 | `Oee.DowntimeReasonCode_Assign` | `@DowntimeEventId`, `@DowntimeReasonCodeId`, `@ShotCount NULL`, `@AppUserId`, `@TerminalLocationId` | Late-binding reason. Refuses to overwrite an assigned reason. Validates reason's Area matches Location's Area. | `Oee.DowntimeEvent`, `Oee.DowntimeReasonCode`, `Audit.Audit_LogOperation` | Operator or supervisor classifying | `Status, Message` |
 | `Oee.DowntimeEvent_List` | `@LocationId NULL`, `@ShiftId NULL`, `@IsOpen BIT NULL`, `@DateFrom NULL`, `@DateTo NULL`, `@IsUnclassified BIT NULL` | Read proc with filters. | `Oee.DowntimeEvent`, `Oee.DowntimeReasonCode` | Supervisor dashboard, reports | Rowset |
 | `Oee.DowntimeEvent_Get` | `@DowntimeEventId` | Single row. | `Oee.DowntimeEvent` | Event detail drill-down | Single row |
-| `Oee.DowntimeEvent_CarryAcrossShift` | `@OutgoingShiftId`, `@IncomingShiftId`, `@CarryoverRule NVARCHAR(50)` | Internal helper — implements Phase 0 UJ-10 rule when `Shift_End` fires. Called by `Shift_End` in its expanded form (Phase 8 extends Phase 1's Shift_End). | `Oee.DowntimeEvent`, `Audit.Audit_LogOperation` | Internal from Shift_End | `Status, Message, CarryoverCount INT` |
+| ~~`Oee.DowntimeEvent_CarryAcrossShift`~~ | **Retired v0.2n** — UJ-10 Option D closure. Events span boundaries naturally; no carryover proc needed. | — | — | — |
+| **`Lots.LotPause_GetByLocation`** + **`Oee.DowntimeEvent_GetOpenAtLocation`** + **`Lots.Lot_GetInProcessAtLocation`** | (called by shift-end summary screen — three reads) | Read-only proc set for FDS-09-015 shift-end summary. `LotPause_GetByLocation` already in Phase 2. The other two are thin wrappers around existing tables — `DowntimeEvent_GetOpenAtLocation` returns `EndedAt IS NULL` rows; `Lot_GetInProcessAtLocation` joins `Lots.LotMovement` (latest by LotId) to `v_LotDerivedQuantities`. No mutations; no audit. | `Oee.DowntimeEvent`, `Lots.PauseEvent`, `Lots.Lot`, `Lots.LotMovement`, `Lots.v_LotDerivedQuantities` | Shift-end summary view binding | Three rowsets (one per call) |
+| `Audit.Audit_LogOperation` (`ShiftHandoverAcknowledged`) | Standard audit logger, called when operator confirms the shift-end summary. | — | `Audit.OperationLog` | Operator submits handover ack | (no result set) |
 
 ## Gateway Scripts
 
@@ -2066,6 +2087,7 @@ Drill-down from dashboard opens event lists for export / review. (Full OEE calcu
 | Supervisor Dashboard | Per-machine per-shift downtime counts, durations, unclassified flags. Drill into event lists. |
 | Downtime Event List | Filterable list with export. |
 | Downtime Event Detail | Single event — timeline, reason, shots, remarks, edit (re-auth required). |
+| **Shift-End Summary** (FDS-09-015, NEW v0.2n) | Read-only handover view — open downtime events at this Cell, open LOT pauses at this Cell, in-process LOTs at this Cell with their TotalInProcess piece counts. Operator-acknowledgement button writes `Audit.OperationLog` row `ShiftHandoverAcknowledged`. Triggered by outgoing operator at shift end OR proactively from a "Handover" tile. Optional — operators MAY skip. |
 
 ## Test Coverage
 
@@ -2076,22 +2098,24 @@ New test suite at `sql/tests/0020_PlantFloor_Downtime_Shift/`:
 | `010_DowntimeEvent_Start.sql` | Creates open row; B3 rejects duplicate open; rejects if Location not a Machine; Setup type with ShotCount stored. |
 | `020_DowntimeEvent_End.sql` | Closes event; rejects if EndedAt < StartedAt; rejects if already ended. |
 | `030_DowntimeReasonCode_Assign.sql` | Assigns reason to unclassified event; rejects overwrite; rejects Area mismatch. |
-| `040_DowntimeEvent_carryover_closeAtEnd.sql` (rule A) | Shift_End closes open events when rule = CloseAtEnd. |
-| `050_DowntimeEvent_carryover_carryOpen.sql` (rule B) | Shift_End leaves open events; event can span boundary. |
-| `060_DowntimeEvent_carryover_associateWithStart.sql` (rule C) | ShiftId captured at Start; never updated by boundary. |
-| `070_Warmup_ShotCount_capture.sql` | UJ-14: Setup downtime event captures ShotCount; non-Setup rejects ShotCount silently (ignored or enforced NULL per design). |
+| `040_Shift_boundary_events_span.sql` (UJ-10 Option D) | Shift_End updates `Oee.Shift.ActualEnd` only; open `DowntimeEvent` rows remain open across the boundary; open `Lots.PauseEvent` rows remain open across the boundary. No carryover proc invoked. |
+| `050_Shift_end_summary_queries.sql` | Three read queries return correct rowsets: open DowntimeEvents at Cell + descendants; open PauseEvents at Cell + descendants; in-process LOTs joined to `v_LotDerivedQuantities`. |
+| `060_ShiftHandoverAcknowledged_audit.sql` | Operator handover acknowledgement writes one `Audit.OperationLog` row with `LogEventType='ShiftHandoverAcknowledged'`. |
+| `070_Warmup_ShotCount_capture.sql` | UJ-14: Setup downtime event captures ShotCount; non-Setup events reject ShotCount silently (ignored or enforced NULL per design). |
 
 Target: 60–90 passing tests in suite 0020.
 
 ## Phase 8 complete when
 
-- [ ] Migration `0017_phase8_downtime_shift.sql` applied; LogEventType seeds present; Phase 0 carryover rule code-table (if any) seeded.
-- [ ] `DowntimeEvent_Start`, `_End`, `DowntimeReasonCode_Assign`, `DowntimeEvent_CarryAcrossShift`, `_List`, `_Get` procs delivered.
-- [ ] Phase 1's `ShiftBoundaryTicker` extended to call carryover helper per Phase 0 rule.
-- [ ] All tests in `sql/tests/0020_PlantFloor_Downtime_Shift/` pass (target 60–90).
+- [ ] Migration `<next_unclaimed>_arc2_phase8_downtime_shift.sql` applied; LogEventType seeds present including `ShiftHandoverAcknowledged`. **No `ShiftBoundaryCarryoverRuleCode` table** (UJ-10 Option D — retired).
+- [ ] `DowntimeEvent_Start`, `_End`, `DowntimeReasonCode_Assign`, `_List`, `_Get`, `_GetOpenAtLocation` procs delivered. **`DowntimeEvent_CarryAcrossShift` is NOT delivered** (UJ-10 Option D retired the concept).
+- [ ] `Lots.Lot_GetInProcessAtLocation` proc delivered for FDS-09-015 shift-end summary.
+- [ ] Phase 1's `ShiftBoundaryTicker` does NOT carry events across — `Shift_Start` / `Shift_End` only update `Oee.Shift` rows; `DowntimeEvent` rows are untouched at the boundary (UJ-10 Option D).
+- [ ] All tests in `sql/tests/<next_unclaimed>_PlantFloor_Downtime_Shift/` pass (target 60–90).
 - [ ] Gateway `DowntimePlcWatcher` implemented against dev PLC simulator (one watcher config per machine).
-- [ ] Perspective Downtime Entry panel and Supervisor Dashboard implemented.
-- [ ] End-to-end: PLC simulator machine-stopped event creates an unclassified DowntimeEvent; operator classifies it; event ends on PLC edge; reports show correct shift association.
+- [ ] Perspective Downtime Entry panel, Supervisor Dashboard, and **Shift-End Summary** view (FDS-09-015) implemented.
+- [ ] End-to-end: PLC simulator machine-stopped event creates an unclassified DowntimeEvent; operator classifies it; event ends on PLC edge; **boundary test**: a downtime that started at 13:55 and ended at 14:15 spans across the 14:00 shift boundary with no auto-close mutation; OEE-style report query slices the duration correctly between the two shifts.
+- [ ] **Shift-end summary verified:** outgoing operator triggers Handover at end of shift; the three queries return the correct in-flight state for that operator's Cell; acknowledgement writes the `ShiftHandoverAcknowledged` audit row.
 
 ---
 
