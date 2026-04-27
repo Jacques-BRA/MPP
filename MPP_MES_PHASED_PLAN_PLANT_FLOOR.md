@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2h
+**Document ID:** MPP-PLAN-ARC2-v0.2i
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2h (2026-04-27)
+**Version:** 0.2i (2026-04-27)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2i | 2026-04-27 | Blue Ridge Automation | **VP-3: Plan Phase 3 (Die Cast Operator Station) — full rewrite against v1.9 design.** ProductionEvent_Record signature reshaped to checkpoint form (cumulative `ShotCount`/`ScrapCount`, `EventAt`; dropped `DieIdentifier`, `CavityNumber`, `LocationId`, `ItemId`, per-event `GoodCount`/`NoGoodCount`, `RecordedAt`). Carlos walkthrough rewritten — Tool + Cavity auto-populated from `Tools.ToolAssignment_ListActiveByCell`, operator confirms via tap, elevated Edit triggers inline `ToolAssignment_Release`/`_Assign`. OperationTemplate seed list pruned — `DieIdentifier` / `CavityNumber` / `WarmupShotCount` removed (Tool/Cavity on Lot per overlay B; warm-up on `DowntimeEvent` only per UJ-14 Option A). Open Items table refreshed — UJ-14 closed (Option A — `DowntimeEvent.ShotCount`); UJ-11 closed (Option A — flagged risk); OI-09 closed (cavity-parallel peers). New "Cavity-parallel LOTs at Die Cast" subsection. Migration filename updated. Pulled overlay B/C/E/F into Phase 3 body. |
 | 0.2h | 2026-04-27 | Blue Ridge Automation | **VP-2: Plan Phase 2 (LOT Lifecycle Completion) — PauseEvent + view folded into body.** Adds `Lots.PauseEvent` table CREATE (OI-21 / FDS-05-038) + 4 procs (`LotPause_Place / _Resume / _GetByLocation / _GetCountsByLocation`) — pulled from v0.2 Overlay K. Adds `Lots.v_LotDerivedQuantities` view CREATE (OI-23 / FDS-05-031) + view-join read paths in `Lot_Get` / `Lot_List` — pulled from v0.2 Overlay D. Open Items table: UJ-08 closed (Option A — proc-enforced merge rules); merge rule narrative refreshed (same Item + die-rank-compat from `Tools.DieRankCompatibility` + supervisor override; FIFO-by-cavity is NOT a merge); test suite files updated; B10 still pending UJ-05 resolution. Migration-number reference updated. |
 | 0.2g | 2026-04-27 | Blue Ridge Automation | **VP-1: Plan Phase 1 freshening.** B4 (Gateway script layer contract) updated for FDS-01-014 / UJ-18 — sync direct-call retired in favour of Gateway-script-async via `system.util.sendMessageAsync`; AIM pool topup is the canonical example. Phase 1 LocationAttributeDefinition seed list adds `ConfirmationMethod` (UJ-17 / FDS-10-013) on the relevant `Cell`-tier `LocationTypeDefinition`s. Phase 1 "Open Items Affecting This Phase" table refreshed — UJ-10 closure (Option D / FDS-09-015) reflected. |
 | 0.2f | 2026-04-27 | Blue Ridge Automation | **VP-0: front matter + Plan Phase 0 refreshed against current state (Data Model v1.9i, FDS v0.11j, OIR v2.14, Seeding Registry v1.0).** UJ batch closures (UJ-04, UJ-09, UJ-10, UJ-11, UJ-13, UJ-14, UJ-16, UJ-17, UJ-18) and Part A closures (OI-12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -32b) since v0.2e moved out of gating/opportunistic into the "Already closed" list. Gating list narrowed to truly-still-gating items. Migration-number reference updated for queued OI-07 + OI-12 correction migrations. v0.2 Alignment Overlay §K (Phase 0 open-items refresh) regenerated with the same scope. Per-phase narratives below (Phases 2–8) still pending VP-1..VP-Final passes. |
@@ -979,11 +980,16 @@ Target: 100–125 passing tests in suite 0014 (up from v0.1 target — PauseEven
 
 ## Data Model Changes
 
-**Migration `sql/migrations/versioned/0012_phase3_die_cast.sql`:**
+**Migration `sql/migrations/versioned/<next_unclaimed>_arc2_phase3_die_cast.sql`** (number TBD — likely `0018` after queued OI-07/OI-12 corrections + Phase 1 + Phase 2 migrations).
+
+**Updated v0.2i — operation template seed shape per v1.9 ProductionEvent checkpoint shape:**
 
 - Seed any missing `Audit.LogEventType` rows used by Phase 3 procs: `ProductionRecorded`, `Rejected`, `LotLabelPrinted` (most already exist from Arc 1 — verify and seed any gaps).
-- Seed dev test rows in `Parts.OperationTemplate` + `Parts.OperationTemplateField` representing a minimal Die Cast operation (`DieCastShot`) with required DataCollectionFields: `DieIdentifier`, `CavityNumber`, `WeightValue`, `GoodCount`, `NoGoodCount`, `WarmupShotCount` (UJ-14). Seed data lives in `sql/seeds/seed_operation_templates_die_cast.sql`.
-- If OI-10 tool life is resolved Phase 0 as a `LocationAttribute` on the DieCastMachine type, seed the attribute definition (`ShotsSinceLastChange`, `MaxShotsPerTool`). Otherwise, no-op.
+- Seed dev test rows in `Parts.OperationTemplate` + `Parts.OperationTemplateField` for a minimal Die Cast operation (`DieCastShot`). DataCollectionFields are operator-captured **non-hot** values only — `WeightValue` (decimal, optional). Hot values (`ShotCount`, `ScrapCount`, `EventAt`) are columns on `Workorder.ProductionEvent` per Data Model v1.9 checkpoint shape — not seeded as DataCollectionFields. Seed data lives in `sql/seeds/seed_operation_templates_die_cast.sql`.
+- **NOT seeded** (per overlay B/C — Tool/Cavity on Lot, not on ProductionEvent): `DieIdentifier`, `CavityNumber`. The Die identifier is `Lot.ToolId → Tools.Tool.Code`; the Cavity is `Lot.ToolCavityId → Tools.ToolCavity.Code`. Reports derive these via JOIN, not via per-event capture.
+- **NOT seeded** (per UJ-14 Option A closure): `WarmupShotCount` as a DataCollectionField. Warm-up shots are tracked exclusively on `Oee.DowntimeEvent.ShotCount` for setup-type downtime events (already in Data Model v1.5 / Phase 8 schema).
+- **NOT seeded** (per v1.9 ProductionEvent reshape): `GoodCount` / `NoGoodCount` per-event fields. Production aggregation derives good count from `ShotCount - ScrapCount` over the event stream via `LAG()`.
+- OI-10 tool life: Tool identity + cavity counters live on `Tools.Tool` / `Tools.ToolCavity` (Phase G). Per-tool shot counts derive from `Workorder.ProductionEvent` GROUP BY `Lot.ToolId` / `Lot.ToolCavityId` — no separate `LocationAttribute` seed needed.
 
 **Tables used:**
 
@@ -1002,85 +1008,105 @@ Target: 100–125 passing tests in suite 0014 (up from v0.1 target — PauseEven
 
 ## Open Items Affecting This Phase
 
-| Item | Fallback |
+| Item | Status |
 |---|---|
-| OI-10 tool life | If unresolved, shot counts captured in `ProductionEventValue` as a DataCollectionField; no running total maintained; supervisor queries history on demand. If Phase 0 chose LocationAttribute approach, `ProductionEvent_Record` increments the `ShotsSinceLastChange` attribute. |
-| UJ-14 warm-up shots | Warm-up shots captured as a `DataCollectionField` on the DieCastShot operation template (`WarmupShotCount` field value on `ProductionEventValue`). Separately, when a setup-type `DowntimeEvent` is closed, Phase 8's `DowntimeEvent_End` captures the accumulated warm-up shots on `DowntimeEvent.ShotCount`. |
-| UJ-11 paper-vs-real-time | Assume real-time. If MPP phases rollout, this station ships first; others follow. Design unchanged. |
+| **OI-09** Multi-cavity / cavity-parallel LOTs | **Closed (2026-04-23).** N active cavities → N parallel **peer** LOTs (not sublots). Each peer is an independent `Lots.Lot` row with `ToolCavityId` set; no parent/child FK between cavity peers; genealogy is flat at Die Cast. See "Cavity-parallel LOTs at Die Cast" subsection below. |
+| **OI-10** Tool life tracking | **Superseded (Phase B Tool Management).** Tool identity + cavity counters live on `Tools.Tool` / `Tools.ToolCavity`. Per-tool shot counts derive from `ProductionEvent` GROUP BY `Lot.ToolId` / `Lot.ToolCavityId` — no `LocationAttribute` increment in `ProductionEvent_Record`. |
+| **UJ-14** Warm-up shots | **Closed (2026-04-27, Option A).** Warm-up shots tracked on `Oee.DowntimeEvent.ShotCount` for setup-type downtime events ONLY. **NOT** on `ProductionEvent` / `ProductionEventValue`. The Die Cast operator transitions from setup-downtime to production at the first good shot; Phase 8's `DowntimeEvent_End` captures the warm-up count. |
+| **UJ-11** Paper-to-screen transition | **Closed (2026-04-27, Option A — flagged risk).** All-at-once cutover; this station ships with all others. Risk owner: Ben (couples to OI-31 rollout shape). Design unchanged. |
+| **OI-31** IdentifierSequence cutover | Pending Phase 0 — `LotName` minted via `Lots.IdentifierSequence_Next @Code='Lot'` (`MESL{0:D7}`). Phase 1 already delivers the proc; Phase 3 just consumes it. |
+| **ShotCount semantics** | Pending Phase 0 — current default: cumulative counter on `ProductionEvent` (per v1.9 checkpoint shape). Open option per Decision 5 of the 2026-04-23 spec: may migrate to derived-from-aggregated-LOT-quantity before Phase 3 implementation. Provisional until decided. |
 
 ## State & Workflow
 
-### Die Cast LOT creation walkthrough
+### Cavity-parallel LOTs at Die Cast (overlay E pulled into body)
 
-Carlos is running DC machine #7, part 5G0, die #42, cavity B. The basket has 48 good parts and 3 rejects from the last shot cycle.
+A die-cast machine mounting a Tool with N active cavities produces **N parallel independent LOTs**, each with `ToolCavityId` set at creation. **No parent/child FK** between cavity peers — genealogy is flat at Die Cast. Each peer fills at its own rate; each closes independently via explicit operator Complete + Move (no auto-close at cavity-level state changes per FDS-05-037).
 
-1. Perspective session is already on the Die Cast LOT Entry screen (DefaultScreen for this terminal, set by Phase 1 routing).
-2. Carlos peels a pre-printed LTT sticker off the stack. It has a barcode, e.g., `2026-04-06-0001`, already printed. He sticks it on the basket.
-3. He taps the barcode input on the screen and scans the LTT with the station's USB scanner. Perspective's scan binding sets a `lttBarcode` input field.
-4. The screen reveals the data entry form. It pulls the active OperationTemplate for Die Cast at this machine (Perspective calls `OperationTemplate_GetActiveForLocation(@LocationId)` — a read proc from Arc 1). The form dynamically renders the fields configured on the template:
-   - `DieIdentifier` (text, required)
-   - `CavityNumber` (int, required)
-   - `WeightValue` (decimal, optional)
-   - `GoodCount` (int, required, default 0)
-   - `NoGoodCount` (int, required, default 0)
-   - `WarmupShotCount` (int, optional, default 0)
-5. Carlos enters `Die=42`, `Cavity=B`, `GoodCount=48`, `NoGoodCount=0`.
-6. He submits. Perspective calls `ProductionEvent_Record` with the full payload.
-7. `ProductionEvent_Record` (narrative below) creates the Lot, writes the ProductionEvent, writes any ProductionEventValue children, and returns `Status=1, Message='OK', NewLotId=<id>, NewProductionEventId=<id>`.
-8. Perspective then calls `LotLabel_Print` (from Phase 2) with the pre-rendered ZPL for the LTT, which logs the label and returns a `LotLabelId`.
-9. Perspective hands the ZPL + LotLabelId to the `LttZplDispatcher` Gateway script. Script dispatches to the station's Zebra printer. On success, script calls `LotLabel_ConfirmPrint(@LotLabelId)` (internal — may just update `PrintedAt` on the row).
-10. The LTT prints beside Carlos. He sticks it on the basket next to the fresh LTT and wheels it out of die cast.
+Operator workflow at a multi-cavity machine: when basket A (cavity 1's basket) fills first, Carlos logs **just LOT-A** with `ToolCavityId = cavity-1`. The other cavities continue producing into their own baskets unlogged until each fills. There is no "shot-record" event that auto-creates LOTs for all cavities at once — each LOT is created lazily by Carlos when its basket is ready (overlay F).
 
-### `ProductionEvent_Record` — the contract
+### Die Cast LOT creation walkthrough — revised v0.2i
+
+Carlos is running DC machine #7. A 4-cavity Tool is mounted. He's been producing for an hour. The basket under cavity B has 48 good parts and 3 rejects from the run; the other cavity baskets are still filling.
+
+1. Perspective session is already on the Die Cast LOT Entry screen (DefaultScreen for this terminal, set by Phase 1 routing). Operator presence (Carlos = `CM`) is established per Phase 1's initials-based model.
+2. Carlos peels a pre-printed LTT sticker off the stack. It has a barcode (e.g., `MESL1710935`) already printed. He sticks it on the basket from cavity B.
+3. He taps the barcode input on the screen and scans the LTT with the station's USB scanner. Perspective binds `lttBarcode`.
+4. **Tool/Cavity auto-population (overlay B / FDS-05-004 revised in v0.11):** Perspective calls `Tools.ToolAssignment_ListActiveByCell @CellLocationId` to retrieve the currently-mounted Tool (single active row per Cell — see Phase B Tool Management). The screen pre-populates the Tool field with the resolved `Tool.Code` (e.g., `DIE-42`) and presents a cavity selector listing the Tool's `ToolCavity` rows where `StatusCode='Active'` (e.g., 1, 2, 3, 4). Carlos taps cavity B (= 2). Both fields are re-confirmable but not editable inline — to change Tool, the operator triggers a supervisor-elevated **Change Tool** action that calls `Tools.ToolAssignment_Release` on the current and `Tools.ToolAssignment_Assign` on a new Tool.
+5. The screen reveals the data entry form, dynamically rendering the active OperationTemplate's DataCollectionFields (per FDS-03-017a). Per v0.2i seed list, the only operator-captured non-hot field is `WeightValue` (optional). Hot values are captured as `ProductionEvent` columns directly:
+   - **`ShotCount`** (int) — cumulative cavity B shot count at this checkpoint. Read from the Die Cast PLC via OPC if available; operator-overridable.
+   - **`ScrapCount`** (int) — cumulative cavity B scrap count at this checkpoint. PLC-readable; operator-overridable.
+6. Carlos confirms `ShotCount = 51, ScrapCount = 3` (system has been counting since the previous checkpoint or since the start of the run). Optional `WeightValue` left empty.
+7. He submits. Perspective calls `Lots.Lot_Create` first (per overlay F — lazy LOT creation) with `@ToolId`, `@ToolCavityId`, `@PieceCount = 48` (good = ShotCount - ScrapCount delta since previous checkpoint), origin = `Manufactured`. `LotName` is minted via `IdentifierSequence_Next` inside the proc transaction (per Phase 1).
+8. Perspective then calls `Workorder.ProductionEvent_Record` with the new `@LotId` + the cumulative `ShotCount` / `ScrapCount` + `EventAt = SYSDATETIME()`. The proc writes one `ProductionEvent` row (no `LocationId` / `ItemId` / `DieIdentifier` / `CavityNumber` — those are derived via `Lot.ToolId` / `Lot.ToolCavityId` per overlay B/C). No `ProductionEventValue` children unless `WeightValue` was populated.
+9. If `NoGoodCount > 0` (here, 3) and Carlos wants to assign defect codes to the rejects, he taps the inline Reject Entry panel and calls `RejectEvent_Record` separately — Phase 3 leaves reject classification optional per FRS Section 4.
+10. Perspective calls `LotLabel_Print` (from Phase 2) with the LTT ZPL. `LotLabelId` returned. Perspective fires `system.util.sendMessageAsync('mes', 'print-lot-label', {LotLabelId})` per FDS-01-014 / B4 v0.2g — Gateway script dispatches the ZPL asynchronously; failure path mirrors FDS-07-006a/b but for LotLabels (3 attempts × 2s gap, banner on failure at this Terminal).
+11. The LTT prints beside Carlos within 1–2 seconds. He sticks it on the basket and wheels it out of Die Cast. Cavity B's basket is now logged; cavities 1, 3, 4 continue unlogged until each fills.
+
+### `ProductionEvent_Record` — the contract — revised v0.2i (overlay C / Data Model v1.9 checkpoint shape)
 
 This is the FDS-03-017a capture proc. It is the single write path for production data at any operator station. Phase 3 delivers it with Die-Cast-specific test coverage; Phases 4–6 exercise it at other stations without additional proc work.
 
-Signature (conceptual):
+**ProductionEvent is now a checkpoint table** (v1.9): each row carries cumulative counters as-of-the-checkpoint. Deltas are derived by readers via `LAG()` over `(LotId, EventAt)`. A missed checkpoint doesn't compound errors — the next event carries truth.
+
+Signature (conceptual — checkpoint shape):
 
 ```sql
 CREATE OR ALTER PROCEDURE Workorder.ProductionEvent_Record
-    @LotId BIGINT NULL,              -- NULL => create Lot first
-    @LotName NVARCHAR(50) NULL,      -- Required if @LotId is NULL
-    @ItemId BIGINT NULL,             -- Required if @LotId is NULL
-    @LotOriginTypeCode NVARCHAR(50) NULL, -- Required if @LotId is NULL; typically 'Manufactured'
-    @LocationId BIGINT,              -- Machine where event occurred
-    @OperationTemplateId BIGINT,     -- Drives DataCollectionField validation
-    @DieIdentifier NVARCHAR(50) NULL,
-    @CavityNumber INT NULL,
-    @WeightValue DECIMAL(10,4) NULL,
+    @LotId BIGINT,                   -- LOT must already exist (lazy creation per overlay F — caller invokes Lot_Create separately first if needed)
+    @OperationTemplateId BIGINT,     -- Drives DataCollectionField validation; ties event to the active template
+    @WorkOrderOperationId BIGINT NULL, -- Nullable per FDS-06-024 — production events function without WO context
+    @ShotCount INT NULL,             -- Cumulative shot counter as-of-this-checkpoint (open per Decision 5 — may migrate to derived)
+    @ScrapCount INT NULL,            -- Cumulative scrap counter
+    @ScrapSourceId BIGINT NULL,      -- Per FDS-06-023a — non-NULL only on scrap-driving checkpoints (Inventory / Location)
+    @WeightValue DECIMAL(10,3) NULL, -- Optional
     @WeightUomId BIGINT NULL,
-    @GoodCount INT,
-    @NoGoodCount INT,
     @Remarks NVARCHAR(500) NULL,
-    @DataCollectionValuesJson NVARCHAR(MAX) NULL,  -- Array of {fieldName, value, numericValue?, uomId?}
+    @DataCollectionValuesJson NVARCHAR(MAX) NULL,  -- Array of {fieldName, value, numericValue?, uomId?} for non-hot fields
     @AppUserId BIGINT,
     @TerminalLocationId BIGINT
 ```
 
+**Removed from the v0.1 signature** (per overlay B/C and v1.9 reshape):
+
+- `@LotName`, `@ItemId`, `@LotOriginTypeCode` — LOT creation is the caller's job (lazy). Proc only consumes existing `@LotId`.
+- `@LocationId` — derivable from `LotMovement` at `EventAt`; not stored on event.
+- `@DieIdentifier`, `@CavityNumber` — Tool/Cavity is on Lot per FDS-05-035; reports JOIN to `Lots.Lot.ToolId` / `Lot.ToolCavityId`.
+- `@GoodCount`, `@NoGoodCount` — replaced by cumulative `ShotCount`/`ScrapCount`; readers derive deltas via `LAG()`.
+
 Execution sequence:
 
-1. Parameter validation:
-   - If `@LotId IS NULL`, `@LotName`, `@ItemId`, `@LotOriginTypeCode` must all be present (creating a new LOT).
-   - If `@LotId IS NOT NULL`, the LOT must exist and `@ItemId` must match (or be NULL for identity check).
-   - `@LocationId`, `@OperationTemplateId`, `@AppUserId`, `@TerminalLocationId` all required and exist.
-2. Business rule: `@Item` is eligible at `@LocationId` (`Parts.ItemLocation`).
-3. Business rule: `@OperationTemplate` is active (not deprecated) and its `LocationId` matches `@LocationId`'s Area (or is `NULL` meaning universal).
-4. `Lot_AssertNotBlocked` if `@LotId` is provided.
-5. Validate `@DataCollectionValuesJson`:
-   - Parse the JSON.
-   - For every field on `Parts.OperationTemplateField` for this operation: if `IsRequired=1`, the field must appear in the JSON OR be captured by a hot column (`GoodCount`, `NoGoodCount`, `DieIdentifier`, `CavityNumber`, `WeightValue`). Missing required → reject.
-   - For every field in the JSON: it must exist on `Parts.DataCollectionField` AND be configured for this OperationTemplate (`Parts.OperationTemplateField`). Otherwise reject.
+1. Parameter validation: `@LotId`, `@OperationTemplateId`, `@AppUserId`, `@TerminalLocationId` all required and exist.
+2. `Lot_AssertNotBlocked @LotId` (B2).
+3. Business rule: `@OperationTemplate` is active (not deprecated).
+4. Validate `@DataCollectionValuesJson`:
+   - For every field on `Parts.OperationTemplateField` for this operation: if `IsRequired=1`, the field must appear in the JSON OR be captured by a hot column (`ShotCount`, `ScrapCount`, `WeightValue`). Missing required → reject.
+   - For every field in the JSON: it must exist on `Parts.DataCollectionField` AND be configured for this OperationTemplate. Otherwise reject.
    - Duplicate fields in JSON → reject.
-   - A JSON field that duplicates a hot column (e.g., JSON contains `GoodCount`) → reject with a clear "use the hot parameter" message.
-6. `BEGIN TRANSACTION`.
-7. If `@LotId IS NULL`: call `Lot_Create` with the LOT parameters. Capture `@LotId` from the returned `NewId`.
-8. Insert the `ProductionEvent` row with hot columns + `OperationTemplateId` + `@AppUserId` + `@TerminalLocationId` + `RecordedAt = SYSDATETIME()`. Capture `@NewProductionEventId`.
-9. For each field in `@DataCollectionValuesJson`: insert `ProductionEventValue` row with `ProductionEventId = @NewProductionEventId`, `DataCollectionFieldId`, `Value`, `NumericValue` (if the field's data-type is numeric), `UomId` (if applicable).
-10. If `@NoGoodCount > 0` and no corresponding `RejectEvent` was passed explicitly, mirror pattern: Phase 3 lets the operator enter rejects in a separate call (`RejectEvent_Record`), so `ProductionEvent_Record` writes the count but does NOT create a RejectEvent automatically. The operator enters defect codes in a follow-on action.
-11. Update the `Lot` — `PieceCount` increments by `@GoodCount` (or is set to `@GoodCount` for a newly-created Lot), `CurrentLocationId = @LocationId`.
-12. Audit via `Audit_LogOperation` with `LogEventType='ProductionRecorded'`, description includes `GoodCount`, `NoGoodCount`, and LotName.
-13. `COMMIT`.
-14. Final `SELECT @Status=1, @Message='OK', @NewLotId, @NewProductionEventId`.
+   - A JSON field that duplicates a hot column (`ShotCount`, `ScrapCount`, `WeightValue`) → reject with a clear "use the hot parameter" message (FDS-03-017a duplicate-hot-column rule).
+5. `BEGIN TRANSACTION`.
+6. Insert the `ProductionEvent` row: `LotId`, `OperationTemplateId`, `WorkOrderOperationId` (NULL allowed), `EventAt = SYSUTCDATETIME()`, `ShotCount`, `ScrapCount`, `ScrapSourceId`, `WeightValue`, `WeightUomId`, `AppUserId`, `TerminalLocationId`, `Remarks`. Capture `@NewProductionEventId`.
+7. For each field in `@DataCollectionValuesJson`: insert `ProductionEventValue` row with `ProductionEventId = @NewProductionEventId`, `DataCollectionFieldId`, `Value`, `NumericValue` (if the field's data-type is numeric), `UomId` (if applicable).
+8. **No `Lot` mutation in this proc.** PieceCount + InventoryAvailable are derived via `Lots.v_LotDerivedQuantities` (Phase 2 / OI-23) — the view aggregates ProductionEvent counters at read time. Phase 3 does NOT increment `Lot.PieceCount` per-event.
+9. Audit via `Audit_LogOperation` with `LogEventType='ProductionRecorded'`, description includes cumulative counts and LotName (resolved via Lot lookup).
+10. `COMMIT`.
+11. Final `SELECT @Status=1, @Message='OK', @NewProductionEventId`.
+
+**Reader pattern for delta derivation:**
+
+```sql
+SELECT
+    LotId,
+    EventAt,
+    ShotCount,
+    ShotCount - LAG(ShotCount) OVER (PARTITION BY LotId ORDER BY EventAt) AS ShotsSinceLast,
+    ScrapCount - LAG(ScrapCount) OVER (PARTITION BY LotId ORDER BY EventAt) AS ScrapsSinceLast
+FROM Workorder.ProductionEvent
+WHERE LotId = @LotId
+ORDER BY EventAt DESC;
+```
+
+Required index on `(LotId, EventAt DESC)` per Data Model v1.9 — supports single-row seek for "previous event for this LOT."
 
 ### `RejectEvent_Record`
 
@@ -1094,21 +1120,28 @@ The operator enters rejects as a follow-on action from the Die Cast screen — s
 
 Rejects do NOT change the LOT's piece count — the rejects were never "in" the LOT's count to begin with (FRS Section 4). The operator can also choose not to enter rejects at every step (FRS: reject recording is optional).
 
-### Die Cast shot counts (UJ-14)
+### Die Cast warm-up shots (UJ-14 closed) — revised v0.2i
 
-Warm-up shots are captured via `WarmupShotCount` DataCollectionField on the DieCastShot template. The value lands on `ProductionEventValue`. A separate warm-up shots accumulator on `DowntimeEvent.ShotCount` — populated in Phase 8 when a Setup-type downtime event closes — captures the total per setup episode, useful for OEE.
+UJ-14 closed 2026-04-27 with **Option A — `Oee.DowntimeEvent.ShotCount`** (already in Data Model v1.5 / Phase 8 schema). Warm-up shots are tracked **exclusively** on the setup-type `Oee.DowntimeEvent` row that bracketed the warm-up period. They are **NOT** captured on `ProductionEvent` or `ProductionEventValue` — that would pollute the production-event stream with non-production rows.
 
-### Tool life tracking (OI-10 contingent)
+Operator workflow at the boundary between warm-up and production:
 
-If Phase 0 resolves OI-10 as a `LocationAttribute` approach: `ProductionEvent_Record` optionally increments `ShotsSinceLastChange` on the machine's `LocationAttribute` row after a successful production event (if the attribute exists for this machine type). If threshold crossed (`>= MaxShotsPerTool`), Perspective shows a tool-change alert. No new proc needed — a helper call to the Arc 1 `LocationAttribute_SetValue` proc does the increment.
+1. Operator opens a setup-type `DowntimeEvent` (`DowntimeReasonType = Setup`) when the warm-up begins (Phase 8's `DowntimeEvent_Start`).
+2. Operator runs warm-up shots; the PLC's cumulative shot counter increments.
+3. When the first good shot indicates production has resumed, operator closes the downtime via Phase 8's `DowntimeEvent_End @DowntimeEventId, @ShotCount = @AccumulatedWarmupShots, @EndedAt = NOW`. The `ShotCount` on the `DowntimeEvent` row captures the warm-up count for OEE attribution.
+4. Subsequent `ProductionEvent_Record` calls capture only good-production cumulative counts.
 
-If Phase 0 chose a dedicated `Parts.Die` table, that work is scoped as a separate mini-phase post-MVP; Phase 3 ships unchanged.
+### Tool life tracking — revised v0.2i (OI-10 superseded by Phase B Tools)
+
+OI-10 is **superseded by the Phase B Tool Management subsystem** (Tools schema, Data Model v1.7). Tool identity + cavity tracking live on `Tools.Tool` / `Tools.ToolCavity`. Per-Tool / per-Cavity shot counts derive at read time from `Workorder.ProductionEvent` GROUP BY `Lot.ToolId` / `Lot.ToolCavityId` — there is no `LocationAttribute.ShotsSinceLastChange` increment in `ProductionEvent_Record`.
+
+Tool-life threshold alarms are **FUTURE** scope (scheduled Gateway script pattern, post-MVP). Phase 3 does not implement threshold-crossed alerts; the supervisor wallboard surfaces the per-Tool aggregate count via a future report (Phase 8 reporting).
 
 ## API Layer (Named Queries → Stored Procedures)
 
 | Procedure | Parameters | Notes | Dependencies | Executed When | Output |
 |---|---|---|---|---|---|
-| `Workorder.ProductionEvent_Record` | See signature above | The FDS-03-017a capture proc. Creates a LOT if needed, writes the event + values, increments piece count, audits. Optional tool-life increment. | `Lots.Lot`, `Lots.Lot_Create`, `Workorder.ProductionEvent`, `Workorder.ProductionEventValue`, `Parts.OperationTemplate`, `Parts.OperationTemplateField`, `Parts.DataCollectionField`, `Parts.Item`, `Parts.ItemLocation`, `Location.LocationAttribute` (tool life optional), `Audit.Audit_LogOperation` | Any producer station | `Status, Message, NewLotId, NewProductionEventId` |
+| `Workorder.ProductionEvent_Record` | See signature above (revised v0.2i — checkpoint shape) | The FDS-03-017a capture proc. Writes one ProductionEvent row with cumulative counters + N ProductionEventValue children. **Does NOT** create LOTs (lazy creation per overlay F — caller invokes `Lot_Create` first). **Does NOT** mutate Lot piece count (derived via `v_LotDerivedQuantities` per OI-23). **Does NOT** increment any LocationAttribute (Tool life is derived per overlay B). | `Lots.Lot` (read-only validation), `Workorder.ProductionEvent`, `Workorder.ProductionEventValue`, `Parts.OperationTemplate`, `Parts.OperationTemplateField`, `Parts.DataCollectionField`, `Audit.Audit_LogOperation` | Any producer station — Die Cast checkpoint, Trim check-in checkpoint, Assembly close checkpoint, etc. | `Status, Message, NewProductionEventId` |
 | `Workorder.RejectEvent_Record` | `@LotId BIGINT`, `@ProductionEventId BIGINT NULL`, `@DefectCodeId BIGINT`, `@Quantity INT`, `@ChargeToArea NVARCHAR(50) NULL`, `@Remarks NVARCHAR(500) NULL`, `@AppUserId`, `@TerminalLocationId` | Records a reject. Does not change Lot.PieceCount. | `Workorder.RejectEvent`, `Quality.DefectCode`, `Audit.Audit_LogOperation` | Follow-on action after production event | `Status, Message, NewId` |
 | `Workorder.ProductionEvent_List` | `@LotId BIGINT NULL`, `@LocationId BIGINT NULL`, `@DateFrom DATETIME2(3) NULL`, `@DateTo DATETIME2(3) NULL`, `@LimitRows INT = 500` | Read proc. Returns event rows with hot columns; does not join to values child table (separate call if needed). | `Workorder.ProductionEvent` | Supervisor dashboard; Die Shot report | Rowset |
 | `Workorder.ProductionEvent_Get` | `@ProductionEventId BIGINT` | Single event with its child `ProductionEventValue` rows; returned as two result sets? Per FDS-11-011 single result set, return a flattened rowset one row per value + header column carried. Or return header-only here and use `ProductionEventValue_List` for the children. Choose the latter. | `Workorder.ProductionEvent` | LOT detail drill-down | Single header row |
@@ -1148,13 +1181,18 @@ Target: 100–140 passing tests in suite 0015 (the proc is large; many validatio
 
 ## Phase 3 complete when
 
-- [ ] Migration `0012_phase3_die_cast.sql` applied; seed operation template + fields for DieCastShot present.
-- [ ] `Workorder.ProductionEvent_Record`, `Workorder.RejectEvent_Record`, and read procs delivered and pass tests.
-- [ ] All tests in `sql/tests/0015_PlantFloor_DieCast/` pass (target 100–140).
-- [ ] Perspective Die Cast LOT Entry screen implemented; dynamic field render from OperationTemplate verified.
-- [ ] End-to-end walkthrough: operator scans LTT → fills form → submits → Lot created → event written → LTT prints on dev Zebra → LOT Detail shows the event and its values.
+- [ ] Migration `<next_unclaimed>_arc2_phase3_die_cast.sql` applied; seed `Parts.OperationTemplate` `DieCastShot` row + `OperationTemplateField` rows for the **non-hot** fields only (`WeightValue`). Confirmed: NO `DieIdentifier` / `CavityNumber` / `WarmupShotCount` / `GoodCount` / `NoGoodCount` DataCollectionField rows.
+- [ ] `Workorder.ProductionEvent_Record` delivered with the **revised v0.2i checkpoint signature** (cumulative `ShotCount` / `ScrapCount` / `EventAt`; no `LocationId` / `ItemId` / `DieIdentifier` / `CavityNumber` / `GoodCount` / `NoGoodCount`). `Lot_Create` is invoked separately by the caller before `ProductionEvent_Record` (lazy LOT creation per overlay F).
+- [ ] `Workorder.RejectEvent_Record` and read procs delivered and pass tests.
+- [ ] All tests in `sql/tests/<next_unclaimed>_PlantFloor_DieCast/` pass (target 100–140).
+- [ ] Perspective Die Cast LOT Entry screen implemented:
+   - Tool/Cavity auto-population via `Tools.ToolAssignment_ListActiveByCell` + cavity selector against `ToolCavity.StatusCode='Active'`.
+   - Dynamic field render from active OperationTemplate (only non-hot fields).
+   - **Cavity-parallel LOTs** as peers — operator logs each cavity's basket as an independent LOT with its own `ToolCavityId`; no parent/child FK between cavities.
+   - **Paused-LOT indicator** binding (count + tap-through detail list) — pulled from Phase 2 Lots.LotPause_GetCountsByLocation.
+- [ ] End-to-end walkthrough (Carlos scenario above): operator scans LTT → Tool auto-resolved + cavity confirmed → enters cumulative ShotCount/ScrapCount → submits → Lot created with Tool/Cavity FKs → ProductionEvent written with checkpoint counters → LTT prints async via `system.util.sendMessageAsync` → LOT Detail screen shows the event and JOIN-derived Tool/Cavity context.
 - [ ] Reject entry inline panel functional; RejectEvent rows visible in Rejects Report stub.
-- [ ] If OI-10 resolved as LocationAttribute: tool-life increment wired and verified.
+- [ ] **No proc anywhere in Phase 3 references `DieIdentifier` / `CavityNumber` / `GoodCount` / `NoGoodCount` / `RecordedAt` columns on `ProductionEvent`** (per v1.9 reshape). Grep verification: `grep -ri 'ProductionEvent.*DieIdentifier\|ProductionEvent.*CavityNumber\|ProductionEvent.*RecordedAt' sql/scripts/ sql/migrations/` returns zero hits.
 
 ---
 
