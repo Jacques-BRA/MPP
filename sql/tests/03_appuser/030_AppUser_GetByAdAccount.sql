@@ -23,10 +23,9 @@ GO
 -- =============================================
 CREATE TABLE #ByAd1 (
     Id           BIGINT,
-    AdAccount    NVARCHAR(100),
+    Initials     NVARCHAR(10),
     DisplayName  NVARCHAR(200),
-    ClockNumber  NVARCHAR(20),
-    PinHash      NVARCHAR(255),
+    AdAccount    NVARCHAR(100),
     IgnitionRole NVARCHAR(100),
     CreatedAt    DATETIME2(3),
     DeprecatedAt DATETIME2(3)
@@ -49,10 +48,9 @@ GO
 -- =============================================
 CREATE TABLE #ByAd2 (
     Id           BIGINT,
-    AdAccount    NVARCHAR(100),
+    Initials     NVARCHAR(10),
     DisplayName  NVARCHAR(200),
-    ClockNumber  NVARCHAR(20),
-    PinHash      NVARCHAR(255),
+    AdAccount    NVARCHAR(100),
     IgnitionRole NVARCHAR(100),
     CreatedAt    DATETIME2(3),
     DeprecatedAt DATETIME2(3)
@@ -78,10 +76,9 @@ GO
 CREATE TABLE #Create3 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #Create3
 EXEC Location.AppUser_Create
-    @AdAccount    = N'test.deprecated.030',
+    @Initials     = N'TD30',
     @DisplayName  = N'Test Deprecated 030',
-    @ClockNumber  = NULL,
-    @PinHash      = NULL,
+    @AdAccount    = N'test.deprecated.030',
     @IgnitionRole = NULL,
     @AppUserId    = 1;
 
@@ -103,10 +100,9 @@ GO
 -- Lookup the deprecated user in a fresh batch
 CREATE TABLE #ByAd3 (
     Id           BIGINT,
-    AdAccount    NVARCHAR(100),
+    Initials     NVARCHAR(10),
     DisplayName  NVARCHAR(200),
-    ClockNumber  NVARCHAR(20),
-    PinHash      NVARCHAR(255),
+    AdAccount    NVARCHAR(100),
     IgnitionRole NVARCHAR(100),
     CreatedAt    DATETIME2(3),
     DeprecatedAt DATETIME2(3)

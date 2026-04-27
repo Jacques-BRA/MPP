@@ -29,6 +29,8 @@
 -- Change Log:
 --   2026-04-13 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.4: dropped ClockNumber from JSON snapshots
+--   2026-04-23 - 2.2 - Initials realignment: Initials added to JSON snapshots
 -- =============================================
 CREATE OR ALTER PROCEDURE Location.AppUser_Deprecate
     @Id        BIGINT,
@@ -145,9 +147,9 @@ BEGIN
         -- ====================
         DECLARE @OldValue NVARCHAR(MAX);
         SELECT @OldValue =
-            (SELECT DisplayName,
+            (SELECT Initials,
+                    DisplayName,
                     AdAccount,
-                    ClockNumber,
                     IgnitionRole,
                     DeprecatedAt
              FROM Location.AppUser
@@ -166,9 +168,9 @@ BEGIN
         -- Capture new state for audit
         DECLARE @NewValue NVARCHAR(MAX);
         SELECT @NewValue =
-            (SELECT DisplayName,
+            (SELECT Initials,
+                    DisplayName,
                     AdAccount,
-                    ClockNumber,
                     IgnitionRole,
                     DeprecatedAt
              FROM Location.AppUser

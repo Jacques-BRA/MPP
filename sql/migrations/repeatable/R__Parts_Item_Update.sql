@@ -26,6 +26,7 @@
 --   @UomId BIGINT                 - Required.
 --   @UnitWeight DECIMAL(10,4) NULL
 --   @WeightUomId BIGINT NULL      - Required if UnitWeight provided.
+--   @CountryOfOrigin NVARCHAR(2) NULL - ISO 3166-1 alpha-2. OI-19 (Phase E).
 --   @AppUserId BIGINT             - Required for audit.
 --
 -- Result set:
@@ -39,6 +40,7 @@
 -- Change Log:
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.3: @CountryOfOrigin added (OI-19)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.Item_Update
     @Id               BIGINT,
@@ -49,6 +51,7 @@ CREATE OR ALTER PROCEDURE Parts.Item_Update
     @UomId            BIGINT,
     @UnitWeight       DECIMAL(10,4)  = NULL,
     @WeightUomId      BIGINT         = NULL,
+    @CountryOfOrigin  NVARCHAR(2)    = NULL,
     @AppUserId        BIGINT
 AS
 BEGIN
@@ -64,7 +67,8 @@ BEGIN
                 @MacolaPartNumber AS MacolaPartNumber,
                 @DefaultSubLotQty AS DefaultSubLotQty,
                 @MaxLotSize AS MaxLotSize, @UomId AS UomId,
-                @UnitWeight AS UnitWeight, @WeightUomId AS WeightUomId
+                @UnitWeight AS UnitWeight, @WeightUomId AS WeightUomId,
+                @CountryOfOrigin AS CountryOfOrigin
          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
     BEGIN TRY
@@ -137,7 +141,7 @@ BEGIN
         -- Capture OldValue for audit BEFORE the UPDATE
         DECLARE @OldValue NVARCHAR(MAX) =
             (SELECT Description, MacolaPartNumber, DefaultSubLotQty, MaxLotSize,
-                    UomId, UnitWeight, WeightUomId
+                    UomId, UnitWeight, WeightUomId, CountryOfOrigin
              FROM Parts.Item WHERE Id = @Id
              FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
@@ -151,6 +155,7 @@ BEGIN
             UomId            = @UomId,
             UnitWeight       = @UnitWeight,
             WeightUomId      = @WeightUomId,
+            CountryOfOrigin  = @CountryOfOrigin,
             UpdatedAt        = SYSUTCDATETIME(),
             UpdatedByUserId  = @AppUserId
         WHERE Id = @Id;

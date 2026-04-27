@@ -12,10 +12,20 @@
 --       it by clearing DeprecatedAt.
 --     - Otherwise: inserts a new row.
 --
+--   Phase E (OI-18) consumption metadata params (@MinQuantity,
+--   @MaxQuantity, @DefaultQuantity, @IsConsumptionPoint) are applied
+--   ONLY on INSERT. On active-no-op or reactivation the existing row's
+--   metadata is preserved — use Parts.ItemLocation_SetConsumptionMetadata
+--   to change metadata on an existing row.
+--
 -- Parameters (input):
---   @ItemId BIGINT     - Required.
---   @LocationId BIGINT - Required.
---   @AppUserId BIGINT  - Required for audit.
+--   @ItemId BIGINT               - Required.
+--   @LocationId BIGINT           - Required.
+--   @MinQuantity INT NULL        - OI-18. Used only on INSERT.
+--   @MaxQuantity INT NULL        - OI-18. Used only on INSERT.
+--   @DefaultQuantity INT NULL    - OI-18. Used only on INSERT.
+--   @IsConsumptionPoint BIT = 0  - OI-18. Used only on INSERT.
+--   @AppUserId BIGINT            - Required for audit.
 --
 -- Result set:
 --   Single row with Status (BIT), Message (NVARCHAR), NewId (BIGINT).
@@ -29,11 +39,16 @@
 -- Change Log:
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.3: consumption metadata params (OI-18)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.ItemLocation_Add
-    @ItemId     BIGINT,
-    @LocationId BIGINT,
-    @AppUserId  BIGINT
+    @ItemId             BIGINT,
+    @LocationId         BIGINT,
+    @MinQuantity        INT    = NULL,
+    @MaxQuantity        INT    = NULL,
+    @DefaultQuantity    INT    = NULL,
+    @IsConsumptionPoint BIT    = 0,
+    @AppUserId          BIGINT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -45,7 +60,10 @@ BEGIN
 
     DECLARE @ProcName NVARCHAR(200) = N'Parts.ItemLocation_Add';
     DECLARE @Params   NVARCHAR(MAX) =
-        (SELECT @ItemId AS ItemId, @LocationId AS LocationId
+        (SELECT @ItemId AS ItemId, @LocationId AS LocationId,
+                @MinQuantity AS MinQuantity, @MaxQuantity AS MaxQuantity,
+                @DefaultQuantity AS DefaultQuantity,
+                @IsConsumptionPoint AS IsConsumptionPoint
          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
     BEGIN TRY
@@ -76,6 +94,33 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM Location.Location WHERE Id = @LocationId AND DeprecatedAt IS NULL)
         BEGIN
             SET @Message = N'Invalid or deprecated LocationId.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'ItemLocation',
+                @EntityId = NULL, @LogEventTypeCode = N'Created',
+                @FailureReason = @Message, @ProcedureName = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+            RETURN;
+        END
+
+        -- Consumption metadata sanity: non-negative; Min <= Max when both supplied
+        IF (@MinQuantity IS NOT NULL AND @MinQuantity < 0)
+           OR (@MaxQuantity IS NOT NULL AND @MaxQuantity < 0)
+           OR (@DefaultQuantity IS NOT NULL AND @DefaultQuantity < 0)
+        BEGIN
+            SET @Message = N'Consumption quantities must be non-negative.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'ItemLocation',
+                @EntityId = NULL, @LogEventTypeCode = N'Created',
+                @FailureReason = @Message, @ProcedureName = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
+            RETURN;
+        END
+
+        IF @MinQuantity IS NOT NULL AND @MaxQuantity IS NOT NULL AND @MinQuantity > @MaxQuantity
+        BEGIN
+            SET @Message = N'MinQuantity cannot exceed MaxQuantity.';
             EXEC Audit.Audit_LogFailure
                 @AppUserId = @AppUserId, @LogEntityTypeCode = N'ItemLocation',
                 @EntityId = NULL, @LogEventTypeCode = N'Created',
@@ -129,8 +174,12 @@ BEGIN
         ELSE
         BEGIN
             -- Insert new
-            INSERT INTO Parts.ItemLocation (ItemId, LocationId, CreatedAt)
-            VALUES (@ItemId, @LocationId, SYSUTCDATETIME());
+            INSERT INTO Parts.ItemLocation
+                (ItemId, LocationId, MinQuantity, MaxQuantity,
+                 DefaultQuantity, IsConsumptionPoint, CreatedAt)
+            VALUES
+                (@ItemId, @LocationId, @MinQuantity, @MaxQuantity,
+                 @DefaultQuantity, @IsConsumptionPoint, SYSUTCDATETIME());
 
             SET @NewId = CAST(SCOPE_IDENTITY() AS BIGINT);
 

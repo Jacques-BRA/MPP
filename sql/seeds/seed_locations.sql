@@ -50,6 +50,10 @@ IF NOT EXISTS (SELECT 1 FROM Location.Location WHERE Code = N'QC')
     INSERT INTO Location.Location (Id, LocationTypeDefinitionId, ParentLocationId, Name, Code, Description, SortOrder)
     VALUES (5, 4, 2, N'Quality Control', N'QC', N'Quality control support area', 3);
 
+IF NOT EXISTS (SELECT 1 FROM Location.Location WHERE Code = N'TRIM')
+    INSERT INTO Location.Location (Id, LocationTypeDefinitionId, ParentLocationId, Name, Code, Description, SortOrder)
+    VALUES (13, 3, 2, N'Trim Shop', N'TRIM', N'Trim / deflash production area', 4);
+
 -- === TIER 3: WorkCenters ======================================
 IF NOT EXISTS (SELECT 1 FROM Location.Location WHERE Code = N'DC-LINE-01')
     INSERT INTO Location.Location (Id, LocationTypeDefinitionId, ParentLocationId, Name, Code, Description, SortOrder)
@@ -82,4 +86,4 @@ IF NOT EXISTS (SELECT 1 FROM Location.Location WHERE Code = N'MS-101')
 
 SET IDENTITY_INSERT Location.Location OFF;
 
-PRINT 'Seed: Location rows loaded (12 rows across 5 tiers).';
+PRINT 'Seed: Location rows loaded (13 rows across 5 tiers).';

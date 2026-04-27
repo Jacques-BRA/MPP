@@ -17,6 +17,7 @@
 | 0.3 | 2026-04-09 | Blue Ridge Automation | Added 2026-04-09 session notes with OI/UJ decision table and status roll-up. Added 4 design decisions (terminal as location type, no outbox, WO MVP-lite, warm-up as downtime). Updated FDS status to v0.2. |
 | 0.4 | 2026-04-09 | Blue Ridge Automation | UpperCamelCase naming convention applied to all DB references. Merged Department into Area per ISA-95 hierarchy. Added Enterprise level. |
 | 0.5 | 2026-04-10 | Blue Ridge Automation | Location model restructured — see FDS v0.4 and Data Model v0.4. `LocationType` reduced to 5 ISA-95 tiers; `LocationTypeDefinition` repurposed as polymorphic kinds; new `LocationAttributeDefinition` for per-kind attribute schemas. |
+| 0.6 | 2026-04-22 | Blue Ridge Automation | **Phase E of the 2026-04-20 OI review refactor — design + doc additions for OI-11..23.** 13 items closed as designed: 4 from the 2026-04-20 MPP meeting (OI-11 Casting→Trim rename, OI-12 lineside caps, OI-13 Flexware BOM import, OI-14 admin remove-item) + 9 from the 2026-04-22 legacy-screenshot review (OI-15 Global Track screen, OI-16 auto-finish-on-target WO, OI-17 tray divisibility, OI-18 ItemLocation consumption metadata, OI-19 Country of Origin, OI-20 Scrap Source enum, OI-21 partial start/complete, OI-22 Hold Management screen, OI-23 Lot computed quantities). Data Model v1.7 → v1.8 (5 additive schema changes), FDS v0.9 → v0.10 (new §5.10 Part Identity Change, §12.5 Global Trace Tool, plus requirements across §§1.4/3.1/3.5/3.6/4.3/5.1/5.3/6.8/6.10/8.2/14), User Journeys v0.6 → v0.7 (Casting→Trim identity-change scene + Track tile usage at Sort Cage). 7 discovery items (OI-24..30) parked for MPP input. Phase F (regenerate derived artifacts) and Phase G (SQL migration) queued. |
 
 ---
 
@@ -162,10 +163,11 @@ Tables and schemas supporting FUTURE capabilities are kept in the data model to 
 
 ### 10. Authentication & Authorization — `MVP`
 
-- Users authenticate via **Active Directory** — `AdAccount` is the identity
-- Clock numbers and PIN hashes support shop-floor terminal identification
+- **Interactive users** (Quality, Supervisor, Engineering, Admin) authenticate via **Active Directory** — `AdAccount` is the identity
+- **Operators** do not authenticate — they are identified by **initials** entered at a shop-floor terminal, which pre-populate a defeasible Initials field on every mutation screen (FDS §4)
 - Roles are managed in **Ignition's internal identity provider** — no custom RBAC tables in the MES database
-- MES stores `AppUser` records for audit trail attribution (who did what), not for authentication
+- MES stores `AppUser` records (both classes) for audit trail attribution; Operator-class rows carry `AdAccount = NULL` and no Ignition role
+- Elevated actions (holds, overrides, scrap, maintenance WOs, admin edits) require a fresh per-action AD prompt — no session-sticky elevation, no clock-number/PIN convenience login (OI-06 closed 2026-04-20)
 
 ### 11. External Integrations — MIXED SCOPE
 
@@ -471,7 +473,7 @@ MES alarms identified: Low Inventory Level, Invalid PartSN, Duplicate PartSN.
 | Off-site receiving: online, no concerns (UJ-06) | ✅ Resolved | Standard Perspective via VPN |
 | WOs included but hidden, MVP-lite (OI-07) | 🔶 Pending Customer | Scope tag changed from CONDITIONAL to MVP-LITE |
 | Vision conflict: auto-hold + supervisor override (OI-04) | 🔶 Pending Customer | New workflow added to FDS §10.3 |
-| Session model: 5-min timeout, re-badge for elevated (OI-06/UJ-01) | 🔶 Pending Customer | FDS §4.2 rewritten |
+| Initials-based operator identity; per-action AD elevation; no clock # or PIN (OI-06/UJ-01) | ✅ Resolved (2026-04-20) | FDS §4 rewritten end-to-end; `AppUser` gains `Initials` column, `AdAccount` made nullable; Config Tool User Management updated |
 | Auto-split into 2 even sublots at machining (UJ-03) | 🔶 Pending Internal | FDS §5.4 rewritten |
 | Warm-up shots as downtime sub-category (UJ-14) | 🔶 Pending Internal | `ShotCount` added to `DowntimeEvent` |
 | Hardware interlock bypass flag (UJ-16) | 🔶 Pending Internal | Two placement options documented in data model |
@@ -480,12 +482,16 @@ MES alarms identified: Low Inventory Level, Invalid PartSN, Duplicate PartSN.
 
 ### Open Items Status Summary
 
+As of 2026-04-22 the Open Issues Register is at v2.6 with 49 items total (30 Part A + 19 Part B). See `MPP_MES_Open_Issues_Register.md` for the authoritative status.
+
 | Status | Count |
 |---|---|
-| ✅ Resolved | 4 (OI-01, OI-08, OI-09, UJ-06, UJ-15) |
-| 🔶 Pending Customer Validation | 8 (OI-02, OI-04, OI-05, OI-06, OI-07, UJ-01, UJ-02, UJ-09, UJ-12) |
-| 🔶 Pending Internal Review (Ben) | 6 (UJ-03, UJ-14, UJ-16, UJ-17, OI-10) |
-| ⬜ Open | 10 (OI-03, UJ-04, UJ-05, UJ-07, UJ-08, UJ-10, UJ-11, UJ-13, UJ-18, UJ-19) |
+| ✅ Resolved | 9 (OI-01, OI-03, OI-06, OI-11; UJ-01, UJ-06, UJ-12, UJ-15, + partial-addenda closes) |
+| 🔶 In Review | 9 (OI-02, OI-04, OI-05, OI-07, OI-08, OI-09, OI-12; UJ-02, UJ-03, UJ-14) |
+| ⬜ Open | 30 (includes OI-13, OI-14, OI-15..OI-30, and 12 Part B UJ items) |
+| Superseded | 1 (OI-10 rolled into Phase B Tools schema) |
+
+> **Note (2026-04-22):** The 2026-04-20 MPP review and the 2026-04-22 legacy-MES screenshot review together reshaped Part A from 10 items to 30. Phase E closed OI-11..23 as *designed* — then a design review moved OI-11 fully to ✅ Resolved (no schema needed: Casting → Trim rename is a 1-line BOM consumption, not a new table). OI-24..30 (7 discovery items) remain parked for MPP input and will be brought to the next MPP review as a consolidated question set. Phase G SQL migration 0010 landed 2026-04-22 (Tools schema + 2 code tables + 3 Parts ALTERs; 779/779 tests still pass). The phased execution plan is in `memory/project_mpp_oi_refactor.md`.
 
 ---
 

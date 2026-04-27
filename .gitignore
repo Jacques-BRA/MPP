@@ -42,6 +42,7 @@ reference/seed_data/_appendix_*_raw.txt
 
 # Claude Code local state (keep CLAUDE.md at repo root; ignore local agent state)
 .claude/
+.superpowers/
 
 # Ignition reference/scratch projects (not part of the deliverable)
 ignition/projects/Refrence project/Spinner/

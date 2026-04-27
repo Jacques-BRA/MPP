@@ -21,6 +21,8 @@
 -- Change Log:
 --   2026-04-13 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-14 - 2.0 - Removed OUTPUT params for Named Query compatibility
+--   2026-04-23 - 2.1 - Phase G.4: dropped ClockNumber + PinHash (legacy auth)
+--   2026-04-23 - 2.2 - Initials realignment: Initials exposed in SELECT
 -- =============================================
 CREATE OR ALTER PROCEDURE Location.AppUser_List
     @IncludeDeprecated BIT = 0
@@ -30,10 +32,9 @@ BEGIN
 
     SELECT
         Id,
-        AdAccount,
+        Initials,
         DisplayName,
-        ClockNumber,
-        PinHash,
+        AdAccount,
         IgnitionRole,
         CreatedAt,
         DeprecatedAt

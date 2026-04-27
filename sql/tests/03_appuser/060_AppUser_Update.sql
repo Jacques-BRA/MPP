@@ -20,9 +20,9 @@ EXEC test.BeginTestFile @FileName = N'03_appuser/060_AppUser_Update.sql';
 GO
 
 -- =============================================
--- Test 1: Happy path - create a user then update DisplayName,
---   ClockNumber, and IgnitionRole.
---   Assert Status=1. Verify all three columns changed in the
+-- Test 1: Happy path - create a user then update DisplayName
+--   and IgnitionRole.
+--   Assert Status=1. Verify both columns changed in the
 --   AppUser row. Verify ConfigLog NewValue captures updated data.
 -- =============================================
 DECLARE @S    BIT,
@@ -33,9 +33,9 @@ DECLARE @S    BIT,
 CREATE TABLE #CreateHappy (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #CreateHappy
 EXEC Location.AppUser_Create
-    @AdAccount   = N'update060.happy@test.com',
+    @Initials    = N'UPH',
     @DisplayName = N'Happy User',
-    @ClockNumber = N'C06001',
+    @AdAccount   = N'update060.happy@test.com',
     @IgnitionRole = N'Operator',
     @AppUserId   = 1;
 SELECT @UserId = NewId FROM #CreateHappy;
@@ -53,8 +53,9 @@ CREATE TABLE #R1 (Status BIT, Message NVARCHAR(500));
 INSERT INTO #R1
 EXEC Location.AppUser_Update
     @Id           = @UserId,
+    @Initials     = N'UPH',
     @DisplayName  = N'Happy User Updated',
-    @ClockNumber  = N'C06099',
+    @AdAccount    = N'update060.happy@test.com',
     @IgnitionRole = N'Supervisor',
     @AppUserId    = 1;
 SELECT @S = Status, @M = Message FROM #R1;
@@ -67,14 +68,12 @@ EXEC test.Assert_IsEqual
     @Expected = N'1',
     @Actual   = @SStr;
 
--- Verify DisplayName changed
+-- Verify DisplayName and IgnitionRole changed
 DECLARE @StoredDisplayName  NVARCHAR(200),
-        @StoredClockNumber  NVARCHAR(20),
         @StoredIgnitionRole NVARCHAR(100);
 
 SELECT
     @StoredDisplayName  = DisplayName,
-    @StoredClockNumber  = ClockNumber,
     @StoredIgnitionRole = IgnitionRole
 FROM Location.AppUser
 WHERE Id = @UserId;
@@ -83,11 +82,6 @@ EXEC test.Assert_IsEqual
     @TestName = N'[HappyPath] DisplayName updated',
     @Expected = N'Happy User Updated',
     @Actual   = @StoredDisplayName;
-
-EXEC test.Assert_IsEqual
-    @TestName = N'[HappyPath] ClockNumber updated',
-    @Expected = N'C06099',
-    @Actual   = @StoredClockNumber;
 
 EXEC test.Assert_IsEqual
     @TestName = N'[HappyPath] IgnitionRole updated',
@@ -138,7 +132,7 @@ DECLARE @S    BIT,
 CREATE TABLE #CreateNullDN (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #CreateNullDN
 EXEC Location.AppUser_Create
-    @AdAccount   = N'update060.nulldn@test.com',
+    @Initials    = N'UND',
     @DisplayName = N'Null DN User',
     @AppUserId   = 1;
 SELECT @UserId = NewId FROM #CreateNullDN;
@@ -148,6 +142,7 @@ CREATE TABLE #R2 (Status BIT, Message NVARCHAR(500));
 INSERT INTO #R2
 EXEC Location.AppUser_Update
     @Id          = @UserId,
+    @Initials    = N'UND',
     @DisplayName = NULL,
     @AppUserId   = 1;
 SELECT @S = Status, @M = Message FROM #R2;
@@ -184,6 +179,7 @@ CREATE TABLE #R3 (Status BIT, Message NVARCHAR(500));
 INSERT INTO #R3
 EXEC Location.AppUser_Update
     @Id          = @BogusId,
+    @Initials    = N'GHX',
     @DisplayName = N'Ghost User',
     @AppUserId   = 1;
 SELECT @S = Status, @M = Message FROM #R3;
@@ -211,8 +207,9 @@ DECLARE @S    BIT,
 CREATE TABLE #CreateDepReject (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #CreateDepReject
 EXEC Location.AppUser_Create
-    @AdAccount   = N'update060.depreject@test.com',
+    @Initials    = N'UDR',
     @DisplayName = N'Dep Reject User',
+    @AdAccount   = N'update060.depreject@test.com',
     @AppUserId   = 1;
 SELECT @UserId = NewId FROM #CreateDepReject;
 DROP TABLE #CreateDepReject;
@@ -222,8 +219,9 @@ DECLARE @HelperUserId BIGINT;
 CREATE TABLE #CreateHelper (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #CreateHelper
 EXEC Location.AppUser_Create
-    @AdAccount   = N'update060.dephelper@test.com',
+    @Initials    = N'UDH',
     @DisplayName = N'Dep Helper',
+    @AdAccount   = N'update060.dephelper@test.com',
     @AppUserId   = 1;
 SELECT @HelperUserId = NewId FROM #CreateHelper;
 DROP TABLE #CreateHelper;
@@ -240,6 +238,7 @@ CREATE TABLE #R4b (Status BIT, Message NVARCHAR(500));
 INSERT INTO #R4b
 EXEC Location.AppUser_Update
     @Id          = @UserId,
+    @Initials    = N'UDR',
     @DisplayName = N'Should Not Apply',
     @AppUserId   = 1;
 SELECT @S = Status, @M = Message FROM #R4b;

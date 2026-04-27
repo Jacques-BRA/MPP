@@ -22,10 +22,9 @@ GO
 CREATE TABLE #CreateActive (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #CreateActive
 EXEC Location.AppUser_Create
-    @AdAccount    = N'test.active.050',
+    @Initials     = N'TA50',
     @DisplayName  = N'Test Active 050',
-    @ClockNumber  = NULL,
-    @PinHash      = NULL,
+    @AdAccount    = N'test.active.050',
     @IgnitionRole = NULL,
     @AppUserId    = 1;
 DROP TABLE #CreateActive;
@@ -33,10 +32,9 @@ DROP TABLE #CreateActive;
 CREATE TABLE #CreateDep (Status BIT, Message NVARCHAR(500), NewId BIGINT);
 INSERT INTO #CreateDep
 EXEC Location.AppUser_Create
-    @AdAccount    = N'test.deprecated.050',
+    @Initials     = N'TD50',
     @DisplayName  = N'Test Deprecated 050',
-    @ClockNumber  = NULL,
-    @PinHash      = NULL,
+    @AdAccount    = N'test.deprecated.050',
     @IgnitionRole = NULL,
     @AppUserId    = 1;
 
@@ -59,10 +57,9 @@ GO
 -- =============================================
 CREATE TABLE #List1 (
     Id           BIGINT,
-    AdAccount    NVARCHAR(100),
+    Initials     NVARCHAR(10),
     DisplayName  NVARCHAR(200),
-    ClockNumber  NVARCHAR(20),
-    PinHash      NVARCHAR(255),
+    AdAccount    NVARCHAR(100),
     IgnitionRole NVARCHAR(100),
     CreatedAt    DATETIME2(3),
     DeprecatedAt DATETIME2(3)
@@ -117,10 +114,9 @@ GO
 -- =============================================
 CREATE TABLE #List2 (
     Id           BIGINT,
-    AdAccount    NVARCHAR(100),
+    Initials     NVARCHAR(10),
     DisplayName  NVARCHAR(200),
-    ClockNumber  NVARCHAR(20),
-    PinHash      NVARCHAR(255),
+    AdAccount    NVARCHAR(100),
     IgnitionRole NVARCHAR(100),
     CreatedAt    DATETIME2(3),
     DeprecatedAt DATETIME2(3)

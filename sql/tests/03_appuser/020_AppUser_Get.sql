@@ -21,10 +21,9 @@ GO
 -- =============================================
 CREATE TABLE #Get1 (
     Id           BIGINT,
-    AdAccount    NVARCHAR(100),
+    Initials     NVARCHAR(10),
     DisplayName  NVARCHAR(200),
-    ClockNumber  NVARCHAR(20),
-    PinHash      NVARCHAR(255),
+    AdAccount    NVARCHAR(100),
     IgnitionRole NVARCHAR(100),
     CreatedAt    DATETIME2(3),
     DeprecatedAt DATETIME2(3)
@@ -56,10 +55,9 @@ GO
 -- =============================================
 CREATE TABLE #Get2 (
     Id           BIGINT,
-    AdAccount    NVARCHAR(100),
+    Initials     NVARCHAR(10),
     DisplayName  NVARCHAR(200),
-    ClockNumber  NVARCHAR(20),
-    PinHash      NVARCHAR(255),
+    AdAccount    NVARCHAR(100),
     IgnitionRole NVARCHAR(100),
     CreatedAt    DATETIME2(3),
     DeprecatedAt DATETIME2(3)

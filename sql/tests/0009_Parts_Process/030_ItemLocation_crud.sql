@@ -204,6 +204,8 @@ CREATE TABLE #IlByItem1 (
     Id BIGINT, ItemId BIGINT, LocationId BIGINT,
     LocationName NVARCHAR(200), LocationCode NVARCHAR(50),
     DefinitionName NVARCHAR(200),
+    MinQuantity INT, MaxQuantity INT, DefaultQuantity INT,
+    IsConsumptionPoint BIT,
     CreatedAt DATETIME2(3), DeprecatedAt DATETIME2(3)
 );
 INSERT INTO #IlByItem1 EXEC Parts.ItemLocation_ListByItem @ItemId = @ItemId;
@@ -262,6 +264,8 @@ CREATE TABLE #IlByItem2 (
     Id BIGINT, ItemId BIGINT, LocationId BIGINT,
     LocationName NVARCHAR(200), LocationCode NVARCHAR(50),
     DefinitionName NVARCHAR(200),
+    MinQuantity INT, MaxQuantity INT, DefaultQuantity INT,
+    IsConsumptionPoint BIT,
     CreatedAt DATETIME2(3), DeprecatedAt DATETIME2(3)
 );
 INSERT INTO #IlByItem2 EXEC Parts.ItemLocation_ListByItem @ItemId = @ItemId;
@@ -288,6 +292,8 @@ CREATE TABLE #IlByLoc (
     Id BIGINT, ItemId BIGINT, LocationId BIGINT,
     PartNumber NVARCHAR(50), Description NVARCHAR(500),
     ItemTypeName NVARCHAR(200),
+    MinQuantity INT, MaxQuantity INT, DefaultQuantity INT,
+    IsConsumptionPoint BIT,
     CreatedAt DATETIME2(3), DeprecatedAt DATETIME2(3)
 );
 INSERT INTO #IlByLoc EXEC Parts.ItemLocation_ListByLocation @LocationId = 9;

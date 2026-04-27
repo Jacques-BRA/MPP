@@ -356,8 +356,8 @@ SELECT @DefCount = COUNT(*) FROM #R;
 DROP TABLE #R;
 
 EXEC test.Assert_RowCount
-    @TestName      = N'List by DefinitionId 3: 4 ProductionAreas returned by proc (2 seeded + 2 test)',
-    @ExpectedCount = 4,
+    @TestName      = N'List by DefinitionId 3: 5 ProductionAreas returned by proc (3 seeded: Die Cast, Machine Shop, Trim Shop + 2 test)',
+    @ExpectedCount = 5,
     @ActualCount   = @DefCount;
 GO
 
