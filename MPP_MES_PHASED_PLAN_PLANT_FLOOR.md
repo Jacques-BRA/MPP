@@ -1,12 +1,12 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2n
+**Document ID:** MPP-PLAN-ARC2-v0.3
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2n (2026-04-27)
-**Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
+**Version:** 0.3 (2026-04-27)
+**Status:** Working draft — full validation pass complete (VP-0 through VP-Final, 2026-04-27). All per-phase narratives now reflect Data Model v1.9i / FDS v0.11j / OIR v2.14 / Seeding Registry v1.0. The v0.2 Alignment Overlay has been retired — its content lives in the per-phase sections.
 
-> **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
+> **Reader note (v0.3):** This is the canonical Arc 2 plan as of 2026-04-27. Read top-to-bottom; per-phase narratives are authoritative. Background design specs at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1, original) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1, post-Phase-G decisions). The v0.2 overlay that captured deltas during 2026-04-24 → 2026-04-27 has been folded into the body and removed.
 
 ---
 
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.3 | 2026-04-27 | Blue Ridge Automation | **VP-Final: v0.2 Alignment Overlay retired; full validation pass complete.** Major version bump from v0.2n to v0.3 marks the end of the in-place validation pass started in VP-0. The v0.2 Alignment Overlay (§§A–L from v0.2) captured deltas from v0.1 against current state during 2026-04-24 → 2026-04-27; that content has been pulled into the per-phase narratives across VP-0 through VP-8. The overlay section itself is now retired (replaced with a brief historical note). Cross-Cutting Concerns conventions B12–B16 (added in v0.2) retained — they remain normative for every phase. Per-phase narratives are now the canonical reference; readers no longer need to consult the overlay before executing a phase. Open Items and Phase 0 facilitation tables updated throughout the validation pass; remaining Phase 0 gating items documented in the Phase 0 body. **Plan now reflects:** Data Model v1.9i, FDS v0.11j, OIR v2.14 (16 UJ closures + 22 Part A closures), Seeding Registry v1.0 (S-01..S-11). |
 | 0.2n | 2026-04-27 | Blue Ridge Automation | **VP-8: Plan Phase 8 (Downtime + Shift Boundary) — UJ-10 Option D closure + shift-end summary.** UJ-10 closed 2026-04-27 with Option D — events span shift boundaries naturally per OI-03 (event-derived availability). The v0.1 carryover-rule alternatives (CloseAtEnd / CarryOpen / AssociateWithStartShift) and the `DowntimeEvent_CarryAcrossShift` proc are **retired** — there is no auto-close, no carryover code table, no boundary-driven mutation. `Shift_End` simply updates `Oee.Shift.ActualEnd`; open `DowntimeEvent` rows remain open and end whenever the operator (or PLC) closes them. New: FDS-09-015 shift-end summary screen — read-only Perspective view binding three queries (open `DowntimeEvent`, open `Lots.PauseEvent`, in-process LOTs at the operator's Cell via `LotMovement` + `v_LotDerivedQuantities`); operator-acknowledgement logged to `Audit.OperationLog` as `ShiftHandoverAcknowledged`. UJ-14 closure (DowntimeEvent.ShotCount only — no ProductionEventValue.WarmupShotCount) confirmed throughout. Migration filename updated. |
 | 0.2m | 2026-04-27 | Blue Ridge Automation | **VP-7: Plan Phase 7 (Hold + Sort Cage + Shipping + AIM) — UJ-04 topup loop + UJ-18 safety sweep + UJ-05 default.** Phase 7 takes ownership of the AIM pool topup loop (Gateway timer ~30s per FDS-07-010), pool alarms (warning/critical/exhausted per FDS-07-010b), pool config CRUD (FDS-07-010c). Phase 7 also delivers the print-job safety sweep timer (every 5min, FDS-07-006b) and stranded-prints alarm at 5. UJ-05 default direction (update-in-place + `Lots.ContainerSerialHistory`) committed for the schema CREATE — table delivers in this phase; finalization waits on MPP Quality + Honda compliance affirmation. AIM `PlaceOnHold` / `ReleaseFromHold` / `UpdateAim` remain sync direct-call with `InterfaceLog` (per UJ-18 — sync still allowed for inter-MES DB calls and for AIM operations not on the operator critical path; the pool-pattern special case applies to `GetNextNumber` only). Open Items table refreshed. Migration filename updated. |
 | 0.2l | 2026-04-27 | Blue Ridge Automation | **VP-6: Plan Phase 6 (Assembly + MIP + Container Pack) — major rewrite for UJ-04 / UJ-09 / UJ-13 / UJ-16 / UJ-17 / UJ-18 / OI-16.** Container_Complete reframed for UJ-04 pool model — sync claim from `Lots.AimShipperIdPool` (no inline AIM call); empty-pool hard fail (FDS-07-010a). ShippingLabel_Print + LotLabel print path reframed for UJ-18 Gateway-script-async — atomic close writes ShippingLabel row with `PrintedAt=NULL` + sendMessageAsync('print-shipping-label', {ShippingLabelId}); 3 attempts × 2s gap inline retry; per-terminal banner on PrintFailedAt; safety sweep at 5min. OI-16 PLC `CompletionConfirmed` BIT + Terminal `RequiresCompletionConfirm` LocationAttribute drive auto-finish gate. UJ-09 strict-BOM + supervisor AD-elevated one-shot override at material scan-in (FDS-04-007 + FDS-06-011 extension). UJ-17 `ConfirmationMethod` LocationAttribute per Cell (Vision/Barcode/Both). UJ-13 ContainerConfig.ClosureMethod confirmed (already in Phase 4 schema; no new code table needed). UJ-16 `HardwareInterlockBypassed` BIT on `Lots.ContainerSerial` ONLY (Option A — single location, not both). Open Items table refreshed. Migration filename updated. |
@@ -42,147 +43,25 @@ This document is the phased delivery plan for **Arc 2 (Plant Floor MES)** — th
 
 This plan is unblocked with one explicit precondition: **Phase 0 (Customer Validation Gate) must complete before Phase 1 implementation begins.** Phase 0 is a facilitation workshop with MPP stakeholders that resolves four structural decisions whose wrong answer would force a phase rebuild.
 
-## v0.2 Alignment Overlay
+## v0.2 Alignment Overlay — RETIRED v0.3 (2026-04-27)
 
-**Authoritative as of 2026-04-24.** Supersedes the corresponding parts of the per-phase narratives below. Read this whole section before executing any phase.
+The overlay section that lived here from v0.2 through v0.2n captured deltas (security model rewrite, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, cavity-parallel LOT pattern, lazy LOT creation, dashboard-pattern rejection, UJ batch closures, etc.) that emerged 2026-04-21 → 2026-04-27 against the v0.1 plan. Per the VP-0 through VP-Final validation pass (2026-04-27), all overlay content has been pulled into the appropriate per-phase narratives below. The cross-cutting B12–B17 conventions (originally L appendix) now live under § Cross-Cutting Concerns.
 
-### A. Security model (Phase 1 rewrite)
+**For historical reference**, the overlay's structure was:
+- §A Security model (initials-only, per-action AD elevation) → Phase 1 body
+- §B Tool/Cavity on Lot → Phases 2/3/4 bodies + B13
+- §C ProductionEvent checkpoint shape → Phase 3 body + B14
+- §D `Lots.IdentifierSequence` → Phase 1 body + B15
+- §E Cavity-parallel LOTs as peers → Phase 3 body
+- §F Lazy LOT creation → Phase 3 body + B16
+- §G LOT close semantics → Phases 3/6 bodies
+- §H Purpose-built Perspective views → B12
+- §I `UserInterfaceScript` not reproduced → B12 / OI-26 closure
+- §J Non-Die Tool Assignment limitation → Phase 3 + Tools schema notes
+- §K Phase 0 open-items refresh → Phase 0 body (Open Items table)
+- §L Cross-cutting conventions B12–B16 → § Cross-Cutting Concerns body
 
-v0.1 describes clock# + PIN login. **That is obsolete.** Phase C (2026-04-21) replaced it end-to-end:
-
-- Operators are identified by **initials only** (no clock number, no PIN) entered at a shop-floor terminal. Initials establish an operator **presence context** that stamps `AppUserId` on events via `Location.AppUser_GetByInitials`.
-- Interactive users (Quality, Supervisor, Engineering, Admin) continue to authenticate via Active Directory.
-- **Elevated actions** require per-action AD re-prompts (FDS-04-007). No session-sticky elevation. No 5-minute timeout. No re-auth-for-sensitive flag on Terminal.
-- **Dedicated vs Shared terminal modes derived from Terminal's parent Location tier** (v0.2c per OI-08 correction): Terminal parented to a WorkCenter or Cell = Dedicated; Terminal parented to an Area = Shared. No separate `TerminalMode` attribute. Dedicated persists presence through the shift with a 30-minute idle re-confirmation overlay ("Operate as CM? Yes / No — change"). Shared terminals prompt on first action and on machine change.
-- **Pre-populated defeasible Initials field** on every mutation screen.
-- Operator `AppUser` rows are managed in the Configuration Tool (Admin screen); they carry no AD account.
-
-Phase 1 delivers `Location.AppUser_GetByInitials` and the Initials-presence context bootstrapping. The v0.1 `AppUser_AuthenticateByClockAndPin` proc is not built. Migration `0012_phase_c_security.sql` (already landed in Phase G) dropped `AppUser.ClockNumber` + `PinHash` columns — do not reference them from any Arc 2 proc.
-
-### B. Tool / Cavity on Lot, not on ProductionEvent
-
-`Lots.Lot` carries `ToolId BIGINT NULL FK → Tools.Tool` and `ToolCavityId BIGINT NULL FK → Tools.ToolCavity` as of Data Model v1.9 (Arc 2 Phase 1 migration). Rules:
-
-- **Required at `Lot_Create` for die-cast-origin LOTs.** `Lots.Lot_Create` signature SHALL include `@ToolId BIGINT = NULL, @ToolCavityId BIGINT = NULL`. If `@LotOriginTypeCode = 'Manufactured'` and the scanned Cell has an active `Tools.ToolAssignment`, both params are required and validated. Other origins pass NULL.
-- **NULL on merged LOTs.** `Lots.Lot_Merge` writes `ToolId = NULL, ToolCavityId = NULL` on the resulting merged row. Downstream Honda-trace reconstructs Tool context via `LotGenealogy` walk of pre-merge source LOTs.
-- **Downstream LOTs do NOT carry.** Trim / Machining intermediate / Assembly LOTs created via `ConsumptionEvent` have NULL `ToolId` / `ToolCavityId`. Genealogy walk is the system of record for Tool-filtered reports.
-- **`Workorder.ProductionEvent` does NOT carry Tool or Cavity.** Derived via `ProductionEvent.LotId → Lot.ToolId / Lot.ToolCavityId`. Pre-v0.2 plan references to `DieIdentifier` / `CavityNumber` hot columns on ProductionEvent are superseded.
-
-### C. ProductionEvent is a checkpoint table (Arc 2 Phase 1 CREATE)
-
-Per FDS-03-017a revised + FDS-06-003 revised (v0.11):
-
-- Columns: `Id`, `LotId`, `OperationTemplateId`, `WorkOrderOperationId` (nullable), `EventAt`, `ShotCount` (cumulative), `ScrapCount` (cumulative), `ScrapSourceId` (nullable), `WeightValue`, `WeightUomId`, `AppUserId`, `TerminalLocationId`, `Remarks`.
-- **Not on the table:** `LocationId`, `ItemId`, `DieIdentifier`, `CavityNumber`, `StartedAt`, `EndedAt`, per-event `GoodCount` / `NoGoodCount`.
-- **Required index:** `(LotId, EventAt DESC)` — "previous event for this LOT" must be a single-row seek.
-- **Deltas via `LAG()`:** `ShotsSinceLast = ShotCount - LAG(ShotCount) OVER (PARTITION BY LotId ORDER BY EventAt)`. A missed checkpoint doesn't compound errors.
-- **ShotCount is OPEN** — may migrate to derived-from-aggregated-LOT-quantity before Phase 3 implementation. Default until decided: keep column, mark provisional.
-
-### D. `Lots.IdentifierSequence` table (Arc 2 Phase 1 CREATE)
-
-New table + proc per OI-31 / FDS-16-001..003. Replaces Flexware `IdentifierFormat`. Arc 2 Phase 1 migration CREATEs the table with the column contract in Data Model v1.9 §3 Lots, plus companion proc `Lots.IdentifierSequence_Next @Code`. Seeded at cutover with `Lot` (`MESL{0:D7}`) and `SerializedItem` (`MESI{0:D7}`); `LastValue` sampled from Flexware on cutover day. Every LOT-create / SerializedPart-create path calls `IdentifierSequence_Next` — no ad-hoc counter maintenance anywhere.
-
-### E. Cavity-parallel LOTs are peers, not sublots
-
-A die-cast machine mounting a Tool with N active cavities produces **N parallel independent LOTs**, each with `ToolCavityId` set at creation. No parent/child FK between them; genealogy is flat at Die Cast. Each fills at its own rate; each closes independently via explicit operator Complete + Move.
-
-The v0.1 plan Phase 5 language around "sub-LOT split" is **Machining-only**. Phase 3 Die Cast narrative must not reproduce sublot mechanics for cavity-parallel LOTs — they're first-class LOTs.
-
-### F. Lazy, operator-driven LOT creation
-
-`Lot_Create` fires whenever the operator decides to log a LOT — not at any prescribed moment. Valid moments: basket-full, before starting the next LOT, any other moment the operator chooses. The MES SHALL NOT auto-create N LOTs at run start. Phase 3 UI / procs SHALL NOT require a LOT row to exist for an in-progress cavity. Physical-but-unlogged baskets are normal.
-
-### G. LOT close semantics
-
-- **Component LOTs** (Die Cast, Trim, intermediate Machining): explicit operator-driven close. "Complete + Move" is a combined UI action — status transition + movement in one atomic proc. No auto-close.
-- **Finished-goods LOTs** (Assembly end-products packed into shipping Containers): MAY auto-close on `Container_Complete`. Phase 6 owns the detail.
-
-### H. Purpose-built Perspective views per terminal function
-
-Die Cast terminal view, Trim Station view, Machining IN view, Machining OUT view, Sort Cage view, Shipping view, Hold Management view, Weigh Station view, etc. B11 zone-based routing picks the right view by terminal Location + `DefaultScreen` LocationAttribute.
-
-**Flexware's `*DashboardConfiguration` family is NOT reproduced** (`LotTrackingDashboardConfiguration`, `LotCreateDashboardConfiguration`, `WorkOrderDashboardConfiguration`, `FinalAssemblyDashboardConfiguration`, `CreateAllocationDashboardConfiguration`, `SortDashboardConfiguration`, `MaterialLabelPrintDashboardConfiguration`, `WorkstationDashboardConfiguration`). If the Trim view needs different populate behavior than Assembly, they are different views — not a configurable flag. **LocationAttribute is for business policies only** (DefaultScreen, TerminalMode, LinesideLimit, TrackingMode, IpAddress, RequireCastPartAllocationOverride). Not UI config. Not dashboard behavior.
-
-### I. UserInterfaceScript — NOT reproduced
-
-Flexware's pattern of storing runtime JavaScript in a DB table and executing it from dashboard save-buttons is explicitly out of scope. Any per-terminal behavior variance lives in Ignition project scripts or Perspective view-level event handlers, version-controlled. OI-26 was deleted (not Resolved) to remove this path from consideration.
-
-### J. Non-Die Tool Assignment — known limitation
-
-`Tools.ToolAssignment` has two filtered unique indexes today: `UQ_ToolAssignment_ActiveTool` (correct for all tool types) and `UQ_ToolAssignment_ActiveCell` (Die-Cast-correct; wrong for Machining / Trim / Assembly where multiple tools coexist per cell). Not blocking for MVP. Post-MVP adjustment: scope the Cell UNIQUE to `ToolType = Die` or drop it. Documented in Data Model v1.9 §7 Tools.
-
-### K. Phase 0 open-items refresh — updated v0.2f (2026-04-27)
-
-The v0.1 Phase 0 table is stale. Use this consolidated list for the Phase 0 workshop. **Significantly narrowed** since v0.2e — the 2026-04-27 UJ batch closures (UJ-04, UJ-09, UJ-10, UJ-11, UJ-13, UJ-14, UJ-16, UJ-17, UJ-18) plus Part A closures (OI-12, -13, -14, -15..-23, -32b) all moved out of gating into the "already closed" list.
-
-**Closed — operator-facing decisions (do NOT re-litigate in workshop):**
-
-- **OI-06 / UJ-01** Operator identity — initials-only presence, per-action AD elevation (Phase C, 2026-04-21).
-- **OI-09 / UJ-15** Multi-part / cavity-parallel LOTs — N cavities → N parallel peer LOTs (not sublots), each with `Lot.ToolCavityId`.
-- **OI-11** Casting → Trim — 1-line BOM consumption, no new schema.
-- **OI-22** Dedicated Hold Management screen — included.
-- **UJ-04** Container lifecycle + AIM — pre-fetched local pool, zero-latency container close, hard-fail on empty pool, Gateway-script-async topup (2026-04-27 design lock).
-- **UJ-09** Material verification at assembly — strict BOM check + supervisor AD-elevated one-shot override (Option C, 2026-04-27).
-- **UJ-10** Shift boundary handling — events span boundaries naturally + optional shift-end summary screen (Option D, 2026-04-27).
-- **UJ-11** Paper-to-screen transition — all-at-once cutover (Option A, **flagged as risk**, 2026-04-27).
-- **UJ-12** Terminal-to-machine mapping — addenda in OI-08.
-- **UJ-13** Container closure — per-Item via `Parts.ContainerConfig.ClosureMethod` + `TargetWeight` (Option A, 2026-04-27 — schema already in Phase 4).
-- **UJ-14** Warm-up shots — `Oee.DowntimeEvent` + `ShotCount` (Option A, 2026-04-27 — schema already in Phase 8).
-- **UJ-16** `HardwareInterlockBypassed` — BIT on `Lots.ContainerSerial` (Option A, 2026-04-27).
-- **UJ-17** Vision vs barcode — single configured source per Cell via `ConfirmationMethod` LocationAttribute on `Cell`-tier `LocationTypeDefinition` (Option A, 2026-04-27).
-- **UJ-18** Event processing — Gateway-script-async pattern for ALL external integrations (FDS-01-014); print dispatch via `system.util.sendMessageAsync` with 3 attempts × 2s gap, per-terminal banner on failure, safety sweep at 5min, stranded-prints alarm at 5 (2026-04-27).
-
-**Closed — technical / architectural decisions (no workshop input required):**
-
-- **OI-01** Event outbox — direct-call-with-logging.
-- **OI-03** Shift runtime adjustments — event-derived availability.
-- **OI-04** Non-serialized line integration — line-stop semantics + 10-fail escalation + CRT 200%-inspect.
-- **OI-05** LOT merge rules — proc-enforced (post-sort, same part, rank-compat); supervisor override unblocks edge cases. **Matrix data owed via S-08** (seeding registry).
-- **OI-07** WorkOrderType — single-seeded `Production` row; `Demand` + `Maintenance` are FUTURE hooks.
-- **OI-08** Terminal mode — derived from parent Location tier (WorkCenter/Cell → Dedicated; Area → Shared). No `TerminalMode` LocationAttribute.
-- **OI-12** `MaxParts` — on `Parts.Item` (per-Item per-Location cap), not on `ContainerConfig`.
-- **OI-15** Global Trace Tool — Track screen.
-- **OI-16** PLC confirm BIT + `RequiresCompletionConfirm` LocationAttribute — applies at WO/Tray/Container close (Phase 6).
-- **OI-17** Tray-divisibility — Finished-Good Item attribute.
-- **OI-18** `Parts.ItemLocation` — supports Area / WorkCenter / Cell hierarchy with cascade on check-in.
-- **OI-19** `Parts.Item.CountryOfOrigin` — added.
-- **OI-20** `ScrapSource` enum — Inventory / Location.
-- **OI-21** Pausable LOT — `Lots.PauseEvent` table (mirrors `Quality.HoldEvent`); orthogonal to WorkOrderStatus / OperationStatus / LotStatusCode; per-terminal Paused-LOT indicator.
-- **OI-23** LOT derived quantities — view (`Lots.v_LotDerivedQuantities`), not materialized.
-- **OI-26** `UserInterfaceScript` — DELETED (DB-stored runtime code not reproduced).
-- **OI-32b** Material Classes — `Parts.ItemType` suffices.
-
-**Gating — must resolve at Phase 0 (wrong answer rebuilds a phase):**
-
-| Item | Question | Why it gates |
-|---|---|---|
-| **OI-31** | IdentifierSequence cutover seed + carry-forward. Any additional counters (container barcodes, shipping print sequences) in use beyond Lot/SerializedItem? Reset policy? Rollover at 9,999,999? Couples to **Ben's OI-31 rollout-shape decision** (single-line vs full-cutover vs shadow — memo at `Meeting_Notes/2026-04-24_OI-31_Single-Line_Deployment_Impact.md`). | Phase 1 migration seeds `Lots.IdentifierSequence.LastValue` at cutover-day values; wrong seed = LTT collisions with live Flexware LOTs. |
-| **FDS-06-030 WorkOrder BIT-flag enumeration** | Which Flexware WorkOrder flags are live in production (`IsCameraProcessingEnabled`, `IsScaleProcessingEnabled`, `GroupTargetWeight` + tolerance + UOM, `RecipeNumber`, `TrayQuantity`, `ReturnableDunnageCode`, `Customer`)? | Phase 1 `Workorder.WorkOrder` CREATE column list. Dead flags don't ship. |
-| **Historical data migration** | Cutover approach — which entities migrate (LOTs, SerializedItems, ProductionOrders, Containers, Genealogy). Discrepancy review for unmatched rows (e.g., Flexware `LotAttribute.DIE NAME` with no matching `Tools.Tool.Code`). | Phase 1 migration-script + pre-flight validation design. |
-| **ShotCount semantics** | `Workorder.ProductionEvent.ShotCount` = cumulative counter (current) OR derived from aggregated LOT quantities? | Phase 3 operator-screen design + reporting path. Default until decided: keep cumulative column, mark provisional. |
-| **Workstation `DefaultScreen` seeding** | List of terminal-function Perspective views + which terminal routes to which (couples to UJ-17 `ConfirmationMethod` per-Cell as well — same per-Cell seeding pass). | Phase 1 seed data for B11 routing. |
-| **Honda AIM Hold/Update contract detail** | UJ-04 locked the GetNextNumber pool flow. Still need confirmation of `PlaceOnHold` / `ReleaseFromHold` / `UpdateAim` signatures + error recovery expectations. | Phase 7 shipping Gateway scripts (Hold + Sort Cage re-pack paths). |
-| **Label template scope** | Flexware has 3 templates (CONTAINER, LOT, CONTAINER_HOLD). Ours matches + any new (Sort Cage, Hold, Void)? Couples to UJ-18 print pattern (Gateway-script-async) — print dispatch flow already locked, just template inventory open. | Phase 6 / 7 label print procs + ZPL templates. |
-| **OI-32 Material Allocation operator screen** | Premise challenged by Jacques in OIR v2.10 review; Blue Ridge clarification queued for confirmation. Awaits a separate Materials-Allocation walkthrough with MPP. | Phase 6 Assembly material flow. |
-
-**Opportunistic items** (resolve if MPP available; fallbacks exist):
-
-| Item | Current fallback if unresolved |
-|---|---|
-| **UJ-19** PD reports enumeration | MPP names the four PD reports + their data sources for MES reporting subsystem replication. Couples to OI-30 Reports tile. |
-| **UJ-05** Sort Cage serial migration | Update-in-place + `Lots.ContainerSerialHistory` is the current default direction (schema-supportable today). Awaits MPP Quality + Honda compliance affirmation. |
-| **UJ-03** Sublot split trigger (Machining IN) | Auto-prompt 50/50 split (Option A) is current default; Ben confirms whether all parts split or only some. |
-| **OI-24..30 discovery items** | Automation tile, Notifications, Supply part flag, cast-override cell flag, Workstation Category, Reports enumeration — handled in their respective phase walkthroughs if MPP brings input. |
-
-### L. Cross-cutting overlay — convention additions
-
-Appended to Arc 2 cross-cutting conventions B1–B11:
-
-- **B12 — Purpose-built Perspective views.** No generic dashboard-configuration engine. One view per terminal function; B11 routing picks by Terminal Location. LocationAttribute for business policies only, never UI config.
-- **B13 — Tool/Cavity system of record.** Lives on `Lots.Lot`. Never duplicated on `ProductionEvent`, `ConsumptionEvent`, or any derived LOT. Honda-trace queries walk `LotGenealogy` to the origin LOT and read Tool/Cavity from there.
-- **B14 — Checkpoint-shape events.** `Workorder.ProductionEvent` is a checkpoint table. Cumulative counters + `LAG()` deltas. No per-event `GoodCount` / `NoGoodCount`; no `StartedAt` / `EndedAt`; no `CellLocationId`. See §C above.
-- **B15 — Identifier minting via `IdentifierSequence_Next`.** All LOT LTTs, serialized-item IDs, and future non-AIM counters go through `Lots.IdentifierSequence_Next @Code`. No ad-hoc identifier generation.
-- **B16 — Lazy LOT creation.** No auto-create of LOTs at run start. Operator drives timing. Phase 3 UI / procs must not require a LOT row for in-progress production.
+Per-phase narratives are now the authoritative reference. Readers no longer need to consult an overlay before executing a phase.
 
 ---
 
@@ -297,6 +176,30 @@ On Perspective session startup, the client IP resolves to a Terminal-type `Locat
 A Trim Shop terminal opens to the Trim Station Screen; a Shipping Dock terminal opens to the Shipping Screen; a Die Cast terminal opens to the Die Cast LOT Entry Screen. Operator presence (initials) is orthogonal — the default-screen lookup happens on session start, before any initials entry or per-action elevation.
 
 No DDL change is required. The `DefaultScreen` attribute is seeded as a new `LocationAttributeDefinition` row on the `Terminal` `LocationTypeDefinition` (via migration or via the existing Arc 1 Config Tool). Phase 1 delivers `Location.Terminal_GetByIpAddress` and the `Terminal_ResolveFromSession` Gateway script that stashes Zone + DefaultScreen in session props for the Home router view to consume.
+
+### B12 — Purpose-built Perspective views
+
+No generic dashboard-configuration engine. One view per terminal function (Die Cast LOT Entry, Trim Station, Machining IN, Machining OUT, Sort Cage Workflow, Shipping Dock, Hold Management, etc.); B11 routing picks by Terminal Location. **LocationAttribute is for business policies only**, never UI configuration. Flexware's `*DashboardConfiguration` family (`LotTrackingDashboardConfiguration`, `LotCreateDashboardConfiguration`, `WorkOrderDashboardConfiguration`, `FinalAssemblyDashboardConfiguration`, `CreateAllocationDashboardConfiguration`, `SortDashboardConfiguration`, `MaterialLabelPrintDashboardConfiguration`, `WorkstationDashboardConfiguration`) is **NOT reproduced**. If two views need different populate behavior, they are different views — not a configurable flag.
+
+### B13 — Tool/Cavity system of record
+
+`Tool` and `Cavity` live on `Lots.Lot` (`ToolId`, `ToolCavityId` FKs, Data Model v1.9). They are **never duplicated** on `Workorder.ProductionEvent`, `Workorder.ConsumptionEvent`, or any derived LOT created via consumption / sub-LOT split. Honda-trace queries walk `Lots.LotGenealogy` to the origin LOT and read Tool/Cavity from there. Downstream (Trim, Machining, Assembly) LOTs carry `ToolId = NULL` and `ToolCavityId = NULL`.
+
+### B14 — Checkpoint-shape events
+
+`Workorder.ProductionEvent` is a **checkpoint table** — each row carries cumulative `ShotCount` / `ScrapCount` as-of-the-checkpoint. Deltas are derived by readers via `LAG()` over `(LotId, EventAt)`. **No** per-event `GoodCount` / `NoGoodCount`. **No** `StartedAt` / `EndedAt`. **No** `LocationId` / `ItemId` / `DieIdentifier` / `CavityNumber` (all derivable from `Lot.ToolId` / `Lot.ToolCavityId` + `LotMovement` + `Lot.ItemId`). A missed checkpoint doesn't compound errors — the next event carries truth.
+
+### B15 — Identifier minting via `IdentifierSequence_Next`
+
+All MPP-internal identifier minting (LOT LTT barcodes, SerializedItem IDs, future non-AIM counters) goes through `Lots.IdentifierSequence_Next @Code`. **No ad-hoc identifier generation anywhere.** The `Lots.IdentifierSequence` table seeds at cutover from Flexware live counter values (OI-31). AIM Shipper IDs are a separate concern (Honda-issued via `AIM.GetNextNumber`, pooled locally per UJ-04).
+
+### B16 — Lazy LOT creation
+
+LOT creation is operator-driven, not auto-triggered at any prescribed moment. `Lots.Lot_Create` fires whenever the operator decides — basket-full, before starting the next LOT, etc. The MES **does not auto-create N LOTs at run start**. Phase 3 UI and procs **must not require** a `Lot` row to exist for an in-progress cavity; physical-but-unlogged baskets are normal. Tool + Cavity assignment happens at `Lot_Create` time (FDS-05-034 / FDS-05-036).
+
+### B17 — Gateway-script-async external integrations (FDS-01-014, UJ-18)
+
+All MES outbound calls to external systems (AIM, Zebra printers, Honda EDI, future Macola pushes) use the Gateway-script-async pattern. Perspective views fire `system.util.sendMessageAsync` to a Gateway-scoped message handler with the relevant entity ID(s) as payload; the handler performs the external call. Failures retry inline within the handler (e.g., 3 attempts × 2s gap for shipping labels per FDS-07-006a) and ultimately write `Audit.FailureLog` if exhausted. Operator-facing failure surfaces (per-terminal banners, wallboard alarms) bind to **DB state** — not in-flight handler state — so Gateway restarts don't lose visibility. Sync direct-call from inside MES procs is retired for **external** systems; sync remains for inter-MES DB calls. Pre-fetched buffers (e.g., `Lots.AimShipperIdPool` per UJ-04) are the special case where zero operator-perceived latency is required.
 
 ## Stored Procedure Template and Conventions
 
