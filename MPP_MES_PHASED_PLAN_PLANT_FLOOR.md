@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2l
+**Document ID:** MPP-PLAN-ARC2-v0.2m
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2l (2026-04-27)
+**Version:** 0.2m (2026-04-27)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2m | 2026-04-27 | Blue Ridge Automation | **VP-7: Plan Phase 7 (Hold + Sort Cage + Shipping + AIM) — UJ-04 topup loop + UJ-18 safety sweep + UJ-05 default.** Phase 7 takes ownership of the AIM pool topup loop (Gateway timer ~30s per FDS-07-010), pool alarms (warning/critical/exhausted per FDS-07-010b), pool config CRUD (FDS-07-010c). Phase 7 also delivers the print-job safety sweep timer (every 5min, FDS-07-006b) and stranded-prints alarm at 5. UJ-05 default direction (update-in-place + `Lots.ContainerSerialHistory`) committed for the schema CREATE — table delivers in this phase; finalization waits on MPP Quality + Honda compliance affirmation. AIM `PlaceOnHold` / `ReleaseFromHold` / `UpdateAim` remain sync direct-call with `InterfaceLog` (per UJ-18 — sync still allowed for inter-MES DB calls and for AIM operations not on the operator critical path; the pool-pattern special case applies to `GetNextNumber` only). Open Items table refreshed. Migration filename updated. |
 | 0.2l | 2026-04-27 | Blue Ridge Automation | **VP-6: Plan Phase 6 (Assembly + MIP + Container Pack) — major rewrite for UJ-04 / UJ-09 / UJ-13 / UJ-16 / UJ-17 / UJ-18 / OI-16.** Container_Complete reframed for UJ-04 pool model — sync claim from `Lots.AimShipperIdPool` (no inline AIM call); empty-pool hard fail (FDS-07-010a). ShippingLabel_Print + LotLabel print path reframed for UJ-18 Gateway-script-async — atomic close writes ShippingLabel row with `PrintedAt=NULL` + sendMessageAsync('print-shipping-label', {ShippingLabelId}); 3 attempts × 2s gap inline retry; per-terminal banner on PrintFailedAt; safety sweep at 5min. OI-16 PLC `CompletionConfirmed` BIT + Terminal `RequiresCompletionConfirm` LocationAttribute drive auto-finish gate. UJ-09 strict-BOM + supervisor AD-elevated one-shot override at material scan-in (FDS-04-007 + FDS-06-011 extension). UJ-17 `ConfirmationMethod` LocationAttribute per Cell (Vision/Barcode/Both). UJ-13 ContainerConfig.ClosureMethod confirmed (already in Phase 4 schema; no new code table needed). UJ-16 `HardwareInterlockBypassed` BIT on `Lots.ContainerSerial` ONLY (Option A — single location, not both). Open Items table refreshed. Migration filename updated. |
 | 0.2k | 2026-04-27 | Blue Ridge Automation | **VP-5: Plan Phase 5 (Machining with Sub-LOT Split) — checkpoint-shape ProductionEvent + OI-18 cascade.** `IsPieceCountIncrement` flag on `Parts.OperationTemplate` retired — Lot piece count is now derived from `Lots.v_LotDerivedQuantities` view (OI-23 / Phase 2) at read time; no ALTER needed on `OperationTemplate`. `MachiningOut_Record` signature updated to use cumulative `ShotCount`/`ScrapCount` per v0.2i checkpoint shape (no `@GoodCount`/`@NoGoodCount`). Movement Scan Screen scan-in cascade (OI-18) applies at Machining IN — pulled from Phase 4 reusable pattern. Sublot split is the canonical pattern per OI-09 / FDS-05-022 (Machining-only — Die Cast cavity-parallel LOTs are peers, not sublots). UJ-03 sublot trigger still In Review (Ben pending). Migration filename updated. |
 | 0.2j | 2026-04-27 | Blue Ridge Automation | **VP-4: Plan Phase 4 (Movement + Trim + Receiving) — OI-11/12/18 + checkpoint-shape ProductionEvent.** Trim section rewritten for OI-11 Casting→Trim 1-line BOM consumption (closed 2026-04-22; no separate `Parts.ItemTransform` table; existing `Parts.Bom` + `Workorder.ConsumptionEvent` + `Lots.LotGenealogy` carry it). ProductionEvent_Record calls updated to v1.9 checkpoint signature (cumulative `ShotCount`/`ScrapCount`; no `LocationId`/`GoodCount`/`NoGoodCount`). Movement Scan Screen scan-in validation extended for OI-12 (`Parts.Item.MaxParts` per-Item per-Location cap) + OI-18 (`Parts.ItemLocation_IsEligible` cascade walk Cell → WorkCenter → Area). Open Items table refreshed — OI-11, OI-12, OI-18, OI-08, UJ-11, UJ-13 all closed. Migration filename updated. |
@@ -1725,22 +1726,27 @@ Target: 150–200 passing tests in suite 0018 (biggest phase, most branches).
 
 ## Data Model Changes
 
-**Migration `sql/migrations/versioned/0016_phase7_hold_sort_shipping.sql`:**
+**Migration `sql/migrations/versioned/<next_unclaimed>_arc2_phase7_hold_sort_shipping.sql`** (number TBD — likely `0022` after VP-6 Phase 6 migration).
 
-- Seed `Audit.LogEventType` entries: `HoldPlaced`, `HoldReleased`, `ContainerHeld`, `ContainerReleased`, `ShippingLabelPrinted`, `ShippingLabelVoided`, `ContainerShipped`, `AimPlaceOnHoldCalled`, `AimReleaseFromHoldCalled`, `AimUpdateAimCalled`.
-- Seed `Quality.HoldTypeCode` rows if not already: `Quality`, `CustomerComplaint`, `Precautionary`, `VisionMismatch` (from UJ-17 fallback).
-- Apply any B10 (serial migration) schema deltas not already applied in Phase 6.
-- Seed `Lots.PrintReasonCode` rows for shipping-label scenarios: `InitialShipping`, `ReprintDamaged`, `SortCageReIdentify`, `AimResync`.
+**v0.2m — what this migration includes (refreshed for UJ-04 + UJ-05 + UJ-18 closures):**
 
-**Tables used:** `Quality.HoldEvent`, `Quality.HoldTypeCode`, `Lots.Container`, `Lots.ContainerSerial`, `Lots.ContainerSerialHistory` (if B10), `Lots.ShippingLabel`, `Lots.LabelTypeCode`, `Lots.Lot`, `Lots.LotStatusHistory`, `Audit.*`.
+- **`Lots.ContainerSerialHistory`** CREATE — per UJ-05 default direction (update-in-place). Table contract per the v0.1 plan + Phase B10 convention. Awaits MPP Quality + Honda compliance final sign-off; if MPP chooses void-and-recreate (Pattern A), this table is dropped before cutover and `ContainerSerial_Add` + `ShippingLabel_Void` carry the workflow alone.
+- Seed `Audit.LogEventType` entries: `HoldPlaced`, `HoldReleased`, `ContainerHeld`, `ContainerReleased`, `ShippingLabelPrinted`, `ShippingLabelVoided`, `ContainerShipped`, `AimPlaceOnHoldCalled`, `AimReleaseFromHoldCalled`, `AimUpdateAimCalled`, **`AimPoolTopupCalled`** (UJ-04), **`AimPoolAlarmFired`** (UJ-04), **`PrintSweepRecovered`** (UJ-18 safety sweep recovery).
+- Seed `Quality.HoldTypeCode` rows: `Quality`, `CustomerComplaint`, `Precautionary`, `VisionMismatch`.
+- Seed `Lots.PrintReasonCode` rows: `InitialShipping`, `ReprintDamaged`, `SortCageReIdentify`, `AimResync`.
+
+**Tables used:** `Quality.HoldEvent`, `Quality.HoldTypeCode`, `Lots.Container`, `Lots.ContainerSerial`, `Lots.ContainerSerialHistory` (NEW v0.2m), `Lots.ShippingLabel`, `Lots.LabelTypeCode`, `Lots.Lot`, `Lots.LotStatusHistory`, `Lots.AimShipperIdPool` + `Lots.AimPoolConfig` (Phase 6 schema; Phase 7 owns the topup loop + alarms + config CRUD), `Audit.*`.
 
 ## Open Items Affecting This Phase
 
-| Item | Fallback / Resolution |
+| Item | Status |
 |---|---|
-| UJ-05 Sort Cage migration | Phase 0 decision applied here. Write paths differ by choice. |
-| UJ-17 vision handling | Auto-hold reason = `VisionMismatch`; supervisor override requires re-auth. |
-| OI-02 closure affects Sort Cage | Re-containerized outputs re-apply closure method; if Weight, new scale reading required. |
+| **UJ-04** AIM Shipper ID local pool — topup loop + alarms + config | **Closed (2026-04-27, design locked).** Phase 7 owns: (1) Gateway timer script `aim-pool-topup-loop` (~30s cadence per FDS-07-010 — calls `AIM.GetNextNumber` until `AvailableCount = TargetBufferDepth`, INSERTs via `AimShipperIdPool_Topup`); (2) alarm-evaluation tick per FDS-07-010b (warning at `< AlarmWarningDepth`, critical at `< AlarmCriticalDepth`, "POOL EXHAUSTED" at depth=0; auto-clear on recovery); (3) Configuration Tool exposure of `AimPoolConfig` (Admin-elevated per FDS-04-007) — `AimPoolConfig_Get` / `_Update`. Phase 6 already consumes the pool synchronously via `_Claim` inside `Container_Complete`. |
+| **UJ-05** Sort Cage serial migration | **Default committed (2026-04-27, update-in-place + `Lots.ContainerSerialHistory`).** Phase 7 delivers the schema CREATE in this migration. Final sign-off awaits MPP Quality + Honda compliance affirmation. Pattern A (void-and-recreate) remains a possible reversal — if chosen, the table is dropped pre-cutover. Phase 7 procs are written for the update-in-place pattern; reversal would require proc rewrite for Sort Cage workflow. |
+| **UJ-17** Vision-mismatch hold | **Closed (2026-04-27, Option A — `ConfirmationMethod` LocationAttribute).** Phase 6 already consumes; Phase 7 adds the auto-hold path: vision/barcode mismatch → `HoldEvent_Place` with `HoldTypeCode='VisionMismatch'`. Supervisor AD elevation per FDS-04-007 unblocks override. |
+| **UJ-13** Container closure on re-pack | **Closed (2026-04-27, Option A).** Re-containerized outputs from Sort Cage re-apply `ContainerConfig.ClosureMethod` (Count or Weight) — same per-Item config consumed by Phase 6 `Container_Complete`. |
+| **UJ-18** Print pattern — safety sweep + stranded-prints alarm | **Closed (2026-04-27, architectural).** Phase 7 owns: (1) Gateway timer `print-job-safety-sweep` (every 5min per FDS-07-006b — finds `Lots.ShippingLabel WHERE PrintedAt IS NULL AND PrintFailedAt IS NULL AND CreatedAt < NOW() - 60s`; re-fires `print-shipping-label` for orphans); (2) stranded-prints alarm at threshold 5 (supervisor wallboard + IT notification mirroring AIM pool alarm pattern). Phase 6 already delivers the inline 3 attempts × 2s gap retry. |
+| **AIM `PlaceOnHold` / `ReleaseFromHold` / `UpdateAim`** | **Sync direct-call retained (per UJ-18 special case).** These calls are NOT on the operator critical path (Sort Cage operations, hold actions) and CAN tolerate brief AIM latency. Sync direct-call + `Audit.InterfaceLog` is acceptable. The pool-pattern special case applies to `GetNextNumber` only. If MPP later observes operator-blocking on Hold operations, they MAY be migrated to Gateway-script-async per FDS-01-014 — design hook is in place. |
 
 ## State & Workflow
 
@@ -1868,18 +1874,29 @@ Placing holds, releasing holds, voiding labels, scrapping LOTs all require re-au
 
 | Procedure | Parameters | Notes | Dependencies | Executed When | Output |
 |---|---|---|---|---|---|
-| `Lots.Container_SortCageReContainer` | `@SourceContainerId`, `@DispositionsJson NVARCHAR(MAX)` (array of `{serializedPartId, disposition: Pass\|Fail\|Rework, newContainerId?}`), `@AppUserId`, `@TerminalLocationId` | Composite — iterates dispositions, moves serials per Phase 0 pattern. For Pass/Rework, call `ContainerSerial_RelocateInPlace` (B) or void-and-recreate flow (A). For Fail, also update affected `SerializedPart.LotId` to new scrap LOT. Emits one `ContainerSerialHistory` row per serial (if pattern B). Voids source container (Pattern A) or leaves it marked `Depleted` (Pattern B). | Many — see narrative | Sort Cage Workflow commit | `Status, Message` |
+| `Lots.Container_SortCageReContainer` | `@SourceContainerId`, `@DispositionsJson NVARCHAR(MAX)` (array of `{serializedPartId, disposition: Pass\|Fail\|Rework, newContainerId?}`), `@AppUserId`, `@TerminalLocationId` | Composite — iterates dispositions per UJ-05 update-in-place default. For Pass/Rework, call `ContainerSerial_RelocateInPlace` (Phase 6 proc) which writes `ContainerSerialHistory` row per moved serial. For Fail, also update affected `SerializedPart.LotId` to new scrap LOT. Source container marked `Depleted`. New output containers go through `Container_Complete` to claim fresh AIM Shipper IDs from the pool (Phase 6) and trigger async print dispatch (Phase 6 + Phase 7 safety sweep). | Many — see narrative | Sort Cage Workflow commit | `Status, Message` |
+
+### AIM Shipper ID pool — topup + config (UJ-04, FDS-07-010c)
+
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `Lots.AimShipperIdPool_Topup` | `@AimShipperId NVARCHAR(50)`, `@FetchedInterfaceLogId BIGINT` | INSERT a fresh ID returned by AIM. Called by `aim-pool-topup-loop` Gateway script for each successful AIM `GetNextNumber` response. UNIQUE on `AimShipperId` protects against double-INSERT on retry. | `Lots.AimShipperIdPool`, `Audit.InterfaceLog` (already written by caller) | Gateway timer script per `AIM.GetNextNumber` response | `Status, Message, NewId` |
+| `Lots.AimShipperIdPool_GetDepth` | (none) | Single result set: `(AvailableCount INT, OldestAvailableAt DATETIME2(3))`. Drives topup-loop trigger + alarm thresholds + supervisor wallboard. | `Lots.AimShipperIdPool` | Gateway script every tick; supervisor view binding | Single row |
+| `Lots.AimShipperIdPool_GetByContainer` | `@ContainerId BIGINT` | Single result set with the consumed pool row + linked `Audit.InterfaceLog` row. End-to-end provenance: from Container.AimShipperId back to the AIM `GetNextNumber` call that issued it. | `Lots.AimShipperIdPool`, `Audit.InterfaceLog` | Container detail / supervisor audit | Single row or empty |
+| `Lots.AimPoolConfig_Get` | (none) | Returns the single config row: `(TargetBufferDepth, TopupThreshold, AlarmWarningDepth, AlarmCriticalDepth)`. | `Lots.AimPoolConfig` | Gateway scripts + Configuration Tool admin screen | Single row |
+| `Lots.AimPoolConfig_Update` | `@TargetBufferDepth INT`, `@TopupThreshold INT`, `@AlarmWarningDepth INT`, `@AlarmCriticalDepth INT`, `@AppUserId BIGINT` | Updates the four thresholds. Validates per FDS-07-010c CHECK ordering: `Critical < Warning < Topup < Target`. Admin-elevated per FDS-04-007. Audit via `Audit.ConfigLog`. | `Lots.AimPoolConfig`, `Audit.Audit_LogConfigChange` | Configuration Tool admin screen | `Status, Message` |
 
 ## Gateway Scripts
 
 | Script | Purpose | Trigger | External System | Audit |
 |---|---|---|---|---|
-| `AimPlaceOnHoldCaller` | Calls AIM `PlaceOnHold(aimShipperId)`. Logs request + response. | Called from Container_UpdateStatus when status = Hold AND container was already shipped to AIM | AIM | `InterfaceLog` |
-| `AimReleaseFromHoldCaller` | Calls AIM `ReleaseFromHold(aimShipperId)`. | Called from Container_UpdateStatus when status returns from Hold | AIM | `InterfaceLog` |
-| `AimUpdateAimCaller` | Calls AIM `UpdateAim(serial, previousSerial)` per Appendix L. Used during Sort Cage serial migration. | Called from Container_SortCageReContainer per migrated serial | AIM | `InterfaceLog` |
-| `AimGetNextNumberCaller` (delivered Phase 6, reused) | Reused in Phase 7 for new Good output containers from Sort Cage. | After Container_Complete success | AIM | `InterfaceLog` |
-| `ShippingZplDispatcher` | Renders shipping label ZPL; dispatches to dock Zebra. Updates ShippingLabel.PrintedAt. | After ShippingLabel_Print returns | Zebra | `InterfaceLog` |
-| `ManifestPrinter` | Renders truck manifest (list of containers with same TruckId); dispatches to dock printer as PDF or ZPL. | Manifest print action on Shipping Dock | Printer | `InterfaceLog` |
+| **`aim-pool-topup-loop`** (Gateway timer — UJ-04 / FDS-07-010) | **Phase 7 ownership.** Every ~30s: read pool depth via `AimShipperIdPool_GetDepth` + config via `AimPoolConfig_Get`; if `AvailableCount < TopupThreshold`, repeatedly call `AIM.GetNextNumber` until reaching `TargetBufferDepth`. Each AIM call → `Audit.InterfaceLog` + `AimShipperIdPool_Topup` INSERT. On AIM failure: log + abandon this cycle + retry next tick (no backoff — script just re-evaluates depth). Pool alarm evaluation (warning / critical / exhausted) co-fires with topup tick or sibling alarm script. Auto-clear on recovery. | Gateway timer (~30s) | AIM | `InterfaceLog`; alarms |
+| **`print-job-safety-sweep`** (Gateway timer — UJ-18 / FDS-07-006b) | **Phase 7 ownership.** Every 5min: `SELECT FROM Lots.ShippingLabel WHERE PrintedAt IS NULL AND PrintFailedAt IS NULL AND CreatedAt < NOW() - 60s` (orphans from Gateway-restart-mid-message etc.). For each orphan, re-fire `system.util.sendMessageAsync('mes', 'print-shipping-label', {ShippingLabelId})`. If orphan count > **5**, fire stranded-prints alarm: supervisor wallboard tile turns critical + IT notification (mirroring AIM pool alarm pattern). Stranded threshold is hardcoded for MVP; promote to a config column post-deploy if MPP wants tunability. | Gateway timer (5 min) | — | `InterfaceLog`; alarms |
+| `AimPlaceOnHoldCaller` (sync direct-call per UJ-18 special case) | Calls AIM `PlaceOnHold(aimShipperId)` synchronously from inside Container_UpdateStatus's Gateway-script wrapper. Logs request + response. | Called from Container_UpdateStatus when status = Hold AND container was already shipped to AIM | AIM | `InterfaceLog` |
+| `AimReleaseFromHoldCaller` (sync direct-call per UJ-18 special case) | Calls AIM `ReleaseFromHold(aimShipperId)`. | Called from Container_UpdateStatus when status returns from Hold | AIM | `InterfaceLog` |
+| `AimUpdateAimCaller` (sync direct-call per UJ-18 special case) | Calls AIM `UpdateAim(serial, previousSerial)` per Appendix L. Used during Sort Cage serial migration. | Called from Container_SortCageReContainer per migrated serial | AIM | `InterfaceLog` |
+| `ShippingLabelReprintDispatcher` | Operator-driven reprint via FDS-07-009 — fires `system.util.sendMessageAsync('mes', 'print-shipping-label', {ShippingLabelId})` for the new ShippingLabel row created by `ShippingLabel_Reprint`. Same Gateway-script-async path as Phase 6's initial print. | Operator triggers from print-failure banner Reprint action OR Sort Cage re-pack flow | Zebra | `InterfaceLog` |
+| `ManifestPrinter` | Renders truck manifest (list of containers with same TruckId); dispatches to dock printer as PDF or ZPL. Sync direct-call OK — manifest print is operator-triggered, not on a critical path. | Manifest print action on Shipping Dock | Printer | `InterfaceLog` |
 
 ## Perspective Views
 
