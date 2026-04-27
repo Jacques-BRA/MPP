@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2g
+**Document ID:** MPP-PLAN-ARC2-v0.2h
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2g (2026-04-27)
+**Version:** 0.2h (2026-04-27)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2h | 2026-04-27 | Blue Ridge Automation | **VP-2: Plan Phase 2 (LOT Lifecycle Completion) — PauseEvent + view folded into body.** Adds `Lots.PauseEvent` table CREATE (OI-21 / FDS-05-038) + 4 procs (`LotPause_Place / _Resume / _GetByLocation / _GetCountsByLocation`) — pulled from v0.2 Overlay K. Adds `Lots.v_LotDerivedQuantities` view CREATE (OI-23 / FDS-05-031) + view-join read paths in `Lot_Get` / `Lot_List` — pulled from v0.2 Overlay D. Open Items table: UJ-08 closed (Option A — proc-enforced merge rules); merge rule narrative refreshed (same Item + die-rank-compat from `Tools.DieRankCompatibility` + supervisor override; FIFO-by-cavity is NOT a merge); test suite files updated; B10 still pending UJ-05 resolution. Migration-number reference updated. |
 | 0.2g | 2026-04-27 | Blue Ridge Automation | **VP-1: Plan Phase 1 freshening.** B4 (Gateway script layer contract) updated for FDS-01-014 / UJ-18 — sync direct-call retired in favour of Gateway-script-async via `system.util.sendMessageAsync`; AIM pool topup is the canonical example. Phase 1 LocationAttributeDefinition seed list adds `ConfirmationMethod` (UJ-17 / FDS-10-013) on the relevant `Cell`-tier `LocationTypeDefinition`s. Phase 1 "Open Items Affecting This Phase" table refreshed — UJ-10 closure (Option D / FDS-09-015) reflected. |
 | 0.2f | 2026-04-27 | Blue Ridge Automation | **VP-0: front matter + Plan Phase 0 refreshed against current state (Data Model v1.9i, FDS v0.11j, OIR v2.14, Seeding Registry v1.0).** UJ batch closures (UJ-04, UJ-09, UJ-10, UJ-11, UJ-13, UJ-14, UJ-16, UJ-17, UJ-18) and Part A closures (OI-12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -32b) since v0.2e moved out of gating/opportunistic into the "Already closed" list. Gating list narrowed to truly-still-gating items. Migration-number reference updated for queued OI-07 + OI-12 correction migrations. v0.2 Alignment Overlay §K (Phase 0 open-items refresh) regenerated with the same scope. Per-phase narratives below (Phases 2–8) still pending VP-1..VP-Final passes. |
 | 0.2e | 2026-04-24 | Blue Ridge Automation | **OI-16 PLC confirm BIT + `RequiresCompletionConfirm` LocationAttribute propagated.** Phase 1 migration gains an additional LocationAttributeDefinition seed row (`RequiresCompletionConfirm` BIT on Terminal tier). Phase 6 Assembly Gateway script gains `CompletionConfirmed` MIP tag read; auto-close gates on BOTH target-crossing AND BIT. Perspective Assembly view conditionally renders a large "Confirm Completion" button vs passive popup based on session's derived RequiresCompletionConfirm value. |
@@ -759,9 +760,19 @@ Target: 75–95 passing tests in suite 0013 (up from v0.1 target of 60–80 — 
 
 ## Data Model Changes
 
-No DDL changes expected. Phase 2 indexes any hot-read paths exposed by testing (e.g., `Lots.LotGenealogy(ParentLotId)` and `Lots.LotGenealogy(ChildLotId)` may need explicit indexes if not already present). Index additions roll into migration `0011_phase2_lot_lifecycle.sql`.
+**Migration `sql/migrations/versioned/<next_unclaimed>_arc2_phase2_lot_lifecycle.sql`** (number TBD per Phase 0 corrections — likely `0016` or `0017`):
 
-**Tables used (all exist from Arc 1):**
+**New tables (added v0.2h):**
+
+- **`Lots.PauseEvent`** (OI-21 / FDS-05-038, Data Model v1.9g) — append-only place + close lifecycle for operator-driven LOT pauses at a workstation. Columns: `Id BIGINT PK`, `LotId BIGINT NOT NULL FK → Lots.Lot.Id`, `LocationId BIGINT NOT NULL FK → Location.Location.Id (Cell-tier)`, `PausedByUserId BIGINT NOT NULL FK → Location.AppUser.Id`, `PausedAt DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME()`, `PausedReason NVARCHAR(500) NULL`, `ResumedByUserId BIGINT NULL FK → Location.AppUser.Id`, `ResumedAt DATETIME2(3) NULL`, `ResumedRemarks NVARCHAR(500) NULL`. Constraints: `CK_PauseEvent_ResumePaired` pairing the resume cols; filtered UNIQUE `UQ_PauseEvent_OpenLotLocation (LotId, LocationId) WHERE ResumedAt IS NULL` (at most one **open** pause per LOT-at-Location; same LOT MAY be paused at multiple Cells simultaneously). Filtered indexes: `IX_PauseEvent_OpenByLocation (LocationId) WHERE ResumedAt IS NULL` (drives Paused-LOT indicator counter) + `IX_PauseEvent_Lot (LotId, PausedAt DESC)` (per-LOT pause history). `Audit.LogEntityType` +1 row (`PauseEvent`).
+
+**New views (added v0.2h):**
+
+- **`Lots.v_LotDerivedQuantities (LotId, TotalInProcess, InventoryAvailable)`** (OI-23 / FDS-05-031, Data Model v1.9e). Joins `Lots.Lot.PieceCount` with aggregations over `Workorder.ProductionEvent` (checkpoint counters: `Σ StartedCount − Σ CompletedCount − Σ ScrappedCount` grouped by `LocationId`) and `Workorder.ConsumptionEvent` (consumed quantities). No materialized columns; no on-write update paths. `Lot_Get` and `Lot_List` read procs JOIN this view to the base `Lots.Lot` table at read time so the Lot Details screen header shows TotalInProcess + InventoryAvailable derived fresh each query. If query performance becomes an issue post-MVP, the view MAY be replaced by an indexed view or materialized table without changing caller contracts.
+
+**Indexes:** Phase 2 indexes any hot-read paths exposed by testing (e.g., `Lots.LotGenealogy(ParentLotId)` and `Lots.LotGenealogy(ChildLotId)` may need explicit indexes if not already present).
+
+**Tables used (all exist from Phase 1 Lots schema CREATE):**
 
 | Table | Role |
 |---|---|
@@ -770,17 +781,21 @@ No DDL changes expected. Phase 2 indexes any hot-read paths exposed by testing (
 | `Lots.LotMovement` | Append on every `Lot_MoveTo` |
 | `Lots.LotAttributeChange` | Append on every `Lot_UpdateAttribute` |
 | `Lots.LotGenealogy` | Append on Split / Merge / Consumption |
-| `Lots.GeneologyRelationshipType` | Code table — Split, Merge, Consumption |
+| `Lots.GenealogyRelationshipType` | Code table — Split, Merge, Consumption |
 | `Lots.LotLabel` | Append on every label print/reprint |
 | `Lots.PrintReasonCode` | Code table — Initial, ReprintDamaged, Split, Merge, SortCageReIdentify |
 | `Lots.LabelTypeCode` | Code table — Primary, Container, Master, Void |
+| `Lots.PauseEvent` | **NEW v0.2h** — operator-driven LOT pause lifecycle (place + close) |
+| `Tools.DieRankCompatibility` | **Read-only** — `Lot_Merge` consults for cross-die merge approval |
 
 ## Open Items Affecting This Phase
 
-| Item | Fallback |
+| Item | Status |
 |---|---|
-| UJ-08 merge rules | Ship with hard-coded rule: `Lot_Merge` requires same `ItemId` and same `DieNumber`. If MPP demands configurability, a `Lots.MergeRule` table is added post-MVP. |
-| B10 serial migration | Not yet relevant — Phase 6 consumes this. Confirm B10 is finalized before Phase 6 starts. |
+| **UJ-08** merge rules | **Closed (2026-04-27, Option A).** Proc-enforced rules per OI-05 / FDS-05-025..030: same `ItemId` (FDS-05-026), post-sort only (FDS-05-025), die-rank-compat from `Tools.DieRankCompatibility` (FDS-05-027), no `Hold × Good` mixing (FDS-05-026). Supervisor AD elevation per FDS-04-007 unblocks edge cases. Empty-matrix behavior: cross-die merges reject with a clear message until matrix populated; supervisor override always works as the escape hatch. Awaits S-08 die rank compatibility matrix from MPP Quality (seeding registry, NOT a build blocker). |
+| **OI-21** Pausable LOT | **Closed (2026-04-27, design locked).** `Lots.PauseEvent` CREATE + 4 procs delivered in this phase — see Data Model Changes above. |
+| **OI-23** Lot derived quantities | **Closed (2026-04-24, view).** `Lots.v_LotDerivedQuantities` CREATE delivered in this phase — see Data Model Changes above. |
+| **B10** serial migration | Pending Phase 0 (UJ-05 still open). Not yet relevant — Phase 6/7 consumes this. Confirm B10 is finalized before Phase 6/7 starts. |
 
 ## State & Workflow
 
@@ -848,6 +863,27 @@ Depth bound: `OPTION (MAXRECURSION 100)` (per B8). The returned rowset includes 
 
 Every mutation to a mutable LOT field — piece count, weight, die, cavity, vendor lot number — produces a `LotAttributeChange` row. This is the traceability backbone for Honda audits: years later, every field's history is queryable. `Lot_GetAttributeHistory` walks this and is used by the LOT detail screen's "history" tab.
 
+### LOT pause at workstation (added v0.2h, OI-21 / FDS-05-038)
+
+Pause is a `(Lot, Location)` lifecycle event recording an operator's deliberate shift of focus away from a partially-progressed LOT at a Cell. The paused LOT remains in-process at the original Cell with its prior partial-start state intact (FDS-05-032); the operator MAY freely run other LOTs at that Cell while the pause is open.
+
+Storage is `Lots.PauseEvent` — append-only place + close lifecycle (mirrors `Quality.HoldEvent`). Pause is **orthogonal** to `Workorder.WorkOrderStatus`, `Workorder.OperationStatus`, and `Lots.LotStatusCode` — no `Paused` row is added to any of those code tables. Pause does NOT write a `Oee.DowntimeEvent` (the Cell is not down — another LOT may be running there).
+
+**Cross-location concurrency.** The same LOT MAY be paused at multiple Cells simultaneously (a Machining LOT mid-progress at one Cell, paused there to handle Assembly work at another Cell). Filtered UNIQUE on `(LotId, LocationId) WHERE ResumedAt IS NULL` enforces at most one **open** pause per `(LotId, LocationId)` only — multiple Locations are independent.
+
+**Operator UX — no auto-prompt.** When an operator selects or scans a fresh LOT at a Cell that has a paused LOT open, the system SHALL NOT automatically prompt "resume paused LOT?" (Rationale: Assembly auto-loads the next LOT from upstream Machining FIFO; an unconditional prompt would interrupt normal flow.) Instead, every workstation Perspective view binds to a **Paused-LOT indicator** that shows the current open-pause count for the operator's Cell; tapping the indicator opens a list view (LotName, Part, PausedAt, PausedByUserId) backed by `LotPause_GetByLocation @LocationId` and lets the operator resume any LOT explicitly. Resume MAY be performed by a different operator from the one who paused.
+
+**No TTL.** Paused LOTs SHALL NOT be auto-resumed or auto-cancelled. They MAY persist across shifts and operators.
+
+### LOT derived quantities — view-backed (added v0.2h, OI-23 / FDS-05-031)
+
+The Lot Details header surfaces two derived quantities computed at read time from the new `Lots.v_LotDerivedQuantities` view:
+
+- **TotalInProcess** — sum of pieces currently held at all non-terminal workstations (started at a location but not yet completed out of it). Derivation: `Σ StartedCount − Σ CompletedCount − Σ ScrappedCount` from `Workorder.ProductionEvent` aggregation, grouped by `(LotId, LocationId)`.
+- **InventoryAvailable** — pieces still available on the LOT for consumption or scrap (neither in-process nor consumed). Derivation: `Lot.PieceCount − TotalInProcess − Σ ConsumedCount`.
+
+Phase 2 modifies `Lot_Get` and `Lot_List` to JOIN the view to the base `Lots.Lot` table at read time. No materialized columns on `Lots.Lot`; no on-write maintenance code paths. Single source of truth = the event tables.
+
 ## API Layer (Named Queries → Stored Procedures)
 
 ### Lot — expanded mutations
@@ -879,6 +915,15 @@ Every mutation to a mutable LOT field — piece count, weight, die, cavity, vend
 | `Lots.LotLabel_Reprint` | `@LotId BIGINT`, `@OriginalLabelId BIGINT`, `@PrintReasonCodeId BIGINT` (must NOT be `Initial`), `@ZplContent NVARCHAR(MAX)`, `@AppUserId`, `@TerminalLocationId` | Append-only — no modification of the original label. Validates the reason is a non-Initial reason. | `Lots.LotLabel`, `Lots.PrintReasonCode`, `Audit.Audit_LogOperation` | Operator reprint dialog | `Status, Message, NewId` |
 | `Lots.LotLabel_List` | `@LotId BIGINT NULL`, `@LocationId BIGINT NULL`, `@DateFrom DATETIME2(3) NULL`, `@DateTo DATETIME2(3) NULL` | Filterable listing for supervisor. Returns print history. | `Lots.LotLabel` | Supervisor label audit screen | Rowset of LotLabel rows |
 
+### LOT pause (added v0.2h, OI-21)
+
+| Procedure | Parameters | Notes | Dependencies | Executed When | Output |
+|---|---|---|---|---|---|
+| `Lots.LotPause_Place` | `@LotId BIGINT`, `@LocationId BIGINT`, `@PausedByUserId BIGINT`, `@PausedReason NVARCHAR(500) = NULL` | Opens a pause. Rejects with a clear message if `(LotId, LocationId)` already has an open pause (filtered UNIQUE enforces at DB level). Audit via `Audit_LogOperation` with `LogEventType='LotPaused'`. | `Lots.PauseEvent`, `Audit.Audit_LogOperation` | Operator taps "Pause this LOT" at a Cell | `Status, Message, NewId` |
+| `Lots.LotPause_Resume` | `@LotId BIGINT`, `@LocationId BIGINT`, `@ResumedByUserId BIGINT`, `@ResumedRemarks NVARCHAR(500) = NULL` | Closes the open pause for `(LotId, LocationId)`. Rejects if no open pause exists. Resumer MAY differ from pauser. Audit via `Audit_LogOperation` with `LogEventType='LotResumed'`. | `Lots.PauseEvent`, `Audit.Audit_LogOperation` | Operator selects a paused LOT from the indicator detail list and confirms resume | `Status, Message` |
+| `Lots.LotPause_GetByLocation` | `@LocationId BIGINT` | Single result set: `LotId, LotName, ItemId, PartCode, PausedByUserId, PausedAt, PausedReason, TotalInProcess, InventoryAvailable` for currently-paused LOTs at this Cell. Joined to `v_LotDerivedQuantities` for in-process counts. | `Lots.PauseEvent`, `Lots.Lot`, `Lots.v_LotDerivedQuantities`, `Parts.Item` | Tapping the Paused-LOT indicator on a workstation screen | Rowset (empty if no open pauses) |
+| `Lots.LotPause_GetCountsByLocation` | (none) | Single result set: `(LocationId, OpenPauseCount)` across all Cells. Drives the wallboard / per-terminal indicator binding. | `Lots.PauseEvent` | Workstation indicator polling (Perspective binding); supervisor wallboard | Rowset of all Cells with at least one open pause |
+
 ## Gateway Scripts
 
 | Script | Purpose | Trigger | External System | Audit |
@@ -908,17 +953,19 @@ New test suite at `sql/tests/0014_PlantFloor_LotLifecycle/` with files:
 | `060_Lot_GetParents_GetChildren.sql` | One-hop up and down return expected rowsets. |
 | `070_Lot_GetAttributeHistory.sql` | Union of AttributeChange + StatusHistory + Movement ordered by time; correct event-type labels. |
 | `080_LotLabel_Print_Reprint.sql` | `LotLabel_Print` creates row; `LotLabel_Reprint` rejects Initial reason; `LotLabel_List` filters by LotId, LocationId, and date range. |
+| `090_LotPause_lifecycle.sql` | **(NEW v0.2h, OI-21)** `LotPause_Place` opens a pause + writes OperationLog; second `_Place` for same `(LotId, LocationId)` rejects (filtered UNIQUE); `_Place` at a different Cell for the same LOT succeeds (cross-location concurrency); `_Resume` closes the open pause; `_Resume` with no open pause rejects; resumer different from pauser succeeds; `_GetByLocation` returns currently-paused LOTs joined to `v_LotDerivedQuantities`; `_GetCountsByLocation` aggregates correctly across multiple Cells. |
+| `100_v_LotDerivedQuantities.sql` | **(NEW v0.2h, OI-23)** View returns correct `TotalInProcess` from event aggregation; correct `InventoryAvailable` after consumption; multiple LOTs across multiple Cells return independent values; LOT with no events returns Lot.PieceCount as InventoryAvailable; `Lot_Get` and `Lot_List` join the view at read time and surface both fields. |
 
-Target: 80–100 passing tests in suite 0014.
+Target: 100–125 passing tests in suite 0014 (up from v0.1 target — PauseEvent + view add ~20 assertions).
 
 ## Phase 2 complete when
 
-- [ ] Migration `0011_phase2_lot_lifecycle.sql` applied (indexes for genealogy hot paths if needed).
-- [ ] All repeatable procs for Lot full mutations, genealogy, and labels present and current.
-- [ ] All tests in `sql/tests/0014_PlantFloor_LotLifecycle/` pass (target 80–100).
+- [ ] Migration `<next_unclaimed>_arc2_phase2_lot_lifecycle.sql` applied: `Lots.PauseEvent` CREATE'd with constraints + indexes; `Lots.v_LotDerivedQuantities` view CREATE'd; `Audit.LogEntityType` +1 row (`PauseEvent`) seeded; any genealogy hot-path indexes added.
+- [ ] All repeatable procs for Lot full mutations, genealogy, labels, and **LOT pause** present and current. New procs: `Lots.LotPause_Place`, `_Resume`, `_GetByLocation`, `_GetCountsByLocation`. Read procs `Lot_Get` and `Lot_List` updated to JOIN `v_LotDerivedQuantities`.
+- [ ] All tests in `sql/tests/<next_unclaimed>_PlantFloor_LotLifecycle/` pass (target 100–125 — includes new PauseEvent + view tests).
 - [ ] `LttZplDispatcher` Gateway script dispatches to a dev Zebra printer and captures ack.
-- [ ] Perspective LOT Search, Detail, Genealogy Tree Viewer, and Reprint Dialog implemented and manually smoke-tested.
-- [ ] End-to-end: operator creates a LOT in Phase 1's stub flow, edits the piece count on the Detail screen, splits it into two children, prints a reprint — all audit rows correct.
+- [ ] Perspective LOT Search, Detail, Genealogy Tree Viewer, and Reprint Dialog implemented and manually smoke-tested. **Paused-LOT indicator** binding wired (count + tap-through detail list) on a sample workstation view; Phase 3+ phases pull the same binding into their views.
+- [ ] End-to-end: operator creates a LOT in Phase 1's stub flow, edits the piece count on the Detail screen, splits it into two children, prints a reprint — all audit rows correct. **PauseEvent flow**: operator pauses a LOT at a Cell, indicator shows count = 1, taps indicator to see the paused LOT in the list, resumes it; Cell shows count = 0.
 
 ---
 
