@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2i
+**Document ID:** MPP-PLAN-ARC2-v0.2j
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2i (2026-04-27)
+**Version:** 0.2j (2026-04-27)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2j | 2026-04-27 | Blue Ridge Automation | **VP-4: Plan Phase 4 (Movement + Trim + Receiving) — OI-11/12/18 + checkpoint-shape ProductionEvent.** Trim section rewritten for OI-11 Casting→Trim 1-line BOM consumption (closed 2026-04-22; no separate `Parts.ItemTransform` table; existing `Parts.Bom` + `Workorder.ConsumptionEvent` + `Lots.LotGenealogy` carry it). ProductionEvent_Record calls updated to v1.9 checkpoint signature (cumulative `ShotCount`/`ScrapCount`; no `LocationId`/`GoodCount`/`NoGoodCount`). Movement Scan Screen scan-in validation extended for OI-12 (`Parts.Item.MaxParts` per-Item per-Location cap) + OI-18 (`Parts.ItemLocation_IsEligible` cascade walk Cell → WorkCenter → Area). Open Items table refreshed — OI-11, OI-12, OI-18, OI-08, UJ-11, UJ-13 all closed. Migration filename updated. |
 | 0.2i | 2026-04-27 | Blue Ridge Automation | **VP-3: Plan Phase 3 (Die Cast Operator Station) — full rewrite against v1.9 design.** ProductionEvent_Record signature reshaped to checkpoint form (cumulative `ShotCount`/`ScrapCount`, `EventAt`; dropped `DieIdentifier`, `CavityNumber`, `LocationId`, `ItemId`, per-event `GoodCount`/`NoGoodCount`, `RecordedAt`). Carlos walkthrough rewritten — Tool + Cavity auto-populated from `Tools.ToolAssignment_ListActiveByCell`, operator confirms via tap, elevated Edit triggers inline `ToolAssignment_Release`/`_Assign`. OperationTemplate seed list pruned — `DieIdentifier` / `CavityNumber` / `WarmupShotCount` removed (Tool/Cavity on Lot per overlay B; warm-up on `DowntimeEvent` only per UJ-14 Option A). Open Items table refreshed — UJ-14 closed (Option A — `DowntimeEvent.ShotCount`); UJ-11 closed (Option A — flagged risk); OI-09 closed (cavity-parallel peers). New "Cavity-parallel LOTs at Die Cast" subsection. Migration filename updated. Pulled overlay B/C/E/F into Phase 3 body. |
 | 0.2h | 2026-04-27 | Blue Ridge Automation | **VP-2: Plan Phase 2 (LOT Lifecycle Completion) — PauseEvent + view folded into body.** Adds `Lots.PauseEvent` table CREATE (OI-21 / FDS-05-038) + 4 procs (`LotPause_Place / _Resume / _GetByLocation / _GetCountsByLocation`) — pulled from v0.2 Overlay K. Adds `Lots.v_LotDerivedQuantities` view CREATE (OI-23 / FDS-05-031) + view-join read paths in `Lot_Get` / `Lot_List` — pulled from v0.2 Overlay D. Open Items table: UJ-08 closed (Option A — proc-enforced merge rules); merge rule narrative refreshed (same Item + die-rank-compat from `Tools.DieRankCompatibility` + supervisor override; FIFO-by-cavity is NOT a merge); test suite files updated; B10 still pending UJ-05 resolution. Migration-number reference updated. |
 | 0.2g | 2026-04-27 | Blue Ridge Automation | **VP-1: Plan Phase 1 freshening.** B4 (Gateway script layer contract) updated for FDS-01-014 / UJ-18 — sync direct-call retired in favour of Gateway-script-async via `system.util.sendMessageAsync`; AIM pool topup is the canonical example. Phase 1 LocationAttributeDefinition seed list adds `ConfirmationMethod` (UJ-17 / FDS-10-013) on the relevant `Cell`-tier `LocationTypeDefinition`s. Phase 1 "Open Items Affecting This Phase" table refreshed — UJ-10 closure (Option D / FDS-09-015) reflected. |
@@ -1206,11 +1207,13 @@ Target: 100–140 passing tests in suite 0015 (the proc is large; many validatio
 
 ## Data Model Changes
 
-**Migration `sql/migrations/versioned/0013_phase4_movement_trim_receiving.sql`:**
+**Migration `sql/migrations/versioned/<next_unclaimed>_arc2_phase4_movement_trim_receiving.sql`** (number TBD — likely `0019` after VP-3 Phase 3 migration).
 
-- Seed dev `Parts.OperationTemplate` rows for `TrimShopOperation` and `ReceivingInspection` with appropriate `OperationTemplateField` entries.
+- Seed dev `Parts.OperationTemplate` rows for `TrimShopOperation` and `ReceivingInspection` with `OperationTemplateField` entries for non-hot fields only (per v1.9 ProductionEvent checkpoint shape — same rule as Phase 3).
+- Seed dev `Parts.Bom` row for at least one Casting → Trim 1-line BOM (per OI-11 closure 2026-04-22): trim-part Item `ParentItemId`, casting-part Item as the sole `BomLine.ChildItemId` at `QtyPer = 1`. This BOM drives the Trim scan-in transformation flow (see "Trim Shop" subsection below).
 - Seed any `Audit.LogEventType` rows for `LotMoved` (already from Phase 1), `LotReceived`, `WeightReconciled` (add any gaps).
 - Seed a new `LocationAttributeDefinition` row on the Trim Shop Machine type for `PrimaryScale` (NVARCHAR — OPC tag path of the station's scale).
+- **No new tables.** Per OI-11 closure, the Casting→Trim part-identity change is a degenerate 1-line BOM consumption — no `Parts.ItemTransform` table needed. Existing `Parts.Bom` + `Workorder.ConsumptionEvent` + `Lots.LotGenealogy` carry the workflow.
 
 **Tables used:**
 
@@ -1226,49 +1229,62 @@ Target: 100–140 passing tests in suite 0015 (the proc is large; many validatio
 
 ## Open Items Affecting This Phase
 
-| Item | Fallback |
+| Item | Status |
 |---|---|
-| OI-02 / UJ-13 closure weight on containers | Not consumed at Trim directly; Trim reads weight but does not close containers. Deferred to Phase 6. |
-| UJ-11 paper-vs-real-time | Real-time assumed. |
+| **OI-11** Casting → Trim part identity | **Closed (2026-04-22).** Trim scan-in is a 1-line BOM consumption — see "Trim Shop" subsection below. No new schema; `Parts.Bom` + `Workorder.ConsumptionEvent` + `Lots.LotGenealogy` carry it. |
+| **OI-12** `MaxParts` per-Item per-Location cap | **Closed (2026-04-24).** `Parts.Item.MaxParts` (Data Model v1.9c) — Movement Scan Screen scan-in proc validates that incoming pieces + existing pieces of this Item at destination Location ≤ `Item.MaxParts`. Rejects with operator message if exceeded. |
+| **OI-18** `Parts.ItemLocation` Area/WC/Cell cascade | **Closed (2026-04-24).** Eligibility check at scan-in walks Cell → WorkCenter → Area via `Parts.ItemLocation_IsEligible` helper proc (Data Model v1.9d / FDS-03-014). |
+| **OI-08** Terminal mode by parent Location tier | **Closed (2026-04-24).** Trim and Receiving terminals are typically Dedicated (parent = WorkCenter / Cell); shared trim terminals exist (parent = Area). Phase 1 Terminal_ResolveFromSession derives mode from parent tier — Phase 4 just consumes the resolved mode. |
+| **OI-02 / UJ-13** Container closure method | **Closed (2026-04-27, Option A).** Per-Item `Parts.ContainerConfig.ClosureMethod`. Not consumed at Trim directly; Trim reads weight but does not close containers. Phase 6 owns the closure flow. |
+| **UJ-11** Paper-to-screen transition | **Closed (2026-04-27, Option A — flagged risk).** All-at-once cutover. |
+| **UJ-06** Off-site receiving | **Closed (2026-04-09).** Online only via VPN; standard Perspective client; no offline mode. |
 
 ## State & Workflow
 
-### Movement Scan Screen — reusable pattern
+### Movement Scan Screen — reusable pattern (revised v0.2j with OI-12 + OI-18)
 
 Almost every station that receives a LOT needs a move-scan entry point. Rather than build a different one per station, Phase 4 delivers a generic `Movement Scan Screen` that any terminal can route to. It takes:
 
 1. Scan LTT barcode.
 2. Perspective calls `Lot_Get(@LotName = scannedBarcode)`.
-3. On found: `Lot_AssertNotBlocked`, then call `Lot_MoveTo(@LotId, @ToLocationId = session.custom.terminal.terminalLocationId, @AppUserId, @TerminalLocationId)`. On success, LOT's `CurrentLocationId` is now the terminal's Location.
-4. Screen flips to station-specific mode — Trim UI, Machining IN UI, Assembly receive UI — driven by the terminal's zone.
-5. On not-found or blocked: show clear error, beep, log to FailureLog.
+3. On found:
+   - `Lot_AssertNotBlocked` (B2).
+   - **Eligibility cascade (OI-18 / FDS-03-014):** `Parts.ItemLocation_IsEligible @ItemId, @CellLocationId = session.custom.terminal.terminalLocationId` walks the Location parentage from the scanned Cell up to Site looking for a matching `ItemLocation` row (walk stops at first match). Reject with clear "Part X not eligible at this Cell" if no match found.
+   - **MaxParts cap (OI-12 / FDS-03-019):** Sum existing pieces of this Item already at the destination Location across all open LOTs + the incoming LOT's PieceCount. Reject if result > `Parts.Item.MaxParts` (NULL = uncapped). Operator sees a clear "Cell already at MaxParts cap for this Part" message.
+4. On both validations pass: call `Lot_MoveTo(@LotId, @ToLocationId = terminalLocationId, @AppUserId, @TerminalLocationId)`. On success, LOT's `CurrentLocationId` is now the terminal's Location.
+5. Screen flips to station-specific mode — Trim UI, Machining IN UI, Assembly receive UI — driven by the terminal's zone.
+6. On any rejection: show clear error, beep, log to FailureLog.
 
 Phase 4 delivers the Movement Scan Screen as a Perspective embedded view; each station's screen embeds it at the top and renders station-specific content below after a successful scan.
 
-### Trim Shop — weight-based piece count
+### Trim Shop — Casting → Trim 1-line BOM consumption (revised v0.2j, OI-11)
 
-The operator sets the basket on the scale. OmniServer publishes `ScaleWeight` on the station's OPC tag. A Gateway script reads the tag on a debounced-stable signal and posts the weight to the Perspective session as a live binding.
+OI-11 closed 2026-04-22 with **1-line BOM consumption**. The trim part has the cast part as its sole component at `QtyPer = 1`; existing `Parts.Bom` + `Workorder.ConsumptionEvent` + `Lots.LotGenealogy` machinery handles the part-identity change without a separate `Parts.ItemTransform` table.
 
-1. Operator scans LTT at the Trim terminal. Movement Scan Screen fires `Lot_MoveTo` (Die Cast → Trim Shop); the Trim UI opens.
-2. UI shows: current LOT's piece count, current item's `UnitWeight`, the live scale weight.
-3. UI computes: `derivedPieceCount = round(netWeight / unitWeight)`. Operator reviews the derived count vs. current piece count. Per FRS 2.2.3, they can update the count; MES takes no further action on the discrepancy but logs the change.
-4. Operator submits the trim-out action. Perspective calls `ProductionEvent_Record`:
-   - `@LotId = existingLotId`
-   - `@LocationId = trimStationLocationId`
-   - `@OperationTemplateId = TrimShopOperation`
-   - `@WeightValue = netWeight`, `@WeightUomId = LB or KG uom Id`
-   - `@GoodCount = derivedPieceCount` (or operator-overridden)
-   - `@NoGoodCount = 0` (Trim does not reject in MVP — sorter cage is separate)
-   - `@DataCollectionValuesJson` includes any TrimShopOperation-specific fields (e.g., `NetWeight`, `PriorPieceCount`, `TareWeight`)
-5. `ProductionEvent_Record` writes the event, writes ProductionEventValue rows, updates the Lot's piece count to the new count (which records a `LotAttributeChange` row for the before/after), and moves the Lot's `CurrentLocationId` to the Trim station.
+The Trim operator workflow:
 
-The weight-to-count helper is a small proc used by the UI for its live binding (not in the transactional write path):
+1. Operator scans the **casting LOT's** LTT at the Trim terminal. Movement Scan Screen fires `Lot_MoveTo` (Die Cast → Trim Shop); the Trim UI opens, identifying the LOT as the casting Item.
+2. UI presents the operator with the active 1-line BOM for the trim Item (looked up via `Parts.Bom_GetActiveForItem @ParentItemId = trimItemId` — confirms the casting LOT's Item is the BOM's sole `ChildItemId`). UI shows: casting LOT's piece count, scale-derived count, the trim Item identity that this LOT will become.
+3. **Scale binding** (live, not transactional): OmniServer publishes `ScaleWeight` on the station's OPC tag. Gateway script reads the tag on a debounced-stable signal and posts the weight to the Perspective session.
+4. Operator confirms the scale-derived count (or overrides per FRS 2.2.3). Submits.
+5. **Perspective fires three procs in a single transactional block** (the proc layer wraps these as one MES proc — `Workorder.ConsumptionEvent_Record_TrimTransform` or similar):
+   - `Lots.Lot_Create` for a fresh trim-Item LOT, with `LotName` minted via `IdentifierSequence_Next`. New LOT's `CurrentLocationId` = Trim Cell. Tool/Cavity FKs = NULL (per overlay B — downstream LOTs don't carry Tool/Cavity).
+   - `Workorder.ConsumptionEvent_Record` writing `SourceLotId = castingLotId`, `ProducedLotId = newTrimLotId`, `ConsumedItemId = castingItemId`, `ProducedItemId = trimItemId`, `PieceCount = N` (piece-for-piece per QtyPer=1).
+   - `Lots.LotGenealogy` row with `RelationshipType = Consumption` linking source casting LOT → produced trim LOT.
+6. Casting LOT's piece count goes to 0 (or residual if partial trim); status transitions to `Closed` via `Lot_UpdateStatus` if zeroed.
+7. New trim LOT inherits the genealogy backbone — Honda traces through the genealogy edge.
+8. **Optional Trim production event:** if the trim operation has DataCollectionFields (weight, etc.) configured on `TrimShopOperation` template, Perspective also fires `ProductionEvent_Record` against the **new trim LOT** — checkpoint shape per v0.2i (cumulative `ShotCount`/`ScrapCount`; no `LocationId`/`GoodCount`/`NoGoodCount`). For simple trim flows where production data isn't captured, skip this step.
+9. Operator prints a **new LTT for the trim LOT** via `LotLabel_Print` + Gateway-script-async dispatch (`system.util.sendMessageAsync` per FDS-01-014).
+
+The weight-to-count helper remains a UI-side helper (not in the transactional write path):
 
 ```
 Lots.Lot_WeightToPieceCount(@ItemId, @NetWeightValue, @NetWeightUomId)
     → returns @DerivedPieceCount, assuming linear unit weight;
       errors if Item.UnitWeight is NULL or UOM mismatch.
 ```
+
+**No "weight-reconciliation" event on the casting LOT** — the casting LOT closes via its consumption record, not via a weight adjustment. The earlier v0.1 design treated Trim as a weight-based piece-count update on the same LOT; that's superseded by OI-11.
 
 ### Receiving Dock — pass-through parts
 
