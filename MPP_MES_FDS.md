@@ -4,7 +4,7 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.11i — Working Draft
+**Version:** 0.11j — Working Draft
 **Date:** 2026-04-27
 
 ---
@@ -15,6 +15,7 @@
 
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
+| 0.11j | 2026-04-27 | Blue Ridge Automation | **§1.6, §4.3, §6.5, §7.2, §7.3, §9.4, §10.3 — UJ batch closures (UJ-09, -10, -17, -18 with downstream design impact).** FDS-01-014 NEW (Gateway-script-async cross-cutting integration pattern, UJ-18); FDS-04-007 elevated-action list extended (UJ-09 BOM substitute override); FDS-06-011 extended (UJ-09 supervisor-override flow at scan-in); FDS-07-005 amended (print extracted from atomic block, UJ-18); FDS-07-006a NEW (print dispatch + 3×2s retry, UJ-18); FDS-07-006b NEW (banner + safety-sweep + stranded-prints alarm at 5, UJ-18); FDS-09-015 NEW (shift-end summary screen, UJ-10 Option D); FDS-10-013 NEW (`ConfirmationMethod` LocationAttribute, UJ-17 Option A). Data Model v1.9i (`Lots.ShippingLabel` +5 print-state columns). OIR v2.14. |
 | 0.11i | 2026-04-27 | Blue Ridge Automation | **§7.2, §7.4 — UJ-04 AIM Shipper ID local pool.** FDS-07-005 rewritten, FDS-07-008 amended, FDS-07-010 rewritten; FDS-07-010a/b/c NEW. Data Model v1.9h. |
 | 0.11h | 2026-04-27 | Blue Ridge Automation | **§5.3 — OI-21 Pausable LOT at Workstation.** FDS-05-038 NEW. Data Model v1.9g. |
 | 0.11g | 2026-04-24 | Blue Ridge Automation | **§6.10 — OI-16 PLC confirm + RequiresCompletionConfirm LocationAttribute.** FDS-06-028 extended. Data Model v1.9f. |
@@ -303,6 +304,22 @@ Role-based access control SHALL be managed through Ignition's internal security 
 
 #### FDS-01-012 — Audit Attribution
 Every state-changing action SHALL be attributed to a user and terminal location. The `AppUser.Id` and `TerminalLocationId` (FK to `Location` where type = Terminal) are recorded on all mutable and event records. Actions performed by system processes (scheduled scripts, PLC-triggered events) SHALL use a designated system user account.
+
+#### FDS-01-014 — External Integration Pattern (Gateway-script-async) — `MVP` (v0.11j, UJ-18)
+
+All MES outbound calls to external systems (AIM, Zebra printers, Honda EDI, future Macola pushes) SHALL use the **Gateway-script-async** pattern, not synchronous in-MES-proc calls. The pattern:
+
+1. The MES stored procedure commits its DB-side state changes atomically (e.g., `Container_Complete` writes the `ShippingLabel` row with `PrintedAt = NULL`, claims the AIM ID from the pool, etc.) and returns control to the calling Perspective view.
+2. The Perspective view (or a calling MES proc wrapper) fires `system.util.sendMessageAsync` to a Gateway-scoped message handler with the relevant entity ID(s) as payload.
+3. The Gateway message handler performs the external call. On success, it updates DB state via a sibling proc (e.g., `ShippingLabel_MarkPrinted`). On failure, it retries per the integration-specific policy and ultimately writes to `Audit.FailureLog` if retries exhaust.
+4. Every external call SHALL log to `Audit.InterfaceLog` (success or failure) per FDS-11-005.
+5. Operator-facing failure surfaces (UI banners, wallboard alarms) SHALL bind to DB state — not to in-flight handler state — so that Gateway restarts do not lose visibility of failed integrations.
+
+**Rationale.** Synchronous calls from inside an MES proc would block the operator on every external system's latency and availability. Gateway-script-async decouples MES correctness from external responsiveness; failures become observable, retryable, and logged without operator-blocking behavior.
+
+**Special case — pre-fetched buffers.** When zero operator-perceived latency is required (Container_Complete → AIM Shipper ID assignment), a pre-fetched local buffer (`Lots.AimShipperIdPool`, FDS-07-010) replaces both the sync call and the async pattern: the buffer's topup loop runs on the Gateway-script-async pattern, but the MES proc's claim is purely local DB. See FDS-07-010 for the pool model.
+
+**Synchronous direct-call exception.** Nothing in this pattern prohibits a sync DB call from inside an MES proc (e.g., a `SELECT` against another MES table). Sync is only retired for **external** systems.
 
 ### 1.7 Database Design Conventions
 
@@ -704,6 +721,7 @@ The initial elevated-action list (the full set will be validated by Tom, MPP's s
 - Issue or close a maintenance work order against a tool
 - Deprecate an `AppUser`, `Item`, `Bom`, `RouteTemplate`, `OperationTemplate`, `ContainerConfig`, or `Tool`
 - Adjust inventory via the admin remove-item action (OI-14)
+- BOM substitute override at material scan-in (UJ-09 — strict BOM check fails, supervisor approves a one-shot substitute; the override event records to `Audit.OperationLog` for traceability)
 
 #### FDS-04-008 — Ignition Role Mapping
 Interactive-user roles configured in Ignition's identity provider map to AD groups:
@@ -1182,7 +1200,13 @@ Before production begins on a serialized line, the operator SHALL identify the s
 - The source LOT SHALL have sufficient piece count
 - If the scanned LOT's item does not appear in the BOM, the system SHALL reject the material with a clear error
 
-> 🔶 **PENDING CUSTOMER VALIDATION — UJ-09:** Material verification uses BOM-based checking — the system validates that the scanned source LOT's part number matches a BOM component. Substitute parts are rejected. Needs MPP confirmation.
+**UJ-09 closed (2026-04-27, Option C — strict + supervisor override).** Strict BOM check is the default — wrong-part scans are rejected. When a substitute is genuinely required (rare; right part not available), a supervisor SHALL be able to authorize a one-shot override via FDS-04-007 elevation (AD prompt for "BOM substitute override"). On successful elevation:
+
+1. The system SHALL accept the scanned LOT despite the BOM mismatch.
+2. The system SHALL write an `Audit.OperationLog` row with the override event — capturing the original BOM expectation, the substitute scanned, the supervisor's `AppUserId`, the operator's `AppUserId`, the terminal, and the timestamp.
+3. The system SHALL proceed with normal consumption recording (FDS-06-010 step 5).
+
+Permanent substitutes — recurring or planned — SHALL be handled via BOM revision (`Bom_CreateNewVersion` → edit `BomLine` → `Bom_Publish`), NOT via repeated supervisor overrides. Engineering / Quality is the BOM author; operators consuming overrides at scale is an engineering signal that the BOM needs updating.
 
 #### FDS-06-012 — Hardware Interlock Bypass
 When the automation sets `HardwareInterlockEnable=false`, the MIP SHALL write `PartSN="NoRead"` and the machine proceeds without MES serial validation (per Touchpoint Agreement 1.1). The system SHALL:
@@ -1404,16 +1428,18 @@ On non-serialized lines, the operator SHALL assign a piece count to the containe
 2. Close the container when the configured capacity is reached
 3. On lines with weight-based tracking, the system MAY use the scale reading to validate the piece count before closure
 
-#### FDS-07-005 — Container Closure — revised v0.11i (UJ-04)
-When a container reaches capacity, the system SHALL, in **one synchronous transaction**:
+#### FDS-07-005 — Container Closure — revised v0.11j (UJ-04 + UJ-18)
+When a container reaches capacity, the system SHALL, in **one synchronous DB transaction** (no external calls inside the block):
 1. Set container status to COMPLETE.
-2. Atomically claim the next FIFO available AIM Shipper ID from `Lots.AimShipperIdPool` via `Lots.AimShipperIdPool_Claim @ContainerId, @AppUserId`. This is a sub-millisecond local DB operation — it SHALL NOT call AIM inline. (See FDS-07-010 for the pool model and FDS-07-010a for empty-pool behavior.)
+2. Atomically claim the next FIFO available AIM Shipper ID from `Lots.AimShipperIdPool` via `Lots.AimShipperIdPool_Claim @ContainerId, @AppUserId`. Sub-millisecond local DB operation. (See FDS-07-010 for the pool model and FDS-07-010a for empty-pool behavior.)
 3. Store the claimed `AimShipperId` on the container record.
-4. Generate and print a ZPL shipping label via the terminal's Zebra printer.
-5. Record the `ShippingLabel` print (container, shipper ID, ZPL content, timestamp).
-6. Log to `Audit.OperationLog`. (No `Audit.InterfaceLog` write here — the AIM call that issued this ID was logged at topup time, and `AimShipperIdPool.FetchedInterfaceLogId` carries the FK back to that record for end-to-end provenance.)
+4. INSERT a `ShippingLabel` row with `PrintedAt = NULL`, `PrintAttempts = 0`, `TerminalLocationId = @TerminalLocationId`, ZPL payload generated. **The label is queued for print, not yet sent to Zebra.**
+5. Log to `Audit.OperationLog`. (No `Audit.InterfaceLog` write here — the AIM call that issued this ID was logged at topup time per FDS-07-010, and `AimShipperIdPool.FetchedInterfaceLogId` carries the FK back to that record for end-to-end provenance.)
+6. Return the new `ShippingLabel.Id` to the caller.
 
-The entire close transaction succeeds or fails atomically — there is no in-between state where a container is COMPLETE without an `AimShipperId`. The synchronous claim model means container closure has zero AIM latency in the steady state.
+**The entire close transaction is local-DB-only.** It succeeds or fails atomically — there is no in-between state where a container is COMPLETE without an `AimShipperId`. The synchronous claim + ShippingLabel-INSERT model means container closure has zero external-system latency in the steady state.
+
+**Print dispatch is asynchronous (UJ-18 / FDS-01-014 Gateway-script-async).** On successful return of step 6, the calling Perspective view SHALL fire `system.util.sendMessageAsync('mes', 'print-shipping-label', {ShippingLabelId})`. The Gateway message handler then performs the print per FDS-07-006a; failures surface to the operator per FDS-07-006b. The container is COMPLETE and reported to the operator instantly — the physical label arrives shortly after.
 
 ### 7.3 Shipping Labels
 
@@ -1433,6 +1459,40 @@ When a shipping label is voided (e.g., container sent to Sort Cage), the system 
 
 #### FDS-07-009 — Shipping Label Reprint
 If a shipping label is damaged or unreadable, an authorized user SHALL be able to reprint it. The reprint SHALL be tracked as a new `ShippingLabel` record (the original is NOT modified). (FRS 3.13.1)
+
+#### FDS-07-006a — Print Dispatch (Gateway-script-async) — `MVP` (v0.11j, UJ-18)
+
+The Gateway message handler `print-shipping-label` SHALL receive a `ShippingLabelId` payload from FDS-07-005's `sendMessageAsync` call and SHALL:
+
+1. SELECT the `ShippingLabel` row + the printer endpoint (resolved via `LocationAttribute` on the Cell that is parent to `ShippingLabel.TerminalLocationId`).
+2. UPDATE `ShippingLabel SET LastPrintAttemptAt = SYSUTCDATETIME(), PrintAttempts = PrintAttempts + 1` (records the attempt before firing — defensive against handler crash mid-print).
+3. Fire the ZPL to the resolved Zebra via Ignition's print primitives or scripted Zebra socket.
+4. **On success** — UPDATE `ShippingLabel SET PrintedAt = SYSUTCDATETIME(), PrintedByUserId = @CallingAppUserId`; write `Audit.InterfaceLog` (success).
+5. **On failure** — capture the exception text, UPDATE `ShippingLabel SET LastPrintError = @Err`. If `PrintAttempts < 3`, sleep 2 seconds and retry from step 2. If `PrintAttempts >= 3`, UPDATE `SET PrintFailedAt = SYSUTCDATETIME()`, write `Audit.FailureLog` (exhausted retries), and STOP. The operator banner (FDS-07-006b) fires off this DB state.
+
+**Retry policy.** 3 attempts, fixed 2s gap. **No `sendMessageAsync` re-send-to-self pattern** — the retry is inline within the single message-handler invocation. Re-send-to-self risks Gateway thread-pool exhaustion if a printer cluster is misbehaving and many parallel re-sends pile up.
+
+**No polling on the print path.** The print attempt is event-driven from FDS-07-005's `sendMessageAsync`; there is no Gateway timer scanning for pending labels at high frequency.
+
+**Idempotency.** Re-firing `print-shipping-label` for an already-Completed `ShippingLabel` (`PrintedAt IS NOT NULL`) SHALL be a no-op — the handler returns without error.
+
+#### FDS-07-006b — Print Failure Surfacing & Safety Sweep — `MVP` (v0.11j, UJ-18)
+
+**Per-terminal banner.** Each shop-floor Perspective view SHALL bind to a query: `SELECT * FROM Lots.ShippingLabel WHERE PrintFailedAt IS NOT NULL AND TerminalLocationId = @MyTerminalId`. When any row matches, a banner SHALL display at that Terminal showing container number, AIM Shipper ID, last error, and three actions:
+
+- **Retry now** — clears `PrintFailedAt`, sets `PrintAttempts = 0`, re-sends the `print-shipping-label` message. Useful when the printer issue has been physically resolved.
+- **Reprint** — fires the FDS-07-009 reprint workflow (creates a new `ShippingLabel` row).
+- **Acknowledge** — clears the banner without changing print state. Used when the supervisor handled the print out-of-band (e.g., manual ZPL send to a different printer).
+
+The banner SHALL appear ONLY at the Terminal stamped on `ShippingLabel.TerminalLocationId` — operators at other terminals do not see it. Plant-wide visibility is a supervisor wallboard concern, not a per-terminal one.
+
+**Safety sweep — orphan recovery.** A Gateway timer script SHALL run every 5 minutes and SHALL:
+
+1. SELECT IDs `WHERE PrintedAt IS NULL AND PrintFailedAt IS NULL AND CreatedAt < DATEADD(SECOND, -60, GETDATE())` — these are labels that were INSERTed at close time but never had their `print-shipping-label` message handled (e.g., Gateway restart between FDS-07-005 commit and the message dispatch).
+2. For each orphan, re-send `system.util.sendMessageAsync('mes', 'print-shipping-label', {ShippingLabelId})`.
+3. The 60-second floor avoids racing with normal-path prints that haven't yet been picked up by the message handler.
+
+**Stranded-prints alarm.** If the safety sweep finds **more than 5** orphans in a single pass, supervisor wallboard tile SHALL turn Critical AND IT notification SHALL fire (mirroring the AIM pool alarm pattern from FDS-07-010b). Above 5 orphans means either the Gateway has been down long enough for a backlog or a systemic printer issue is affecting many lines. The threshold is hardcoded in the safety-sweep script for MVP; can be promoted to a `Lots.AimPoolConfig` column or a sibling `Lots.PrintQueueConfig` table if MPP later wants tunability.
 
 ### 7.4 AIM Integration
 
@@ -1710,6 +1770,20 @@ Operators SHALL NOT log breaks live during a shift. At end-of-shift (or at the o
 #### FDS-09-014 — Early-Start Behaviour
 When production events are captured with `RecordedAt` **earlier** than the shift's scheduled start, the MES SHALL accept those events without rejection. Availability reporting SHALL use the time-window bounded by the earliest event and the shift's scheduled end (effectively expanding the window backwards). MPP explicitly requested this behaviour at the 2026-04-20 review — early starts increase availability because events drive runtime, and operators should not be penalised for starting early. A shift that is NOT run (zero events across the entire scheduled window) SHALL still instantiate an `Oee.Shift` row and report as zero-run for auditability.
 
+#### FDS-09-015 — Shift-End Summary Screen — `MVP` (v0.11j, UJ-10)
+
+At shift end (or when the outgoing operator triggers a "Handover" action from the terminal), the MES SHALL present a one-screen summary of in-flight state at that Terminal. This is a Perspective view binding to three queries — no schema additions required:
+
+1. **Open downtime events** — `SELECT FROM Oee.DowntimeEvent WHERE EndedAt IS NULL AND LocationId IN (terminal's parent Cell + descendants)`. Display: started-at, reason, operator who placed.
+2. **Open LOT pauses** — `SELECT FROM Lots.PauseEvent WHERE ResumedAt IS NULL AND LocationId IN (terminal's parent Cell + descendants)`. Display: LOT, paused-at, paused-by, reason.
+3. **In-process LOTs at this Terminal's Cell(s)** — derived via `LotMovement` joined to `Lots.v_LotDerivedQuantities`. Display: LOT, Part, in-process piece count.
+
+The view is read-only. Outgoing operator acknowledges the summary; system records the handover acknowledgement to `Audit.OperationLog` (event type `ShiftHandoverAcknowledged`) for audit traceability. Incoming operator's initials prompt is per FDS-04-009 (terminal session re-confirmation).
+
+The shift-end summary is **optional** — operators MAY skip it. Open events / pauses / in-process LOTs persist regardless (per OI-03 event-spans-naturally model — events do not auto-split at shift boundaries). The summary is purely a continuity / handover convenience.
+
+**Implementation note (UJ-10 Q1 from Jacques):** the in-process-LOT join over `LotMovement` + `v_LotDerivedQuantities` is the most expensive query of the three. Recommended optimization: index `Lots.LotMovement (ToLocationId, MovedAt DESC)` to support the latest-movement-per-LOT scan. Same query pattern is reusable on the Lot Details screen (per OI-23) — not a new burden, but worth flagging.
+
 ### 9.5 OEE — `FUTURE`
 
 #### FDS-09-011 — OEE Scope Boundary
@@ -1834,7 +1908,24 @@ Tag pattern: `OmniServer/[LineName].[ScaleName].NET_NetWeightValue`
 Barcode scanners at terminals SHALL operate as keyboard wedge devices — scan data is injected into the active input field on the Perspective screen. No custom scanner driver integration is required. The MES SHALL validate scanned data (LTT barcode format, AIM shipper ID format) on the server side after entry.
 
 #### FDS-10-008 — Zebra Printer Integration
-ZPL label generation and printing SHALL be handled via Ignition's built-in TCP socket or serial communication to Zebra printers. Each terminal record specifies its associated printer. ZPL templates SHALL be configurable (not hard-coded) to accommodate label format changes.
+ZPL label generation and printing SHALL be handled via Ignition's built-in TCP socket or serial communication to Zebra printers. Each terminal record specifies its associated printer. ZPL templates SHALL be configurable (not hard-coded) to accommodate label format changes. **Print dispatch is asynchronous via Gateway-script-async pattern (FDS-01-014); see FDS-07-006a/b for the shipping-label-specific flow including 3-attempt retry with 2s gap and per-terminal banner on failure.**
+
+#### FDS-10-013 — Confirmation Method LocationAttribute — `MVP` (v0.11j, UJ-17)
+
+PLC-integrated assembly Cells SHALL declare which confirmation source(s) the line uses for part identity, via a `LocationAttribute` `ConfirmationMethod` on the Cell. Seeded `LocationAttributeDefinition` row on relevant `LocationTypeDefinition`s (e.g., `AssemblyStation`, `SerializedAssembly`):
+
+| Attribute | DataType | Allowed values | Description |
+|---|---|---|---|
+| `ConfirmationMethod` | NVARCHAR(20) | `Vision`, `Barcode`, `Both` | Which source(s) the MES SHALL require for the FDS-06-010 / FDS-10-003 part-identity check |
+
+The Cell's `ConfirmationMethod` value is read by the production proc and the operator-facing UI:
+- **`Vision`** — only Cognex OCR confirms; barcode reads (if any) are ignored.
+- **`Barcode`** — only barcode confirms; vision reads (if any) are ignored.
+- **`Both`** — vision AND barcode SHALL confirm matching part identity before the production event records. Mismatch counts toward the 10-fail line-stop threshold (OI-04 / FDS-10-005).
+
+Edge-case handling for `Vision` or `Barcode` Cells where the configured source briefly fails (e.g., barcode unreadable but vision OK on a `Barcode`-configured Cell): operator manual override SHALL be available, logged via the FDS-06-009 / UJ-16 `HardwareInterlockBypassed` flag on the resulting `ContainerSerial` row. Override is supervisor-elevated per FDS-04-007.
+
+If MPP later identifies Cells where reconciling Vision and Barcode is operationally valuable (Option D from UJ-17), a fourth value `VisionAuthoritativeBarcodeReconcile` MAY be added without schema change — the proc layer interprets the new value.
 
 ---
 

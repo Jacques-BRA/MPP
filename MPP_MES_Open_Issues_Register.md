@@ -1,7 +1,7 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.13 — Working Draft
+**Version:** 2.14 — Working Draft
 **Date:** 2026-04-27
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
@@ -20,6 +20,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | 2.4 | 2026-04-21 | Blue Ridge Automation | **Phase A of the 2026-04-20 OI review refactor.** Closed OI-03 (shift runtime derived from events) and OI-06 (initials-based operator identity — see Phase C / FDS v0.8). Revised OI-04 (line-stop, not LOT-hold; 10-fail escalation; CRT 200% inspect), OI-05 (die-rank compatibility merge rules), OI-07 (three WO types, Maintenance targets Tools), OI-08 addenda (terminal locked to machine context; part↔machine validity map; mobile consideration), OI-09 addenda (sublot pattern with parent FK), OI-10 (superseded by Phase B Tool Management design). Added four new items: OI-11 (part rename at Casting → Trim), OI-12 (lineside inventory caps), OI-13 (BOM source = Flexware app @ IP .919), OI-14 (admin remove-item). Structural change: each OI and UJ now has its own subsection instead of living inside a giant grid table — easier to read, diff, and update. Source meeting notes at `Meeting_Notes/2026-04-20_OI_Review.md`. Running plan in `memory/project_mpp_oi_refactor.md`. |
 | 2.5 | 2026-04-22 | Blue Ridge Automation | **Legacy MES screenshot review gap analysis.** 36 screenshots of the Flexware Madison MES reviewed against the current FDS / Data Model. 16 new Part A items added (OI-15 through OI-30): 9 concrete design additions (Track screen, auto-finish-on-target WO, tray-divisibility rule, ItemLocation consumption metadata, Country of Origin, scrap source enum, partial start/complete, Hold Management screen, Lot computed fields) and 7 discovery items to confirm with MPP (Automation tile scope, Notifications, per-workstation scripting, Supply Part flag, cast-override cell flag, Workstation Category grouping, Reports tile contents). Source summary at `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` §"Additional discovered gaps". Legacy screenshots at `reference/MPP_Current_MES_screenshots.docx`. |
 | 2.6 | 2026-04-22 | Blue Ridge Automation | **OI-11 resolved — Casting → Trim rename modelled via 1-line BOM, not `Parts.ItemTransform`.** Review of the v2.5 design surfaced that the proposed `Parts.ItemTransform` table duplicated every column of `Workorder.ConsumptionEvent`. The rename is a degenerate 1-line BOM consumption: trim part has cast part as its sole component at QtyPer=1; existing ConsumptionEvent + LotGenealogy machinery handles the flow and the Honda backward trace. OI-11 moves ⬜ Open → ✅ Resolved. Downstream corrections: Data Model v1.8-rev (ItemTransform table section replaced with a ✅ Resolved callout; `Audit.LogEntityType` seed shrinks from 10 to 9 rows; table count "~73" → "~72"), FDS v0.10-rev (§5.10 retained, rewritten around FDS-05-033 BOM-driven scan-in; FDS-05-034/-035 retired), User Journeys v0.7-rev (Trim Shop narrative simplified to normal consumption), Phase G migration `0010_phase9_tools_and_workorder.sql` (ItemTransform LogEntityType row dropped; ScrapSource shifted from Id=40 to Id=39; re-run green, 779/779 tests still pass). |
+| 2.14 | 2026-04-27 | Blue Ridge Automation | **Part B — 10 UJ closures from Jacques's review batch.** UJ-07 (Option A), UJ-08, UJ-09 (Option C — strict + supervisor override), UJ-10 (Option D — shift-end summary), UJ-11 (Option A — flagged risk), UJ-13 (Option A), UJ-14, UJ-16, UJ-17 (Option A), UJ-18 (Gateway-script-async — architectural). Downstream FDS edits land in v0.11j (FDS-04-007 elevated-action list extension for UJ-09; FDS-07-005 amended for print extraction; FDS-07-006a/b NEW print dispatch + retry; §1.6 / FDS-01-014 NEW cross-cutting integration pattern; FDS-09-015 NEW shift-end summary; FDS-10-013 NEW ConfirmationMethod LocationAttribute). Data Model v1.9i (ShippingLabel +5 print-state columns). Part B counts shift: Resolved 6 → 16, In Review 2 → 1, Open 11 → 2 (UJ-03 stays In Review; UJ-05 + UJ-19 stay Open). |
 | 2.13 | 2026-04-27 | Blue Ridge Automation | **Part B UJ enrichment pass — 13 of 19 UJ entries restructured to match OI-entry depth (Description → Options A/B/C with impact analysis → Recommended direction → What's needed to decide).** Per Jacques's 2026-04-24 flag that UJ entries lacked options/impact framing. Two In-Review entries (UJ-03 sublot trigger, UJ-14 warm-up shots) and 11 Open entries (UJ-05, UJ-07, UJ-08, UJ-09, UJ-10, UJ-11, UJ-13, UJ-16, UJ-17, UJ-18, UJ-19) now carry Blue Ridge's recommended direction with reasoning and the explicit input needed to lock each. Six already-Resolved entries (UJ-01, UJ-02, UJ-04, UJ-06, UJ-12, UJ-15) left as-is — their resolution narratives already carry the depth. No status changes; this is a structure / readability refinement to make the next MPP review more actionable. |
 | 2.12 | 2026-04-27 | Blue Ridge Automation | **UJ-04 design locked — AIM Shipper ID local pool (zero-latency container closure).** Follow-up to v2.10's "queue async" Decision-with-addition. The Claude-proposed async-queue model (container completes in pending state, queue drains and back-fills `AimShipperId`) was rejected by Jacques on 2026-04-27 because it still introduces latency at close time. Replaced with a **pre-fetched local pool**: a background Gateway script keeps `Lots.AimShipperIdPool` topped up to a configurable target depth; `Container_Complete` claims one row FIFO synchronously inside its own transaction — sub-millisecond, never blocked on AIM. Empty pool = **hard fail** (close rejects, operator sees error, line stops; no soft fallback). Once consumed, IDs are permanently terminal — no return-to-pool on void / re-pack (Honda treats every issued ID as consumed regardless). Honda does not expire IDs. Two new tables (`Lots.AimShipperIdPool` + single-row `Lots.AimPoolConfig`) and four supporting procs (`_Claim` / `_Topup` / `_GetDepth` / `_GetByContainer` plus Config `_Get` / `_Update`). Configuration Tool exposes the four configurable thresholds (TargetBufferDepth=50, TopupThreshold=30, AlarmWarningDepth=20, AlarmCriticalDepth=10). Two-tier alarm: supervisor wallboard tile at Warning, supervisor alarm + IT notification at Critical. Downstream commits in this revision: Data Model v1.9h, FDS v0.11i (FDS-07-005 rewrite, FDS-07-008 amendment, FDS-07-010 rewrite, FDS-07-010a/b/c NEW), ERD Lots tab. SQL deferred to Arc 2 Phase 7 alongside the Container schema CREATE. No count changes (UJ-04 was already counted Resolved in v2.10 — this is a body refinement closing the design). |
 | 2.11 | 2026-04-27 | Blue Ridge Automation | **OI-21 design locked — Pausable LOT at Workstation as `Lots.PauseEvent`, not a `WorkOrderStatus` extension.** Follow-up to the v2.10 Decision-with-addition that left four open questions for Claude + Jacques. Decision body rewritten with the locked design: pause is a `(Lot, Location)` event recorded in a new append-only `Lots.PauseEvent` table mirroring `Quality.HoldEvent`. Pause is orthogonal to `WorkOrderStatus`, `OperationStatus`, and `LotStatusCode` — no enum extension on any of those. The same LOT MAY be paused at multiple Cells simultaneously (Machining + Assembly partial-progress); filtered UNIQUE blocks duplicate **open** pauses for `(LotId, LocationId)` only. **No auto-prompt** when starting a different LOT at the same Cell (rationale: Assembly auto-loads from upstream Machining FIFO — an unconditional resume prompt would interrupt the normal flow). Every workstation screen surfaces a **Paused-LOT indicator** (count + tap-through to detail list) for explicit operator-driven resume. **No TTL** — paused LOTs persist across shifts and operators; resume MAY be performed by a different operator from the one who paused. PausedReason and ResumedRemarks both optional. WO/Operation/Lot status do not transition on pause; no DowntimeEvent is written. Downstream commits in this revision: Data Model v1.9g (new `Lots.PauseEvent` table contract), FDS v0.11h (FDS-05-038 NEW under §5.3), ERD Lots tab. SQL deferred to Arc 2 Phase 1 alongside the rest of the Lots schema CREATE — procs `Lots.LotPause_Place / _Resume / _GetByLocation / _GetCountsByLocation`. No count changes to the Resolved/InReview/Open totals (OI-21 was already counted Resolved in v2.10 — this is a body refinement that closes the four open design questions). |
@@ -49,16 +50,16 @@ This register consolidates all open items and design decisions that gate Perspec
 > - Open (8) = OI-24, -25, -27, -28, -29, -30, -31, -32
 > - Superseded (1) = OI-10
 
-**Part B counts (19 items):**
+**Part B counts (19 items) — updated v2.14:**
 
 | Priority | ✅ Resolved | 🔶 In Review | ⬜ Open | **Total** |
 |---|---|---|---|---|
-| HIGH | 2 (UJ-01, UJ-04) | 0 | 5 (UJ-07, UJ-08, UJ-11, UJ-13, UJ-18, UJ-19) | **7** |
-| MEDIUM | 3 (UJ-02, UJ-12, UJ-15) | 2 (UJ-03, UJ-14) | 5 (UJ-05, UJ-09, UJ-10, UJ-16, UJ-17) | **11** |
+| HIGH | 6 (UJ-01, UJ-04, UJ-07, UJ-08, UJ-11, UJ-13, UJ-18) | 0 | 1 (UJ-19) | **7** |
+| MEDIUM | 9 (UJ-02, UJ-09, UJ-10, UJ-12, UJ-14, UJ-15, UJ-16, UJ-17) | 1 (UJ-03) | 1 (UJ-05) | **11** |
 | LOW | 1 (UJ-06) | 0 | 0 | **1** |
-| **Total** | **6** | **2** | **10** | **19** |
+| **Total** | **16** | **1** | **2** | **19** |
 
-**Grand total:** 51 items (32 Part A + 19 Part B). 28 resolved, 3 in review, 18 open, 1 superseded + 1 superseded-style (OI-10).
+**Grand total:** 51 items (32 Part A + 19 Part B). 38 resolved, 2 in review, 10 open, 1 superseded + 1 superseded-style (OI-10).
 
 > **Note on UJ descriptions:** Jacques flagged 2026-04-24 that UJ entries lack the options/impact/reference depth of the OI entries. A separate enrichment pass is queued before the next MPP review — not addressed in v2.10.
 
@@ -933,7 +934,7 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 ---
 
-### UJ-07 — Work order visibility and lifecycle — ⬜ Open
+### UJ-07 — Work order visibility and lifecycle — ✅ Resolved (2026-04-27, Option A)
 
 **Priority:** HIGH
 **Blocks:** Production tracking architecture
@@ -955,11 +956,13 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** Ben's confirmation that operators truly do not need WO visibility (which OI-07 already implies but was originally pending UJ-07). Confirmation from MPP IT that Macola does not push or expect to receive `Production` WOs from the MES — if it does, A may need to coexist with D.
 
-**Decision (existing):** Pending Ben's input on WO triggers, span (per-operation vs. per-route), and optional ERP derivation path. Now coupled to the three-WO-type model from OI-07 revised.
+**Decision (2026-04-27 — closed by Jacques):** **Option A — Per-LOT WO.** WorkOrders do not need to be seen by operators. FDS-06-022 / FDS-06-024 already specify the Per-LOT auto-create + MVP-LITE invisibility. No FDS edit required. ERP-derived (D) deferred — not in scope. The `WorkOrderTypeId` discriminator stays as a future hook for Demand / Maintenance per OI-07.
+
+**Decision (historical):** Pending Ben's input on WO triggers, span (per-operation vs. per-route), and optional ERP derivation path. Now coupled to the three-WO-type model from OI-07 revised.
 
 ---
 
-### UJ-08 — LOT merge business rules — ⬜ Open
+### UJ-08 — LOT merge business rules — ✅ Resolved (2026-04-27, Option A)
 
 **Priority:** HIGH
 **Blocks:** LOT merge screen
@@ -980,11 +983,13 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** S-08 die rank compatibility matrix from MPP Quality (now tracked in seeding registry — not a build blocker). Operator validation of supervisor-override workflow UX (Sort Cage scenario where supervisor approves the cross-die merge while operator waits at terminal). MPP Quality + supervisor walkthrough.
 
-**Decision (existing):** Configurable per part or die / cavity. Rules now partially supplied (rank compatibility, post-sort only, FIFO-by-cavity). Full die-rank matrix owed by MPP Quality (S-08).
+**Decision (2026-04-27 — closed by Jacques):** **Option A — hard-coded rules + supervisor override.** Already in design — FDS-05-025..030 carry the merge rule set; supervisor AD elevation per FDS-04-007 is the override path. No FDS edit required. Awaits S-08 die rank compatibility matrix (seeding registry, not a build blocker).
+
+**Decision (historical):** Configurable per part or die / cavity. Rules now partially supplied (rank compatibility, post-sort only, FIFO-by-cavity). Full die-rank matrix owed by MPP Quality (S-08).
 
 ---
 
-### UJ-09 — Material verification at assembly — ⬜ Open
+### UJ-09 — Material verification at assembly — ✅ Resolved (2026-04-27, Option C)
 
 **Priority:** MEDIUM
 **Blocks:** Assembly material ID screen
@@ -1005,11 +1010,13 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** MPP confirmation that substitutions are rare and BOM revision is the right path for permanent substitutes. Honda compliance affirmation. If C accepted, design the supervisor-override UX (PIN entry mid-scan, override-event audit row).
 
-**Decision (existing):** BOM check on scan-in — reject substitutes. Pending customer validation.
+**Decision (2026-04-27 — closed by Jacques):** **Option C — Strict BOM check + supervisor override.** Strict by default; on a wrong-part scan, supervisor AD elevation (FDS-04-007) unlocks a one-shot override that records the substitution event in `Audit.OperationLog` for traceability. FDS edits in v0.11j: FDS-04-007 elevated-action list adds "BOM substitute override at material scan-in"; FDS-06-011 extended with the override flow.
+
+**Decision (historical):** BOM check on scan-in — reject substitutes. Pending customer validation.
 
 ---
 
-### UJ-10 — Shift boundary handling — ⬜ Open
+### UJ-10 — Shift boundary handling — ✅ Resolved (2026-04-27, Option D)
 
 **Priority:** MEDIUM
 **Blocks:** Downtime, container, production screens
@@ -1031,11 +1038,13 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** Customer confirmation on OEE reporting expectations (slice-by-shift query is the OI-03 baseline). Operator + Supervisor walk-through on whether the shift-end summary screen has value (D enhancement) — if not, A suffices. Couples to UJ-11 (paper transition: legacy paper sheets are the current shift handover artifact).
 
-**Decision (existing):** Pending customer discussion. Now partially addressed by OI-03's event-derived runtime model — shift boundaries become pure timestamps, downtime events can freely span them.
+**Decision (2026-04-27 — closed by Jacques):** **Option D — events span (per OI-03) + optional shift-end summary screen.** Already-OI-03-resolved event-spans-naturally model is the foundation; on top, the outgoing operator gets a one-screen handover summary (open `DowntimeEvent` rows, open `PauseEvent` rows, in-process LOTs at the operator's terminal). Implementation note: the in-process-LOT query joins `LotMovement` to `v_LotDerivedQuantities` — same pattern already used by Lot Details. FDS edit in v0.11j: FDS-09-015 NEW.
+
+**Decision (historical):** Pending customer discussion. Now partially addressed by OI-03's event-derived runtime model — shift boundaries become pure timestamps, downtime events can freely span them.
 
 ---
 
-### UJ-11 — Paper to screen transition — ⬜ Open
+### UJ-11 — Paper to screen transition — ✅ Resolved (2026-04-27, Option A — flagged risk)
 
 **Priority:** HIGH
 **Blocks:** All production screens
@@ -1057,7 +1066,9 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** Ben's OI-31 rollout shape decision (single-line vs full-cutover vs shadow — memo at `Meeting_Notes/2026-04-24_OI-31_Single-Line_Deployment_Impact.md`). MPP IT joint deployment plan with station-by-station terminal-readiness timeline. Couples to UJ-19 (Productivity DB transition).
 
-**Decision (existing):** Pending discussion with Ben. Question is whether some stations stay paper-first until tablets are deployed (OI-08 addenda).
+**Decision (2026-04-27 — closed by Jacques):** **Option A — All-at-once cutover. Flagged as a risk.** Every station goes digital on go-live; paper sheets become invalid. Risk: requires every terminal in place before flip; highest training and operations burden. Risk owner: Ben (rollout shape decision per OI-31). Couples to UJ-19 (Productivity DB transition). No FDS edit required — go-live shape is a deployment plan concern, not an FDS requirement.
+
+**Decision (historical):** Pending discussion with Ben. Question is whether some stations stay paper-first until tablets are deployed (OI-08 addenda).
 
 ---
 
@@ -1072,7 +1083,7 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 ---
 
-### UJ-13 — Weight vs. count-based container closure — ⬜ Open
+### UJ-13 — Weight vs. count-based container closure — ✅ Resolved (2026-04-27, Option A)
 
 **Priority:** HIGH
 **Blocks:** Container management screens
@@ -1093,11 +1104,13 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** MPP confirmation of which parts are weight-based vs count-based. This is part of S-05 (Parts master export — the MPP IT export should carry `ClosureMethod` + `TargetWeight` per part, or MPP supplies a separate two-column mapping). Engineering walk-through with Ben on weight-based UX (does the operator see live weight readout? auto-close on threshold? confirm-before-close?).
 
-**Decision (existing):** Pending Ben — dual-mode closure logic per ContainerConfig (proposed: `ClosureMethod` + `TargetWeight`).
+**Decision (2026-04-27 — closed by Jacques):** **Option A — Per-Item via ContainerConfig.** Schema columns `Parts.ContainerConfig.ClosureMethod` + `TargetWeight` already shipped in v1.0 (Phase 4) proactively for OI-02. No FDS edit required. ClosureMethod values per Item come in via S-05 (Parts master export — seeding registry).
+
+**Decision (historical):** Pending Ben — dual-mode closure logic per ContainerConfig (proposed: `ClosureMethod` + `TargetWeight`).
 
 ---
 
-### UJ-14 — Warm-up shots and setup tracking — 🔶 In Review
+### UJ-14 — Warm-up shots and setup tracking — ✅ Resolved (2026-04-27, Option A)
 
 **Priority:** MEDIUM
 **Blocks:** Die Cast production screen
@@ -1117,7 +1130,9 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** Ben's final confirmation that warm-up tracking under `DowntimeEvent.ShotCount` matches operator practice. Edge case to validate: what happens if warm-up partially produces good shots (atypical but possible)? Currently those would be recorded on a separate `ProductionEvent` once production starts — the warm-up downtime closes when the operator transitions to production.
 
-**Decision (existing):** Treat as downtime sub-category. `ShotCount` added to `DowntimeEvent`. Pending Ben's final confirmation. Schema column shipped in Phase 8 migration `0009_phase8_oee_reference.sql`.
+**Decision (2026-04-27 — closed by Jacques):** **Option A — DowntimeEvent + ShotCount.** Already shipped in v1.5 / Phase 8 migration `0009_phase8_oee_reference.sql`. No FDS edit required.
+
+**Decision (historical):** Treat as downtime sub-category. `ShotCount` added to `DowntimeEvent`. Pending Ben's final confirmation. Schema column shipped in Phase 8 migration `0009_phase8_oee_reference.sql`.
 
 ---
 
@@ -1132,7 +1147,7 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 ---
 
-### UJ-16 — Hardware interlock bypass mode — ⬜ Open
+### UJ-16 — Hardware interlock bypass mode — ✅ Resolved (2026-04-27, Option A)
 
 **Priority:** MEDIUM
 **Blocks:** Serialized assembly screens
@@ -1153,11 +1168,13 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** Ben's input on actual bypass triggering conditions and frequency. Specifically: (1) Is bypass operator-initiated, or supervisor-required? (2) Does it auto-clear after N events, or stays active until explicitly turned off? (3) What's the typical reason — vision fault, manual override, recovery? Couples to UJ-17 (vision/barcode confirmation conflicts can trigger bypass need). Honda compliance: confirm the serial-level flag satisfies their traceability requirement.
 
-**Decision (existing):** Add a bypass flag to the data model and mark affected serials as "serial validation skipped." Pending discussion with Ben.
+**Decision (2026-04-27 — closed by Jacques):** **Option A — BIT flag on `Lots.ContainerSerial`.** Per-serial precision; column drafted in v0.4.1 (`HardwareInterlockBypassed BIT NOT NULL DEFAULT 0`). No new FDS edit required — FDS-06-009 covers the bypass capture.
+
+**Decision (historical):** Add a bypass flag to the data model and mark affected serials as "serial validation skipped." Pending discussion with Ben.
 
 ---
 
-### UJ-17 — Vision system vs. barcode confirmation — ⬜ Open
+### UJ-17 — Vision system vs. barcode confirmation — ✅ Resolved (2026-04-27, Option A)
 
 **Priority:** MEDIUM
 **Blocks:** PLC-integrated production screens
@@ -1179,11 +1196,13 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** Ben's input on actual line behavior — for each Assembly Cell with vision and/or barcode, which source(s) are present and operationally reliable. Walk-through for the few "both available" lines: would MPP value the AND rule (B) or accept the configured-source rule (A)? Couples to OI-04 (line-stop / 10-fail / CRT workflow already covers fail escalation).
 
-**Decision (existing):** Pending Ben. Now coupled to OI-04 revised (line-stop, 10-fail escalation, CRT workflow).
+**Decision (2026-04-27 — closed by Jacques):** **Option A — Single configured source per Cell.** New `LocationAttributeDefinition` seed `ConfirmationMethod NVARCHAR ('Vision' / 'Barcode' / 'Both')` on relevant LocationTypeDefinitions. Edge-case mismatches surface as 10-fail line stops per OI-04 (already covered). FDS edit in v0.11j: FDS-10-013 NEW.
+
+**Decision (historical):** Pending Ben. Now coupled to OI-04 revised (line-stop, 10-fail escalation, CRT workflow).
 
 ---
 
-### UJ-18 — Event processing: sync vs. async — ⬜ Open
+### UJ-18 — Event processing: sync vs. async — ✅ Resolved (2026-04-27, Gateway-script-async)
 
 **Priority:** HIGH
 **Blocks:** Every label-printing touchpoint, all non-AIM external integrations
@@ -1210,7 +1229,21 @@ These are the 19 assumptions from `MPP_MES_USER_JOURNEYS.md`. Each gates one or 
 
 **What's needed to decide:** Ben's validation of A as the default. Confirm acceptable label-print latency budget. Confirm Hold operations can tolerate a few seconds of sync AIM call.
 
-**Decision (existing):** FRS does not require the outbox pattern — just a log of all sent and received content (`Audit.InterfaceLog`). Pending Ben's validation of the direct-call-with-logging approach.
+**Decision (2026-04-27 — closed by Jacques):** **Gateway-script-async pattern (architectural, not just an integration choice).** All external integrations SHALL be made via Ignition Gateway scripting; async dispatch via `system.util.sendMessageAsync` rather than synchronous in-MES-proc calls. Failures handled in script and logged to `Audit.FailureLog`. AIM `GetNextNumber` is the special case — UJ-04's pre-fetched pool insulates Container_Complete from any network call at all.
+
+**Print-path implications (Q&A locked with Jacques 2026-04-27):**
+- **Container close** (FDS-07-005) — atomic block now holds: pool claim, status flip, `ShippingLabel` INSERT (PrintedAt NULL, attempts 0, terminal), OperationLog. Print is **extracted** — Perspective view fires `system.util.sendMessageAsync('mes', 'print-shipping-label', {ShippingLabelId})` on close success.
+- **Print attempts:** 3 retries with **fixed 2s gap** between attempts — handled inline in the Gateway message handler (no re-send-to-self pattern; concern was Gateway thread-pool lockup).
+- **Failure surface:** UI banner at the closing terminal only (per-terminal scope, not plant-wide). Banner shows container + AIM ID + last error + Retry/Reprint/Acknowledge actions. Other operators at other terminals do not see it.
+- **Stranded-prints alarm:** safety-sweep timer at low cadence (every 5 min) checks `ShippingLabel WHERE PrintedAt IS NULL AND PrintFailedAt IS NULL AND CreatedAt < NOW() - 60s`. If count > **5**, supervisor alarm + IT notification fires (mirrors AIM pool alarm pattern).
+- **Schema delta on `Lots.ShippingLabel`:** +`PrintAttempts INT NOT NULL DEFAULT 0`, +`LastPrintAttemptAt DATETIME2(3) NULL`, +`LastPrintError NVARCHAR(2000) NULL`, +`PrintFailedAt DATETIME2(3) NULL`, +`TerminalLocationId BIGINT FK → Location.Location.Id, NULL` (banner routing). State derivation, no separate code table.
+- **Other external integrations:** AIM `UpdateAim`, AIM `PlaceOnHold` / `ReleaseFromHold`, future Macola pushes — same Gateway-script-async pattern. Sync direct call from MES proc is retired except where the call is genuinely instantaneous (local DB).
+
+**Integration landed (this commit — v2.14):**
+- **Data Model v1.9i** — `Lots.ShippingLabel` +5 columns above.
+- **FDS v0.11j** — FDS-01-014 (NEW under §1.6) cross-cutting Gateway-script-async pattern; FDS-07-005 amended (print extracted from atomic block); FDS-07-006a (NEW) print dispatch + retry; FDS-07-006b (NEW) banner + safety sweep.
+
+**Decision (historical):** FRS does not require the outbox pattern — just a log of all sent and received content (`Audit.InterfaceLog`). Pending Ben's validation of the direct-call-with-logging approach.
 
 ---
 
