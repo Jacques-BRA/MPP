@@ -86,7 +86,7 @@ When in doubt about scope, check `reference/MPP_Scope_Matrix.xlsx` — it is the
 - **Integration queue from OIR v2.10 — 7 of 8 landed** (2026-04-27): (1) OI-12 MaxParts ✅ `47a4e25`, (2) OI-18 ItemLocation cascade ✅ `0f7f40f`, (3) OI-08 Terminal mode ✅ `7a9d87e`, (4) OI-23 Lot derivations view ✅ `e393b7d`, (5) OI-16 PLC confirm + RequiresCompletionConfirm ✅ `55427f5`, (6) OI-21 Pausable LOT — design locked + landed ✅ `15edd5e`, (7) UJ-04 AIM pool — design locked + landed ✅ `82df891`. (8) OI-13 BOM export moved to seeding registry as S-06.
 - **UJ enrichment + closure batch 2026-04-27** — 13 UJ entries enriched to OI-style depth in v2.13 (commit `483948e`); Jacques reviewed the docx and closed 10 in v2.14 (commit `a2b58f5`): UJ-07/-08/-11/-13/-14/-16 (Option A defaults), UJ-09 (Option C — strict + supervisor override), UJ-10 (Option D — shift-end summary), UJ-17 (Option A — ConfirmationMethod LocationAttribute), UJ-18 (Gateway-script-async architectural — FDS-01-014 + print-dispatch async pattern + ShippingLabel +5 print-state cols). Part B status: 16 Resolved, 1 In Review (UJ-03), 2 Open (UJ-05, UJ-19).
 
-Source-of-truth docs: `MPP_MES_DATA_MODEL.md` v1.9i, `MPP_MES_FDS.md` v0.11j, `MPP_MES_Open_Issues_Register.md` v2.14, `MPP_MES_USER_JOURNEYS.md` v0.8, `MPP_MES_PHASED_PLAN_PLANT_FLOOR.md` v0.2b, `MPP_MES_ERD.html` (current through v1.9i in per-schema tabs, Master tab regen queued), `MPP_MES_SEEDING_REGISTRY.md` v1.0. Arc 2 revisions spec at `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (still untracked in working tree). Phase G capability snapshot: `Meeting_Notes/2026-04-22_Phase_G_Capabilities_Summary.md`.
+Source-of-truth docs: `MPP_MES_DATA_MODEL.md` v1.9i, `MPP_MES_FDS.md` v0.11j, `MPP_MES_Open_Issues_Register.md` v2.14, `MPP_MES_USER_JOURNEYS.md` v0.8, `MPP_MES_PHASED_PLAN_PLANT_FLOOR.md` **v0.3** (full validation pass complete 2026-04-27 — VP-0..VP-Final, 12 commits; v0.2 overlay retired; per-phase narratives canonical), `MPP_MES_ERD.html` (current through v1.9i in per-schema tabs **AND Master tab — regen done 2026-04-27**), `MPP_MES_SEEDING_REGISTRY.md` v1.0. Arc 2 revisions spec at `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (still untracked in working tree). Phase G capability snapshot: `Meeting_Notes/2026-04-22_Phase_G_Capabilities_Summary.md`.
 
 - **Data model:** v1.9i (rev 2026-04-27) — 8 schemas, ~76 tables. Recent additions: `Lots.PauseEvent` (v1.9g, OI-21), `Lots.AimShipperIdPool` + `Lots.AimPoolConfig` (v1.9h, UJ-04), `Lots.ShippingLabel` +5 print-state cols (v1.9i, UJ-18). Earlier landmarks: Tool/Cavity on Lot + ProductionEvent checkpoint shape + IdentifierSequence (v1.9, Arc 2 model revisions); WorkOrderType corrected to single Production seed (v1.9b, OI-07); MaxParts on Parts.Item (v1.9c, OI-12); ItemLocation Area/WorkCenter/Cell cascade (v1.9d, OI-18); `v_LotDerivedQuantities` view (v1.9e, OI-23); `RequiresCompletionConfirm` LocationAttribute (v1.9f, OI-16). 8 schemas: Location, Parts, Lots, Workorder, Quality, OEE, Tools, Audit. BIGINT PKs/FKs everywhere, NVARCHAR. Location three-tier polymorphic model. Audit 4 log streams. All enum/status columns code-table backed with FKs. User attribution via `BIGINT FK → AppUser.Id`. AppUser realigned to initials-based security model (v1.6); ClockNumber/PinHash dropped in Phase G. HoldEvent + PauseEvent + DowntimeEvent follow open + close lifecycle. SortOrder + MoveUp/MoveDown on Location.Location. Three-state Draft/Published/Deprecated versioning on Bom, RouteTemplate, OperationTemplate, QualitySpec.
 - **FDS:** v0.11j (rev 2026-04-27) — all 15 sections. Cross-cutting integration pattern (FDS-01-014, UJ-18) — Gateway-script-async via `system.util.sendMessageAsync` for all external systems. Recent additions: §5.3 FDS-05-038 Pausable LOT (OI-21); §7.4 FDS-07-010/-010a/b/c AIM pool + alarms + config (UJ-04); §7.4 FDS-07-006a/b print dispatch + banner + safety sweep (UJ-18); §6.10 FDS-06-028 auto-finish + RequiresCompletionConfirm (OI-16); §5.1 FDS-05-031 view-derived Lot quantities (OI-23); §2.5 FDS-02-010 / §4 FDS-04-003 terminal-mode-by-parent-tier (OI-08); §3.6 FDS-03-019 MaxParts on Item (OI-12); §3.5 FDS-03-014 ItemLocation cascade (OI-18); §6.10 single-Production WorkOrderType (OI-07); §16 IdentifierSequence (Arc 2 v0.11). UJ batch closures (v0.11j, 2026-04-27): FDS-04-007 list extension + FDS-06-011 supervisor override (UJ-09); FDS-09-015 shift-end summary (UJ-10); FDS-10-013 ConfirmationMethod LocationAttribute (UJ-17). §4 security model rewritten Phase C (2026-04-21) — initials-based operators, per-action AD elevation, dedicated vs shared terminal modes, 30-min idle re-confirmation. §11 Audit four log streams + FDS-11-011 single-result-set Ignition JDBC convention. Revision history reordered newest-at-top + entries trimmed (commit `bfb77fc`). FDS appendices remain placeholder references — pending.
@@ -134,9 +134,50 @@ SELECT @Status = Status, @NewId = NewId FROM #Result;
 DROP TABLE #Result;
 ```
 
+## Outstanding for Next Session — **present these first**
+
+**Doc set is current end-to-end as of 2026-04-27.** The Arc 2 phased plan is now at v0.3 (full validation pass complete: VP-0 through VP-Final, 12 commits this session covering Master ERD regen + every per-phase narrative). What's left:
+
+### Phase 0 facilitation workshop with MPP — 8 gating items
+
+Narrowed from 13 in v0.2e after the UJ batch closures landed:
+
+1. **OI-31** — IdentifierSequence cutover seed values + Ben's rollout-shape decision (memo at `Meeting_Notes/2026-04-24_OI-31_Single-Line_Deployment_Impact.md`).
+2. **FDS-06-030** — WorkOrder BIT-flag enumeration.
+3. **Historical data migration** — entity list + pre-flight validation + discrepancy review.
+4. **ShotCount semantics** — cumulative counter (current default) vs derived from aggregated LOT quantity (Decision 5 of the 2026-04-23 spec).
+5. **Workstation `DefaultScreen` seeding** — per-Cell Perspective-view list + UJ-17 `ConfirmationMethod` per-Cell folded into same walkthrough.
+6. **Honda AIM Hold/Update contract detail** — `PlaceOnHold` / `ReleaseFromHold` / `UpdateAim` signatures + error recovery (UJ-04 GetNextNumber pool flow already locked).
+7. **Label template scope** — Flexware has 3 templates (CONTAINER / LOT / CONTAINER_HOLD); confirm matches + any new (Sort Cage / Hold / Void).
+8. **OI-32 Material Allocation operator screen** — premise challenged in OIR v2.10; clarification queued.
+
+### Open Part B UJs
+
+- **UJ-03** sublot split trigger — In Review, Ben pending.
+- **UJ-05** Sort Cage serial migration — default direction committed (update-in-place + `Lots.ContainerSerialHistory`); awaits MPP Quality + Honda compliance affirmation.
+- **UJ-19** Productivity DB replacement — MPP names the four PD reports; couples to OI-30 Reports tile.
+
+### Discovery items still Open (OIR Part A)
+
+OI-24 Automation tile, OI-25 Notifications, OI-27 Supply part flag, OI-28 cast-override cell flag, OI-29 Workstation Category, OI-30 Reports enumeration. Handled in respective phase walkthroughs as MPP brings input.
+
+### SQL queue — Blue Ridge owns (not waiting on MPP)
+
+1. **OI-07 correction migration** — rename `WorkOrderType` seed `Demand`→`Production`; DELETE Ids 2 + 3; update test 0019.
+2. **OI-12 correction migration** — DROP `Parts.ContainerConfig.MaxParts`; ADD `Parts.Item.MaxParts`.
+3. These take versioned migration numbers `0013` + `0014` (or bundled into one).
+4. **Arc 2 Phase 1 SQL implementation** — lands at next-unclaimed-after-corrections (likely `0015_arc2_phase1_shop_floor_foundation.sql`). Phase 1 plan body now reflects v1.9 + all overlay items (B4 Gateway-script-async; ConfirmationMethod LocationAttribute seed; etc.).
+
+### Non-blocking polish
+
+- Memory file revision-history-format trim: applied to FDS only; not yet to Data Model + OIR.
+- ERD "regen queued" caveats all cleared (Master tab done).
+
+---
+
 ## Remaining Tasks
 
-See `MPP_MES_SUMMARY.md` "Remaining Tasks" section for the full list. Key items as of 2026-04-24:
+See `MPP_MES_SUMMARY.md` "Remaining Tasks" section for the full list. Key items as of 2026-04-27:
 
 **Integration queue from Jacques's OIR v2.10 review (per-item commits):**
 1. ✅ **OI-12 `MaxParts` move** — landed (commit `47a4e25`).
