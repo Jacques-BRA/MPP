@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2f
+**Document ID:** MPP-PLAN-ARC2-v0.2g
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2f (2026-04-27)
+**Version:** 0.2g (2026-04-27)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2g | 2026-04-27 | Blue Ridge Automation | **VP-1: Plan Phase 1 freshening.** B4 (Gateway script layer contract) updated for FDS-01-014 / UJ-18 — sync direct-call retired in favour of Gateway-script-async via `system.util.sendMessageAsync`; AIM pool topup is the canonical example. Phase 1 LocationAttributeDefinition seed list adds `ConfirmationMethod` (UJ-17 / FDS-10-013) on the relevant `Cell`-tier `LocationTypeDefinition`s. Phase 1 "Open Items Affecting This Phase" table refreshed — UJ-10 closure (Option D / FDS-09-015) reflected. |
 | 0.2f | 2026-04-27 | Blue Ridge Automation | **VP-0: front matter + Plan Phase 0 refreshed against current state (Data Model v1.9i, FDS v0.11j, OIR v2.14, Seeding Registry v1.0).** UJ batch closures (UJ-04, UJ-09, UJ-10, UJ-11, UJ-13, UJ-14, UJ-16, UJ-17, UJ-18) and Part A closures (OI-12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -32b) since v0.2e moved out of gating/opportunistic into the "Already closed" list. Gating list narrowed to truly-still-gating items. Migration-number reference updated for queued OI-07 + OI-12 correction migrations. v0.2 Alignment Overlay §K (Phase 0 open-items refresh) regenerated with the same scope. Per-phase narratives below (Phases 2–8) still pending VP-1..VP-Final passes. |
 | 0.2e | 2026-04-24 | Blue Ridge Automation | **OI-16 PLC confirm BIT + `RequiresCompletionConfirm` LocationAttribute propagated.** Phase 1 migration gains an additional LocationAttributeDefinition seed row (`RequiresCompletionConfirm` BIT on Terminal tier). Phase 6 Assembly Gateway script gains `CompletionConfirmed` MIP tag read; auto-close gates on BOTH target-crossing AND BIT. Perspective Assembly view conditionally renders a large "Confirm Completion" button vs passive popup based on session's derived RequiresCompletionConfirm value. |
 | 0.2d | 2026-04-24 | Blue Ridge Automation | **OI-23 Lot derived quantities as a view.** Phase 2 (LOT Lifecycle) SQL migration gains `CREATE VIEW Lots.v_LotDerivedQuantities (LotId, TotalInProcess, InventoryAvailable)` — joins `Lots.Lot.PieceCount` with aggregations over `Workorder.ProductionEvent` (checkpoint counters) and `Workorder.ConsumptionEvent` (consumed quantities). No materialized columns; no on-write update paths. Read procs (Lot_Get, Lot_List) join the view at read time. Companion FDS v0.11f, Data Model v1.9e. |
@@ -239,7 +240,13 @@ Attempting a second open event is a business rule violation, not an exception. `
 
 Gateway scripts call stored procs the same way Perspective views do — through parameterized Named Queries. Gateway scripts **MUST NOT** execute raw DML via `system.db.runUpdateQuery` or inline SQL. External I/O (AIM HTTP/SOAP, Zebra printer socket writes, OPC read/write via TOPServer or OmniServer) happens **only** in Gateway scripts; stored procs never reach outside the database.
 
-Every external call is bracketed by two `Audit.Audit_LogInterface` calls: one before the call (Direction='Outbound', RequestPayload populated, ResponsePayload NULL), one after (update the same row with ResponsePayload and any error). Critical failures are additionally logged to `Audit.FailureLog`. No outbox pattern — direct calls with a full audit trail (per OI-01 resolution).
+**Trigger pattern (revised v0.2g per FDS-01-014 / UJ-18 — Gateway-script-async):** all external integrations are dispatched via `system.util.sendMessageAsync('mes', '<handler-name>', {entityId})` from Perspective views (or from MES procs when proc-driven). Sync direct-call from inside an MES proc is retired for **external** systems — sync remains the model for inter-MES DB calls only. The async dispatch decouples MES correctness from external availability and makes failures observable, retryable, and logged without operator-blocking.
+
+**Audit trail:** Every external call is bracketed by `Audit.Audit_LogInterface` writes — one when the request fires (Direction='Outbound', RequestPayload populated, ResponsePayload NULL), one when the response or error returns (update the same row). Critical failures are additionally logged to `Audit.FailureLog`. The OI-01 "no outbox" decision still stands — there is no separate outbox table; the message-handler pattern delivers async semantics without a DB queue.
+
+**Special case — pre-fetched buffers.** When zero operator-perceived latency is required (e.g., `Container_Complete` → AIM Shipper ID assignment), a pre-fetched local buffer (`Lots.AimShipperIdPool`, FDS-07-010) replaces the dispatch model: the MES proc consumes locally; the buffer's topup loop runs as a Gateway-script-async. See Phase 7 for the pool model.
+
+**Special case — print failure surfacing.** Print attempts retry inline within the message handler (e.g., 3 × 2s gap for shipping labels per FDS-07-006a). On exhaustion, DB state (`PrintFailedAt`) drives a per-terminal banner (FDS-07-006b) — the MES does not maintain a separate "failed prints" queue; the audit row IS the queue. A low-frequency safety-sweep timer (~5 min) recovers orphans (e.g., Gateway restart between proc commit and message dispatch).
 
 ### B5 — PLC descriptive boundary
 
@@ -486,6 +493,10 @@ No test suite additions.
 - `RequiresCompletionConfirm` (BIT — per OI-16 additions, v0.2e) — when set on a Dedicated Terminal, the auto-finish completion flow shows a large "Confirm Completion" button instead of a passive popup. NULL = 0 = passive popup.
 - ~~`TerminalMode`~~ **(dropped v0.2c)** — mode is now derived from the Terminal Location's parent tier in the ISA-95 hierarchy per OI-08 correction. No seed row needed for this attribute.
 
+**LocationAttributeDefinition seeds on PLC-integrated `Cell`-tier `LocationTypeDefinition`s (added v0.2g, UJ-17):**
+
+- `ConfirmationMethod` (NVARCHAR — `'Vision'` / `'Barcode'` / `'Both'`) — per FDS-10-013, declares which confirmation source(s) the assembly Cell uses for part identity at scan-in. Read by the production proc and operator UI; drives the FDS-06-010 / FDS-10-003 part-identity check. Edge-case mismatches surface as 10-fail line stops per OI-04 (already covered by FDS-10-005..012). The exact list of Cell-tier `LocationTypeDefinition`s receiving this seed (e.g., `AssemblyStation`, `SerializedAssembly`) comes from the Phase 0 `DefaultScreen` seeding pass — same per-Cell walkthrough.
+
 **What is NOT seeded (per Phase C security rewrite):**
 
 - No `IdleTimeoutSeconds` attribute — there is no shift-start login to time out. Operator presence is persistent on Dedicated terminals; Shared terminals prompt on first action or machine change. The 30-minute idle re-confirmation overlay on Dedicated terminals is Perspective-layer behaviour, not a DB attribute.
@@ -519,12 +530,15 @@ No test suite additions.
 
 | Item | Assumption used |
 |---|---|
-| OI-31 identifier sequences | Resolved in Phase 0 — cutover-day `LastValue` for Lot + SerializedItem; format carry-forward confirmed; any additional counters added to the seed. |
-| OI-06 / UJ-01 operator identity | **Closed (Phase C, 2026-04-21).** Initials-based presence + per-action AD elevation. No clock# + PIN, no 5-minute timeout, no session-sticky elevation. Phase 1 delivers `AppUser_GetByInitials`. Do not re-open. |
-| UJ-10 shift boundary | Resolved in Phase 0 — carryover rule drives the `Shift_End` / `Shift_Start` implementation. |
-| FDS-06-030 WorkOrder BIT flags | Resolved in Phase 0 — live flag column list on `Workorder.WorkOrder` CREATE. |
-| Historical data migration | Resolved in Phase 0 — entity list, pre-flight validation, discrepancy review process. |
-| OI-08 addenda | Terminal mode derived from Terminal Location's parent tier — Engineering attaches Terminals in the right place in the hierarchy at Configuration time. No seeded attribute. |
+| OI-31 identifier sequences | Pending Phase 0 — cutover-day `LastValue` for Lot + SerializedItem; format carry-forward confirmed; any additional counters added to the seed. |
+| OI-06 / UJ-01 operator identity | **Closed (Phase C, 2026-04-21).** Initials-based presence + per-action AD elevation. Phase 1 delivers `AppUser_GetByInitials`. |
+| UJ-10 shift boundary | **Closed (2026-04-27, Option D).** Events span boundaries naturally per OI-03 model — `Shift_End` does NOT auto-close open `DowntimeEvent` rows; the open-event invariant per B3 carries through the boundary. The optional shift-end summary screen (FDS-09-015) is delivered in Phase 8. Phase 1's `Shift_Start` / `Shift_End` procs simply insert / update the `Oee.Shift` runtime row — no carryover logic. |
+| UJ-17 vision vs barcode | **Closed (2026-04-27, Option A).** Single configured source per Cell via `ConfirmationMethod` LocationAttribute (FDS-10-013). Phase 1 delivers the seeded `LocationAttributeDefinition` row; per-Cell value seeding folds into Phase 0 `DefaultScreen` walkthrough. |
+| OI-16 / RequiresCompletionConfirm | **Closed (2026-04-24).** Per-Terminal `RequiresCompletionConfirm` BIT LocationAttribute. Phase 1 seeds the definition; per-Terminal value seeding folds into Phase 0 `DefaultScreen` walkthrough. Phase 6 Assembly view consumes the value. |
+| FDS-06-030 WorkOrder BIT flags | Pending Phase 0 — live flag column list on `Workorder.WorkOrder` CREATE. |
+| Historical data migration | Pending Phase 0 — entity list, pre-flight validation, discrepancy review process. |
+| OI-08 addenda | **Closed (2026-04-24).** Terminal mode derived from parent Location tier — Engineering attaches Terminals in the right place in the hierarchy at Configuration time. No seeded attribute. |
+| UJ-18 Gateway-script-async | **Closed (2026-04-27).** B4 (above) updated. AIM pool topup is the canonical example; Phase 1 doesn't directly use it (no external integrations until Phase 6/7), but Gateway-script-async is the foundation pattern for everything downstream. |
 
 ## State & Workflow
 
