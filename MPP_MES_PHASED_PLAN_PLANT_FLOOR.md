@@ -1,9 +1,9 @@
 # MPP MES — Phased Delivery Plan: Arc 2 (Plant Floor MES)
 
-**Document ID:** MPP-PLAN-ARC2-v0.2j
+**Document ID:** MPP-PLAN-ARC2-v0.2k
 **Project:** Madison Precision Products MES Replacement
 **Contractor:** Blue Ridge Automation
-**Version:** 0.2j (2026-04-27)
+**Version:** 0.2k (2026-04-27)
 **Status:** Working draft — design spec at `docs/superpowers/specs/2026-04-16-arc2-phased-plan-design.md` (v0.1) and `docs/superpowers/specs/2026-04-23-arc2-model-revisions.md` (v0.1 — authoritative for post-Phase-G decisions)
 
 > **Reader note (v0.2):** The individual phase sections below predate the 2026-04-23 Arc 2 model revisions. Read the new **§"v0.2 Alignment Overlay"** immediately after this header before executing any phase — it captures the deltas (auth model, Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, dashboard-pattern rejection) that supersede or refine the per-phase narratives. Phase-by-phase rewrites remain queued for a future revision pass.
@@ -15,6 +15,7 @@
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
 | 0.1 | 2026-04-16 | Blue Ridge Automation | Initial draft — nine phases (0 customer validation gate through 8 downtime + shift). Mirrors Arc 1 plan structure. Codifies Arc 2 cross-cutting conventions B1–B11. |
+| 0.2k | 2026-04-27 | Blue Ridge Automation | **VP-5: Plan Phase 5 (Machining with Sub-LOT Split) — checkpoint-shape ProductionEvent + OI-18 cascade.** `IsPieceCountIncrement` flag on `Parts.OperationTemplate` retired — Lot piece count is now derived from `Lots.v_LotDerivedQuantities` view (OI-23 / Phase 2) at read time; no ALTER needed on `OperationTemplate`. `MachiningOut_Record` signature updated to use cumulative `ShotCount`/`ScrapCount` per v0.2i checkpoint shape (no `@GoodCount`/`@NoGoodCount`). Movement Scan Screen scan-in cascade (OI-18) applies at Machining IN — pulled from Phase 4 reusable pattern. Sublot split is the canonical pattern per OI-09 / FDS-05-022 (Machining-only — Die Cast cavity-parallel LOTs are peers, not sublots). UJ-03 sublot trigger still In Review (Ben pending). Migration filename updated. |
 | 0.2j | 2026-04-27 | Blue Ridge Automation | **VP-4: Plan Phase 4 (Movement + Trim + Receiving) — OI-11/12/18 + checkpoint-shape ProductionEvent.** Trim section rewritten for OI-11 Casting→Trim 1-line BOM consumption (closed 2026-04-22; no separate `Parts.ItemTransform` table; existing `Parts.Bom` + `Workorder.ConsumptionEvent` + `Lots.LotGenealogy` carry it). ProductionEvent_Record calls updated to v1.9 checkpoint signature (cumulative `ShotCount`/`ScrapCount`; no `LocationId`/`GoodCount`/`NoGoodCount`). Movement Scan Screen scan-in validation extended for OI-12 (`Parts.Item.MaxParts` per-Item per-Location cap) + OI-18 (`Parts.ItemLocation_IsEligible` cascade walk Cell → WorkCenter → Area). Open Items table refreshed — OI-11, OI-12, OI-18, OI-08, UJ-11, UJ-13 all closed. Migration filename updated. |
 | 0.2i | 2026-04-27 | Blue Ridge Automation | **VP-3: Plan Phase 3 (Die Cast Operator Station) — full rewrite against v1.9 design.** ProductionEvent_Record signature reshaped to checkpoint form (cumulative `ShotCount`/`ScrapCount`, `EventAt`; dropped `DieIdentifier`, `CavityNumber`, `LocationId`, `ItemId`, per-event `GoodCount`/`NoGoodCount`, `RecordedAt`). Carlos walkthrough rewritten — Tool + Cavity auto-populated from `Tools.ToolAssignment_ListActiveByCell`, operator confirms via tap, elevated Edit triggers inline `ToolAssignment_Release`/`_Assign`. OperationTemplate seed list pruned — `DieIdentifier` / `CavityNumber` / `WarmupShotCount` removed (Tool/Cavity on Lot per overlay B; warm-up on `DowntimeEvent` only per UJ-14 Option A). Open Items table refreshed — UJ-14 closed (Option A — `DowntimeEvent.ShotCount`); UJ-11 closed (Option A — flagged risk); OI-09 closed (cavity-parallel peers). New "Cavity-parallel LOTs at Die Cast" subsection. Migration filename updated. Pulled overlay B/C/E/F into Phase 3 body. |
 | 0.2h | 2026-04-27 | Blue Ridge Automation | **VP-2: Plan Phase 2 (LOT Lifecycle Completion) — PauseEvent + view folded into body.** Adds `Lots.PauseEvent` table CREATE (OI-21 / FDS-05-038) + 4 procs (`LotPause_Place / _Resume / _GetByLocation / _GetCountsByLocation`) — pulled from v0.2 Overlay K. Adds `Lots.v_LotDerivedQuantities` view CREATE (OI-23 / FDS-05-031) + view-join read paths in `Lot_Get` / `Lot_List` — pulled from v0.2 Overlay D. Open Items table: UJ-08 closed (Option A — proc-enforced merge rules); merge rule narrative refreshed (same Item + die-rank-compat from `Tools.DieRankCompatibility` + supervisor override; FIFO-by-cavity is NOT a merge); test suite files updated; B10 still pending UJ-05 resolution. Migration-number reference updated. |
@@ -1375,18 +1376,22 @@ Target: 60–80 passing tests in suite 0016.
 
 ## Data Model Changes
 
-**Migration `sql/migrations/versioned/0014_phase5_machining.sql`:**
+**Migration `sql/migrations/versioned/<next_unclaimed>_arc2_phase5_machining.sql`** (number TBD — likely `0020` after VP-4 Phase 4 migration).
 
-- Seed `Parts.OperationTemplate` rows for `MachiningIn` and `MachiningOut` with appropriate DataCollectionFields (`Fixture`, `Program`, `CycleTimeSeconds`, etc. — final set confirmed with MPP).
-- Seed any missing `Audit.LogEventType` rows: `MachiningInScanned`, `LotSplit` (already from Phase 2 likely), `MachiningOutCompleted`.
+- Seed `Parts.OperationTemplate` rows for `MachiningIn` and `MachiningOut` with non-hot `OperationTemplateField` entries only (per v1.9 ProductionEvent checkpoint shape — `Fixture`, `Program`, `CycleTimeSeconds`, etc. — final set confirmed with MPP). No `GoodCount` / `NoGoodCount` DataCollectionFields (those are derived via `LAG()` over cumulative `ShotCount`/`ScrapCount`).
+- Seed any missing `Audit.LogEventType` rows: `MachiningInScanned`, `MachiningOutCompleted`. (`LotSplit` already from Phase 2.)
+- **No ALTER on `Parts.OperationTemplate`** — the `IsPieceCountIncrement` flag concept from v0.1 is retired. Lot piece count is now derived from `Lots.v_LotDerivedQuantities` view (OI-23 / Phase 2) at read time; no per-event Lot.PieceCount mutation. Machining "pass-through" semantics fall out naturally — the view aggregates ProductionEvent counters across all events, regardless of whether they are Die Cast (production-creating) or Machining (pass-through).
 
 **Tables used:** No new tables. Leverages existing `Lots.Lot`, `LotGenealogy`, `ProductionEvent`, `RejectEvent`.
 
 ## Open Items Affecting This Phase
 
-| Item | Fallback |
+| Item | Status |
 |---|---|
-| UJ-03 sub-LOT split auto vs manual | Phase 0 resolved to auto-split with operator override. Fallback if unresolved: auto-split at `DefaultSubLotQty`, operator confirms or edits. |
+| **UJ-03** Sub-LOT split trigger (Machining IN) | **Still In Review** — Ben pending. Default direction: auto-prompt 50/50 split (Option A). Ship with auto-prompt; if Ben's input shows certain parts never split, evolve to Option C (per-Item flag) post-MVP. |
+| **OI-09** Cavity-parallel-vs-sublots | **Closed (2026-04-23).** Confirms the Machining sublot pattern is **separate** from the Die Cast cavity-parallel-LOT pattern. Phase 5 is Machining-only sublot territory. |
+| **OI-18** ItemLocation cascade | **Closed (2026-04-24).** Movement Scan Screen at Machining IN walks Cell → WorkCenter → Area via `Parts.ItemLocation_IsEligible` (Phase 4 reusable pattern). |
+| **UJ-11** Paper-to-screen | **Closed (2026-04-27, Option A — flagged risk).** |
 
 ## State & Workflow
 
@@ -1428,10 +1433,10 @@ Workorder.MachiningOut_Record(
     @AppUserId, @TerminalLocationId)
 ```
 
-7. `MachiningOut_Record` executes:
-   - Call `ProductionEvent_Record` (internal) with the MachiningOut operation. This writes the event + values, increments the parent's piece count by `@GoodCount` — wait, clarification: at Machining, `GoodCount` is a through-count, the piece is already in the LOT and being processed. Treat the Machining out event as a pass-through, not an increment: set `@PieceCount` behavior on `ProductionEvent_Record` based on the OperationTemplate type. Option: a flag on `OperationTemplate` (`IsPieceCountIncrement`) that says whether this template adds pieces (Die Cast = yes) or passes them through (Machining = no). Phase 3's `ProductionEvent_Record` honors this flag; Phase 5 seeds MachiningIn / MachiningOut with `IsPieceCountIncrement=0`.
-   - If `@NoGoodCount > 0`, record is captured on the event; operator can enter defect codes via follow-on `RejectEvent_Record` calls (same as Die Cast).
-   - If `@SplitChildrenJson` present and non-empty: call `Lot_Split` (Phase 2) to create the children. Each child's `@CurrentLocationId` is the same Machining machine (they'll move elsewhere later via scan). Parent is reduced; if residual=0, parent goes to Closed.
+7. `MachiningOut_Record` executes — revised v0.2k for v1.9 checkpoint shape:
+   - Call `ProductionEvent_Record` (internal) with the MachiningOut operation, passing cumulative `@ShotCount` (operations completed at this checkpoint) and `@ScrapCount` (cumulative scraps). **No per-event `@GoodCount` / `@NoGoodCount`.** No Lot.PieceCount mutation — derivation via `v_LotDerivedQuantities` (Phase 2 / OI-23).
+   - If `ScrapCount` increment from the previous checkpoint is non-zero, the operator may enter defect codes via follow-on `RejectEvent_Record` calls (same pattern as Die Cast).
+   - If `@SplitChildrenJson` present and non-empty: call `Lot_Split` (Phase 2) to create the children. Each child's `@CurrentLocationId` is the same Machining machine (they'll move elsewhere later via scan). Parent is reduced; if residual=0, parent goes to Closed via `Lot_UpdateStatus`.
 8. Audit via `Audit_LogOperation` with `LogEventType='MachiningOutCompleted'`, description includes child counts.
 9. Return `Status, Message, ProductionEventId, ChildLotIds[]` (one row per child, Phase 2's multi-row pattern).
 
@@ -1454,18 +1459,7 @@ Machining may process a rework LOT returning from Sort Cage (Phase 7). Rework LO
 | `Lots.Lot_GetWipQueueByLocation` | `@LocationId BIGINT`, `@IncludeChildren BIT = 0` (for Machining Area instead of specific machine) | Returns queue ordered by `LastMovementAt ASC`. Read-only. `@IncludeChildren=1` descends to child Locations (an Area sums its Machines). | `Lots.Lot`, `Lots.LotMovement`, `Location.Location` | Machining IN screen | Rowset: Lot fields + `ArrivedAt`, `HoldFlag` (from BlocksProduction) |
 | `Workorder.MachiningOut_Record` | See narrative above | Composite: calls `ProductionEvent_Record` (internal) + optional `Lot_Split`. Single transaction. | `Workorder.ProductionEvent_Record`, `Lots.Lot_Split`, `Audit.Audit_LogOperation` | Machining OUT screen | Multi-row rowset: header row with `Status, Message, ProductionEventId`; additional rows for each child LOT |
 
-**Note:** `ProductionEvent_Record` receives a small upgrade in Phase 5: honors `Parts.OperationTemplate.IsPieceCountIncrement` flag. If 0, does not increment `Lot.PieceCount` on the parent. Phase 3 deliverable gets this flag added in the Phase 3 proc source; migration 0012 (Phase 3) seeds `DieCastShot.IsPieceCountIncrement=1`; migration 0014 (Phase 5) seeds MachiningIn / MachiningOut with `IsPieceCountIncrement=0`.
-
-That flag needs a column in `Parts.OperationTemplate` — which means a retroactive DDL addition:
-
-**Migration `0014_phase5_machining.sql` also adds:**
-
-```sql
-ALTER TABLE Parts.OperationTemplate
-    ADD IsPieceCountIncrement BIT NOT NULL DEFAULT 1;
-```
-
-and backfills seed rows (`DieCastShot`=1, `TrimShopOperation`=1, `MachiningIn`=0, `MachiningOut`=0, `ReceivingInspection`=0).
+**Note (revised v0.2k):** The `IsPieceCountIncrement` flag concept from v0.1 is **retired**. Per v1.9 ProductionEvent checkpoint shape + OI-23 `v_LotDerivedQuantities` view, Lot.PieceCount is no longer mutated by `ProductionEvent_Record`. Derived quantities (TotalInProcess, InventoryAvailable) come from the view at read time, aggregating across all event types regardless of station semantics. No ALTER on `Parts.OperationTemplate` is required.
 
 ## Gateway Scripts
 
