@@ -4,7 +4,7 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.11h — Working Draft
+**Version:** 0.11i — Working Draft
 **Date:** 2026-04-27
 
 ---
@@ -20,6 +20,7 @@
 | 0.5 | 2026-04-10 | Blue Ridge Automation | §11 Audit & Logging expanded: added fourth log stream `Audit.FailureLog` for attempted-but-rejected operations (new FDS-11-004). High-Fidelity Interface Logging renumbered from FDS-11-004 to FDS-11-005 to make room. Added FDS-11-008 documenting the code-string signatures for the four shared audit procs. Renumbered FDS-11-007 → FDS-11-009 (Retention Policy) and FDS-11-008 → FDS-11-010 (BIGINT Primary Keys) to accommodate. Normalized vocabulary examples in FDS-11-006/007 updated to UpperCamelCase (`Created`/`Updated`/`Deprecated`/`LotCreated` etc. instead of UPPER_SNAKE). |
 | 0.7 | 2026-04-15 | Blue Ridge Automation | **Production data collection capture.** Closed a gap where `OperationTemplate` + `OperationTemplateField` + `DataCollectionField` defined *what* to collect but nothing persisted *what was actually collected* when a LOT passed through. Updated §3.4 (FDS-03-012 operation-template definition — replaced stale `Collects*`/`Requires*` BIT-flag table with the `OperationTemplateField` → `DataCollectionField` junction wording that matches data model rev 0.7+). Updated §6.2 (FDS-06-001 die cast screen — now driven by `OperationTemplateField` rows rather than flags) and FDS-06-003 (die cast production event — now captures `OperationTemplateId`, `DieIdentifier`, `CavityNumber`, `WeightValue`/`WeightUomId` as hot columns plus N `ProductionEventValue` children for any other configured field). Added new FDS-03-017a specifying how the Perspective screen resolves operation-template fields into inputs and writes the header+children transactionally. Data model aligned at v1.4 (new `Workorder.ProductionEventValue` table + `ProductionEvent` extensions). |
 | 0.6 | 2026-04-15 | Blue Ridge Automation | Reflects Phase 5/6 SQL completion and the Ignition JDBC stored-procedure convention change. Data model realigned to v1.3: added HoldEvent place/release lifecycle table, SortOrder + MoveUp/MoveDown pattern on `Location.Location`, OperationTemplate→DataCollectionField junction (replacing hardcoded BIT flags), and seven new code tables backing all former enum/status columns. Versioning pattern for RouteTemplate, OperationTemplate, and Bom standardized on the three-state `Draft / Published / Deprecated` model (PublishedAt + DeprecatedAt). Added FDS-11-011 documenting the Ignition JDBC single-result-set convention: stored procedures SHALL NOT use `OUTPUT` parameters; mutation procs SHALL return `SELECT Status, Message, NewId` as their sole result set, read procs SHALL return a single result set (empty = not found), and the four shared audit writers SHALL emit no result set (they run inside caller transactions and would otherwise break INSERT-EXEC with ROLLBACK). |
+| 0.11i | 2026-04-27 | Blue Ridge Automation | **§7.2 / §7.4 UJ-04 — AIM Shipper ID local pool (zero-latency container closure).** Per Jacques's 2026-04-27 design lock: `Container_Complete` SHALL claim a pre-fetched AIM Shipper ID from a local FIFO pool synchronously inside its own transaction — never inline call to AIM, never deferred async assignment. AIM Shipper IDs attach to Containers only (never sub-assemblies). Empty pool = **hard fail**: `Container_Complete` rejects, operator sees error, line stops. Pool topup is a background Gateway timer script that calls `AIM.GetNextNumber` to refill toward a configurable target depth (default 50) when below the topup threshold (default 30). Two new threshold-driven escalations: warning at depth < 20 (supervisor wallboard tile), critical at depth < 10 (supervisor alarm + IT notification). Once consumed, an AIM Shipper ID NEVER returns to the pool — Honda treats every issued ID as permanently consumed; voided / re-packed containers draw a fresh ID. Honda does not expire IDs; no TTL handling needed. **FDS-07-005 rewritten** — container closure is synchronous and atomic with pool claim (no AIM call inline). **FDS-07-008 amended** — voided containers do not return ID to pool. **FDS-07-010 fully rewritten** — pool model, topup state machine, drain script cadence (~30s timer), claim ordering. **FDS-07-010a NEW** — empty-pool hard-fail behavior. **FDS-07-010b NEW** — alarm thresholds + IT notification routing. **FDS-07-010c NEW** — Configuration Tool exposure of the four thresholds via `Lots.AimPoolConfig_Get` / `_Update`. Data Model v1.9h carries new tables `Lots.AimShipperIdPool` and `Lots.AimPoolConfig`. SQL deferred to Arc 2 Phase 7. |
 | 0.11h | 2026-04-27 | Blue Ridge Automation | **§5.3 OI-21 — Pausable LOT at Workstation, `Lots.PauseEvent` (FDS-05-038 NEW).** Per Jacques's 2026-04-27 design lock: pause is a `(Lot, Location)` lifecycle event, not a `Workorder.WorkOrderStatus` extension. New `Lots.PauseEvent` append-only place/close-lifecycle table (mirrors `Quality.HoldEvent`). Same LOT MAY be paused at multiple Cells simultaneously (Machining + Assembly partial-progress); no auto-prompt on starting another LOT at a Cell with paused work — every workstation screen instead surfaces a **Paused-LOT indicator** (count + tap-through detail list). No TTL — paused LOTs persist across shifts and operators (different operator MAY resume someone else's pause). PausedReason and ResumedRemarks both optional. Pause does NOT transition `WorkOrderStatus`, `OperationStatus`, or `LotStatusCode` and does NOT write a `DowntimeEvent` — pause is a LOT-Location operator-focus state record only. Procs land in Arc 2 Phase 1 alongside `Lots.Lot`: `Lots.LotPause_Place`, `_Resume`, `_GetByLocation`, `_GetCountsByLocation`. Data Model v1.9g. OIR v2.11 (OI-21 design locked). |
 | 0.11g | 2026-04-24 | Blue Ridge Automation | **§6.10 OI-16 — PLC confirmation BIT + `RequiresCompletionConfirm` LocationAttribute.** Per Jacques's 2026-04-24 OIR review, Auto-Finish on Target (FDS-06-028) gains two additions: (1) a PLC confirmation BIT that must fire before the WO-close event — belt-and-suspenders with the cumulative-count threshold (count crosses target AND PLC confirms, not either-or); (2) a per-Terminal `RequiresCompletionConfirm` LocationAttribute that toggles a large "Confirm Completion" button UX vs a passive popup ("WorkOrder/Tray/Container Completed"). Some lines require physical operator acknowledgement at a fixed 1:1 terminal, others don't. FDS-06-028 extended. New `LocationAttributeDefinition` seed row on `Terminal` LocationTypeDefinition. ERD + Arc 2 Plan Phase 6 updated. |
 | 0.11f | 2026-04-24 | Blue Ridge Automation | **§5.1 OI-23 — LOT derived quantities implemented as a view, not materialized columns.** Per Jacques's 2026-04-24 OIR review: use a SQL view (`Lots.v_LotDerivedQuantities`) computing `TotalInProcess` and `InventoryAvailable` at read time from `Lots.Lot.PieceCount` + `Workorder.ProductionEvent` + `Workorder.ConsumptionEvent` aggregations. No materialized columns on `Lots.Lot`; no update-on-write. FDS-05-031 rewritten to specify the view-backed derivation and drop the "may be materialized in a future phase" option. Data Model v1.9e documents the view. Arc 2 Plan Phase 2 migration gains the view creation. |
@@ -1401,14 +1402,16 @@ On non-serialized lines, the operator SHALL assign a piece count to the containe
 2. Close the container when the configured capacity is reached
 3. On lines with weight-based tracking, the system MAY use the scale reading to validate the piece count before closure
 
-#### FDS-07-005 — Container Closure
-When a container reaches capacity, the system SHALL:
-1. Set container status to COMPLETE
-2. Request an AIM shipper ID via `GetNextNumber` (see Section 13 — External Interfaces)
-3. Store the `AimShipperId` on the container record
-4. Generate and print a ZPL shipping label via the terminal's Zebra printer
-5. Record the `ShippingLabel` print (container, shipper ID, ZPL content, timestamp)
-6. Log to `Audit.OperationLog` and queue the AIM call to `Audit.InterfaceLog`
+#### FDS-07-005 — Container Closure — revised v0.11i (UJ-04)
+When a container reaches capacity, the system SHALL, in **one synchronous transaction**:
+1. Set container status to COMPLETE.
+2. Atomically claim the next FIFO available AIM Shipper ID from `Lots.AimShipperIdPool` via `Lots.AimShipperIdPool_Claim @ContainerId, @AppUserId`. This is a sub-millisecond local DB operation — it SHALL NOT call AIM inline. (See FDS-07-010 for the pool model and FDS-07-010a for empty-pool behavior.)
+3. Store the claimed `AimShipperId` on the container record.
+4. Generate and print a ZPL shipping label via the terminal's Zebra printer.
+5. Record the `ShippingLabel` print (container, shipper ID, ZPL content, timestamp).
+6. Log to `Audit.OperationLog`. (No `Audit.InterfaceLog` write here — the AIM call that issued this ID was logged at topup time, and `AimShipperIdPool.FetchedInterfaceLogId` carries the FK back to that record for end-to-end provenance.)
+
+The entire close transaction succeeds or fails atomically — there is no in-between state where a container is COMPLETE without an `AimShipperId`. The synchronous claim model means container closure has zero AIM latency in the steady state.
 
 ### 7.3 Shipping Labels
 
@@ -1418,19 +1421,66 @@ Each completed container SHALL receive a shipping label containing the AIM shipp
 #### FDS-07-007 — Shipping Label Tracking
 Every shipping label print, void, and reprint SHALL be recorded in the `ShippingLabel` table: container, AIM shipper ID, label type, ZPL content, void flag, printed/voided timestamps, and printed-by user.
 
-#### FDS-07-008 — Shipping Label Void
+#### FDS-07-008 — Shipping Label Void — amended v0.11i (UJ-04)
 When a shipping label is voided (e.g., container sent to Sort Cage), the system SHALL:
 1. Set `IsVoid = 1` and record `VoidedAt` on the shipping label record
 2. Notify AIM of the void via the appropriate interface call
 3. The voided label SHALL remain in the database for audit trail — it is NOT deleted
+
+**ID lifecycle on void (UJ-04 lock).** A voided AIM Shipper ID SHALL NOT return to the `AimShipperIdPool` as available. Honda treats every issued ID as permanently consumed regardless of downstream void / re-pack. The `Lots.AimShipperIdPool` row remains terminal (`ConsumedAt` set, pointing at the original consuming `Container`). When a re-packed container is closed, it draws a fresh ID from the pool via FDS-07-005's synchronous `_Claim`.
 
 #### FDS-07-009 — Shipping Label Reprint
 If a shipping label is damaged or unreadable, an authorized user SHALL be able to reprint it. The reprint SHALL be tracked as a new `ShippingLabel` record (the original is NOT modified). (FRS 3.13.1)
 
 ### 7.4 AIM Integration
 
-#### FDS-07-010 — AIM Shipper ID Request
-When a container is complete, the system SHALL call AIM `GetNextNumber` to obtain a shipper ID. The request and response SHALL be logged to `Audit.InterfaceLog`. If AIM is unavailable, the system SHALL queue the request for retry (per FDS-01-006 dispatch pattern). The container SHALL remain in COMPLETE status with a null `AimShipperId` until the AIM call succeeds — the label SHALL NOT print until the shipper ID is assigned.
+#### FDS-07-010 — AIM Shipper ID Local Pool — revised v0.11i (UJ-04)
+
+The MES SHALL maintain a local pool of pre-fetched AIM Shipper IDs (`Lots.AimShipperIdPool`) so that container closure (FDS-07-005) is **synchronous and zero-latency** with respect to AIM availability. AIM Shipper IDs SHALL be pre-fetched in advance and consumed FIFO at container-close time.
+
+**Pool model.** Each `Lots.AimShipperIdPool` row represents one AIM-issued Shipper ID. A row's lifecycle is binary: **available** (`ConsumedAt IS NULL`) or **consumed** (`ConsumedAt IS NOT NULL`). Once consumed, the row is terminal — see FDS-07-008's amendment for the no-reuse-on-void rule.
+
+**Topup loop — Gateway timer script.** A background Ignition Gateway timer script SHALL run on a fixed cadence (recommended: every 30 seconds; cadence MAY be tuned without spec change) and SHALL:
+
+1. Read pool depth via `Lots.AimShipperIdPool_GetDepth` returning `(AvailableCount, OldestAvailableAt)`.
+2. Read configured thresholds via `Lots.AimPoolConfig_Get` returning `(TargetBufferDepth, TopupThreshold, AlarmWarningDepth, AlarmCriticalDepth)`.
+3. If `AvailableCount < TopupThreshold`, repeatedly call `AIM.GetNextNumber` until `AvailableCount` reaches `TargetBufferDepth`. For each AIM call:
+   a. Write the request/response to `Audit.InterfaceLog` via `Audit_LogInterfaceCall` and capture the resulting `InterfaceLogId`.
+   b. INSERT a new pool row via `Lots.AimShipperIdPool_Topup @AimShipperId, @InterfaceLogId`.
+   c. If the AIM call fails, log the failure to `Audit.InterfaceLog`, abandon the topup pass for this cycle, and retry next tick (no backoff; the script re-evaluates depth every cycle).
+
+**Claim ordering.** `Lots.AimShipperIdPool_Claim` SHALL select the oldest available row by `FetchedAt ASC` using `UPDATE TOP (1) WITH (UPDLOCK, READPAST, ROWLOCK) ... OUTPUT inserted.AimShipperId`. The `READPAST` hint allows concurrent claims to skip in-flight locks instead of blocking — two simultaneous container-closes return two distinct IDs without contention.
+
+**End-to-end provenance.** Every consumed pool row links back to the originating AIM call via `AimShipperIdPool.FetchedInterfaceLogId` FK → `Audit.InterfaceLog`. Audit queries can trace an `AimShipperId` from the `Container` row, through the `AimShipperIdPool` consumption, back to the precise AIM `GetNextNumber` call that issued it.
+
+#### FDS-07-010a — Empty Pool Hard Fail — `MVP` (v0.11i, UJ-04)
+
+If the pool is empty when `Container_Complete` attempts to claim, `Lots.AimShipperIdPool_Claim` SHALL raise an error and the entire close transaction SHALL roll back. The container SHALL remain in its prior pre-close state (typically OPEN); no `Container.AimShipperId` is set; no `ShippingLabel` row is written. The operator SHALL see a clear error message indicating that the AIM Shipper ID pool is exhausted and that the line is blocked from completing further containers until the pool refills.
+
+This is a **deliberate hard-fail design** (not soft-fallback): production stops on affected lines until either (a) AIM connectivity is restored and the topup script refills the pool, or (b) IT manually intervenes. Rationale: trucks cannot ship without valid AIM Shipper IDs, so allowing further closes against an empty pool would create a pile of un-shippable containers and obscure the actual integration outage.
+
+#### FDS-07-010b — Pool Depth Alarms — `MVP` (v0.11i, UJ-04)
+
+The Gateway timer script (or a sibling alarm-evaluation script) SHALL evaluate pool depth on every tick against `Lots.AimPoolConfig` thresholds:
+
+- **`AvailableCount < AlarmWarningDepth`** (default 20) → SHALL update a supervisor wallboard tile to a Warning state showing `AvailableCount` and `OldestAvailableAt`. No external notification.
+- **`AvailableCount < AlarmCriticalDepth`** (default 10) → SHALL escalate: supervisor wallboard tile turns Critical and the system SHALL send an IT notification (initial implementation: Ignition email/SMS via the configured Gateway notification profile; channel choices remain a Phase 0 deployment input). The notification SHALL include `AvailableCount`, `OldestAvailableAt`, and the most recent `Audit.InterfaceLog` AIM-failure entry if any.
+- **Pool empty (`AvailableCount = 0`)** → IT notification SHALL upgrade to "POOL EXHAUSTED — line stops imminent" severity. Combined with FDS-07-010a's hard-fail behavior, this is the operational signal that production has stopped or is about to stop.
+
+Both alarm levels SHALL automatically clear when depth recovers above the corresponding threshold (the wallboard tile returns to Healthy / yellow; the IT notification logs a recovery event).
+
+#### FDS-07-010c — Pool Configuration via Configuration Tool — `MVP` (v0.11i, UJ-04)
+
+`Lots.AimPoolConfig` SHALL be operator-editable via the Configuration Tool (Admin-elevated per FDS-04-007). The Config Tool SHALL surface:
+
+- `TargetBufferDepth` (default 50) — the buffer size the topup script aims for.
+- `TopupThreshold` (default 30) — the trigger for topup runs.
+- `AlarmWarningDepth` (default 20).
+- `AlarmCriticalDepth` (default 10).
+
+Validation: the four values SHALL satisfy `AlarmCriticalDepth < AlarmWarningDepth < TopupThreshold < TargetBufferDepth` (CHECK constraints enforce this at the DB level — `_Update` rejects invalid combinations). Updates SHALL be audited via `Audit.ConfigLog`.
+
+The four defaults (50 / 30 / 20 / 10) ship in the Arc 2 Phase 7 migration seed and reflect Jacques's initial sizing target — they are tunable post-deployment based on actual peak container throughput and observed AIM responsiveness.
 
 #### FDS-07-011 — AIM Hold Notification
 When a container is placed on hold, the system SHALL call AIM `PlaceOnHold` with the shipper ID. When released, the system SHALL call AIM `ReleaseFromHold`. Both calls SHALL be logged to `Audit.InterfaceLog`. (FRS 2.3.1)

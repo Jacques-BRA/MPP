@@ -181,8 +181,8 @@
 
 <header>
     <h1>MPP MES — Entity Relationship Diagrams</h1>
-    <p>Madison Precision Products — MES Database Schema (8 schemas, 74 tables)</p>
-    <p style="font-size: 0.85em; opacity: 0.7;"><strong>v1.9g (2026-04-27):</strong> OI-21 — new <code>Lots.PauseEvent</code> table (Pausable LOT at Workstation, FDS-05-038). Append-only place + close lifecycle mirroring <code>Quality.HoldEvent</code>; filtered UNIQUE on <code>(LotId, LocationId) WHERE ResumedAt IS NULL</code>; same LOT MAY be paused at multiple Cells simultaneously; no TTL. Pause is orthogonal to <code>WorkOrderStatus</code>, <code>OperationStatus</code>, and <code>LotStatusCode</code> — no enum extensions. Master tab regen queued. <br>Last updated: 2026-04-24 — <strong>full v1.9 pass: every schema tab and the Master ERD tab regenerated end-to-end</strong>. (1) Lots tab: <code>Lot.ToolId</code> + <code>Lot.ToolCavityId</code> added (die-cast-origin system of record; NULL elsewhere / after merge); new <code>IdentifierSequence</code> table + diagram (replaces Flexware <code>IdentifierFormat</code>; 2 counters — <code>Lot</code> <code>MESL{0:D7}</code> + <code>SerializedItem</code> <code>MESI{0:D7}</code>). (2) Workorder tab: <code>ProductionEvent</code> reshaped to checkpoint form (cumulative <code>ShotCount</code>/<code>ScrapCount</code>; dropped <code>LocationId</code>, <code>ItemId</code>, <code>DieIdentifier</code>, <code>CavityNumber</code>, per-event <code>GoodCount</code>/<code>NoGoodCount</code>; renamed <code>RecordedAt</code>→<code>EventAt</code>, <code>OperatorId</code>→<code>AppUserId</code>). (3) Tools tab: cross-schema <code>Tool</code>/<code>ToolCavity</code>→<code>Lot</code> relationships + Cross-schema callout. (4) OEE tab: <code>ShiftSchedule</code> fixed (DaysOfWeekBitmask INT + 5 missing columns); <code>Shift</code> fixed (ShiftDate removed + CreatedAt/Remarks added); <code>DowntimeReasonType.Code</code> + <code>DowntimeReasonCode</code> extended with SourceCode/user-attribution/etc. per v1.5. (5) Audit tab: four "bigbigint" typos corrected to "bigint". (6) Master ERD tab: full rebuild — 73 tables in 8 schemas with complete cross-schema FK summary table (44 rows) + comprehensive mermaid diagram covering all intra- and inter-schema relationships including v1.7 Tools, v1.8 ScrapSource / ItemLocation consumption metadata / Item.CountryOfOrigin, and v1.9 Lot.Tool*/ProductionEvent reshape / IdentifierSequence. <strong>v1.9c (2026-04-24):</strong> OI-12 correction — <code>MaxParts</code> relocated from <code>Parts.ContainerConfig</code> to <code>Parts.Item</code> per Jacques's OIR review (MaxParts is a Part attribute, not a container attribute). OI-09 closed — N cavities → N parallel peer LOTs, not sublots. <code>Parts.Item.MaxLotSize</code> repurposed as <code>PartsPerBasket</code> (semantic only).</p>
+    <p>Madison Precision Products — MES Database Schema (8 schemas, 76 tables)</p>
+    <p style="font-size: 0.85em; opacity: 0.7;"><strong>v1.9h (2026-04-27):</strong> UJ-04 — new <code>Lots.AimShipperIdPool</code> + <code>Lots.AimPoolConfig</code> tables (zero-latency container closure via pre-fetched FIFO pool of AIM Shipper IDs). Background Gateway script tops up the pool toward `TargetBufferDepth` (configurable, default 50); `Container_Complete` claims one row FIFO synchronously inside its own transaction. Empty pool = <strong>hard fail</strong> (line stops). Permanent ID consumption — no reuse on void / re-pack. Two-tier alarm: supervisor wallboard tile at warning depth, supervisor alarm + IT notification at critical. Master tab regen still queued. <strong>v1.9g (2026-04-27):</strong> OI-21 — new <code>Lots.PauseEvent</code> table (Pausable LOT at Workstation, FDS-05-038). Append-only place + close lifecycle mirroring <code>Quality.HoldEvent</code>; filtered UNIQUE on <code>(LotId, LocationId) WHERE ResumedAt IS NULL</code>; same LOT MAY be paused at multiple Cells simultaneously; no TTL. Pause is orthogonal to <code>WorkOrderStatus</code>, <code>OperationStatus</code>, and <code>LotStatusCode</code> — no enum extensions. Master tab regen queued. <br>Last updated: 2026-04-24 — <strong>full v1.9 pass: every schema tab and the Master ERD tab regenerated end-to-end</strong>. (1) Lots tab: <code>Lot.ToolId</code> + <code>Lot.ToolCavityId</code> added (die-cast-origin system of record; NULL elsewhere / after merge); new <code>IdentifierSequence</code> table + diagram (replaces Flexware <code>IdentifierFormat</code>; 2 counters — <code>Lot</code> <code>MESL{0:D7}</code> + <code>SerializedItem</code> <code>MESI{0:D7}</code>). (2) Workorder tab: <code>ProductionEvent</code> reshaped to checkpoint form (cumulative <code>ShotCount</code>/<code>ScrapCount</code>; dropped <code>LocationId</code>, <code>ItemId</code>, <code>DieIdentifier</code>, <code>CavityNumber</code>, per-event <code>GoodCount</code>/<code>NoGoodCount</code>; renamed <code>RecordedAt</code>→<code>EventAt</code>, <code>OperatorId</code>→<code>AppUserId</code>). (3) Tools tab: cross-schema <code>Tool</code>/<code>ToolCavity</code>→<code>Lot</code> relationships + Cross-schema callout. (4) OEE tab: <code>ShiftSchedule</code> fixed (DaysOfWeekBitmask INT + 5 missing columns); <code>Shift</code> fixed (ShiftDate removed + CreatedAt/Remarks added); <code>DowntimeReasonType.Code</code> + <code>DowntimeReasonCode</code> extended with SourceCode/user-attribution/etc. per v1.5. (5) Audit tab: four "bigbigint" typos corrected to "bigint". (6) Master ERD tab: full rebuild — 73 tables in 8 schemas with complete cross-schema FK summary table (44 rows) + comprehensive mermaid diagram covering all intra- and inter-schema relationships including v1.7 Tools, v1.8 ScrapSource / ItemLocation consumption metadata / Item.CountryOfOrigin, and v1.9 Lot.Tool*/ProductionEvent reshape / IdentifierSequence. <strong>v1.9c (2026-04-24):</strong> OI-12 correction — <code>MaxParts</code> relocated from <code>Parts.ContainerConfig</code> to <code>Parts.Item</code> per Jacques's OIR review (MaxParts is a Part attribute, not a container attribute). OI-09 closed — N cavities → N parallel peer LOTs, not sublots. <code>Parts.Item.MaxLotSize</code> repurposed as <code>PartsPerBasket</code> (semantic only).</p>
     <div class="conventions">
         <span>UpperCamelCase</span>
         <span>singular nouns</span>
@@ -585,6 +585,14 @@ erDiagram
             <h4>PauseEvent <span class="scope-badge scope-mvp">MVP v1.9g</span></h4>
             <p>Append-only place + close lifecycle for operator-driven LOT pauses at a workstation (OI-21 / FDS-05-038). Mirrors <code>Quality.HoldEvent</code>'s shape. <code>(LotId, LocationId)</code> with optional <code>PausedReason</code>; nullable <code>ResumedAt</code> + <code>ResumedByUserId</code> + <code>ResumedRemarks</code> close the pause. Filtered UNIQUE on <code>(LotId, LocationId) WHERE ResumedAt IS NULL</code> blocks duplicate <strong>open</strong> pauses for the same LOT-at-Cell, but the same LOT MAY be open-paused at multiple Cells simultaneously (Machining + Assembly partial-progress). Pause is <strong>orthogonal</strong> to <code>WorkOrderStatus</code>, <code>OperationStatus</code>, and <code>LotStatusCode</code> — no Paused row added to any of those code tables; pause does NOT write a <code>DowntimeEvent</code>. No TTL — paused LOTs persist across shifts and operators (resume MAY be by a different operator). Drives the Paused-LOT indicator (count + tap-through detail list) on every workstation screen.</p>
         </div>
+        <div class="table-card">
+            <h4>AimShipperIdPool <span class="scope-badge scope-mvp">MVP v1.9h</span></h4>
+            <p>Local FIFO pool of pre-fetched Honda AIM Shipper IDs (UJ-04 / FDS-07-010). Each row's lifecycle is binary: <strong>available</strong> (<code>ConsumedAt IS NULL</code>) or <strong>consumed</strong> (terminal — never returns to available, even on container void / re-pack). A background Gateway timer script (~30s cadence) calls <code>AIM.GetNextNumber</code> to keep the pool topped up toward <code>AimPoolConfig.TargetBufferDepth</code>; <code>Container_Complete</code> claims one row via <code>UPDATE TOP (1) WITH (UPDLOCK, READPAST, ROWLOCK) ... OUTPUT ... ORDER BY FetchedAt</code> — sub-millisecond, never blocks on AIM. <code>FetchedInterfaceLogId</code> FK → <code>Audit.InterfaceLog</code> gives end-to-end provenance from a <code>Container.AimShipperId</code> back to the originating AIM call. <strong>Empty pool = hard fail</strong> (FDS-07-010a): close transaction rolls back; line stops until pool refills.</p>
+        </div>
+        <div class="table-card">
+            <h4>AimPoolConfig <span class="scope-badge scope-mvp">MVP v1.9h</span></h4>
+            <p>Single-row config for the AIM Shipper ID pool (FDS-07-010c). Four operator-tunable thresholds via Configuration Tool (Admin-elevated): <code>TargetBufferDepth</code> (default 50), <code>TopupThreshold</code> (default 30), <code>AlarmWarningDepth</code> (default 20), <code>AlarmCriticalDepth</code> (default 10). CHECK constraint enforces strict ordering <code>Critical &lt; Warning &lt; Topup &lt; Target</code>. Two-tier alarm: wallboard tile turns Warning at depth &lt; <code>AlarmWarningDepth</code>; supervisor alarm + IT notification at depth &lt; <code>AlarmCriticalDepth</code>; severity upgrades to "POOL EXHAUSTED" at depth = 0. Single-row enforced by <code>CHECK (Id = 1)</code>.</p>
+        </div>
     </div>
 
     <h3>ERD</h3>
@@ -785,6 +793,26 @@ erDiagram
         nvarchar ResumedRemarks "optional"
     }
 
+    AimShipperIdPool {
+        bigint Id PK
+        nvarchar AimShipperId "UNIQUE, Honda-issued"
+        datetime2 FetchedAt
+        bigint FetchedInterfaceLogId FK "audit.InterfaceLog provenance"
+        datetime2 ConsumedAt "NULL = available"
+        bigint ConsumedByContainerId FK "NULL = available"
+        bigint ConsumedByUserId FK "NULL = available"
+    }
+
+    AimPoolConfig {
+        int Id PK "always 1"
+        int TargetBufferDepth "default 50"
+        int TopupThreshold "default 30"
+        int AlarmWarningDepth "default 20"
+        int AlarmCriticalDepth "default 10"
+        datetime2 UpdatedAt
+        bigint UpdatedByUserId FK
+    }
+
     LotOriginType ||--o{ Lot : "originated as"
     LotStatusCode ||--o{ Lot : "status of"
     Lot ||--o{ Lot : "parent of (Machining sub-LOT only)"
@@ -796,6 +824,7 @@ erDiagram
     Lot ||--o{ LotLabel : "labeled with"
     Lot ||--o{ SerializedPart : "serialized from"
     Lot ||--o{ PauseEvent : "paused at workstation (v1.9g)"
+    Container ||--o| AimShipperIdPool : "consumed by (v1.9h)"
     IdentifierSequence ||..o{ Lot : "mints LotName (v1.9)"
     IdentifierSequence ||..o{ SerializedPart : "mints SerialNumber (v1.9)"
     ContainerStatusCode ||--o{ Container : "status of"
@@ -1619,7 +1648,7 @@ erDiagram
 <div id="tab-master" class="tab-content">
     <div class="schema-desc">
         <h2>Master ERD — All Schemas</h2>
-        <p>All 73 tables across 8 schemas with cross-schema foreign-key relationships. Table names are prefixed with schema abbreviations (<code>loc__</code>, <code>parts__</code>, <code>lots__</code>, <code>wo__</code>, <code>qual__</code>, <code>oee__</code>, <code>tools__</code>, <code>audit__</code>). Scroll horizontally to explore. Regenerated 2026-04-24 for Data Model v1.9. <strong>Note (2026-04-27):</strong> the new <code>Lots.PauseEvent</code> table from v1.9g (OI-21) is reflected in the per-schema Lots tab but not yet wired into this Master tab — full Master regen queued.</p>
+        <p>All 73 tables across 8 schemas with cross-schema foreign-key relationships. Table names are prefixed with schema abbreviations (<code>loc__</code>, <code>parts__</code>, <code>lots__</code>, <code>wo__</code>, <code>qual__</code>, <code>oee__</code>, <code>tools__</code>, <code>audit__</code>). Scroll horizontally to explore. Regenerated 2026-04-24 for Data Model v1.9. <strong>Note (2026-04-27):</strong> three new Lots tables — <code>PauseEvent</code> (v1.9g, OI-21) plus <code>AimShipperIdPool</code> + <code>AimPoolConfig</code> (v1.9h, UJ-04) — are reflected in the per-schema Lots tab but not yet wired into this Master tab — full Master regen queued.</p>
         <p class="scope-note">Per-schema tabs above carry column-level detail; this tab shows tables as boxes with only their PK, plus the complete cross-schema FK picture. Use per-schema tabs for column lookups, this tab for architecture-level review.</p>
     </div>
 

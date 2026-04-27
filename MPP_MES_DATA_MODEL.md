@@ -1,6 +1,6 @@
 # MPP MES — Data Model Reference
 
-**Version:** v1.9 working draft (rev 2026-04-27g — OI-21 Pausable LOT — `Lots.PauseEvent`; see revision history)
+**Version:** v1.9 working draft (rev 2026-04-27h — UJ-04 AIM Shipper ID local pool + config — `Lots.AimShipperIdPool` + `Lots.AimPoolConfig`; see revision history)
 **Schemas:** 8 | **Tables:** ~73
 **Target:** Microsoft SQL Server 2022 Standard Edition
 
@@ -20,6 +20,7 @@
 | 0.6 | 2026-04-13 | Blue Ridge Automation | **Data type standardization across all ~51 tables.** All primary keys changed from `INT` to `BIGINT IDENTITY`. All foreign keys changed from `INT` to `BIGINT` to match. All `VARCHAR(N)` columns changed to `NVARCHAR(N)` (Unicode support for Honda EDI data). Audit `EntityId` columns (OperationLog, ConfigLog, FailureLog) changed to `BIGINT` to match arbitrary PK references. Non-PK/FK value columns (SortOrder, SequenceNumber, PieceCount, VersionNumber, counts, quantities) remain `INT`. `BIT`, `DECIMAL`, and `DATETIME2(3)` columns unchanged. ERD updated to match. |
 | 1.1 | 2026-04-14 | Blue Ridge Automation | **OperationTemplate versioning — schema change.** Added `VersionNumber INT NOT NULL DEFAULT 1` to `Parts.OperationTemplate`; changed `UNIQUE (Code)` → `UNIQUE (Code, VersionNumber)`. Supports the clone-to-modify workflow: `_CreateNewVersion` inserts a new row sharing the Code with `VersionNumber = MAX(siblings)+1`, copies the parent's `OperationTemplateField` rows, and historical `RouteStep` rows continue pointing at the parent's Id so production traceability is preserved. Mirrors the versioning pattern already used by `RouteTemplate` and (later) `Bom` / `QualitySpec`. Schema plumbing delivered as part of Phase 5 — see Phased Plan v1.3. |
 | 1.8 | 2026-04-22 | Blue Ridge Automation | **Phase E Group 1 — schema additions from the 2026-04-22 legacy-screenshot gap analysis.** Four items (v1.8 initially drafted five, OI-11 reverted — see row below): (1) **OI-12** — `Parts.ContainerConfig.MaxParts INT NULL` (per-container cap — rejects scan-in beyond this limit to stop operators over-scanning). Lineside inventory quantity cap modelled as a new `LocationAttribute` (`LinesideLimit`) attached to Cell definitions via the existing `Location.LocationAttributeDefinition` pattern — no schema change, just a seed entry. (2) **OI-18** — `Parts.ItemLocation` extended with consumption metadata: `MinQuantity INT NULL`, `MaxQuantity INT NULL`, `DefaultQuantity INT NULL`, `IsConsumptionPoint BIT NOT NULL DEFAULT 0`. Drives the runtime Allocations grid at the workstation (quantities the operator is hinted to scan in) and distinguishes consumption points (inputs to the cell) from production points (outputs). (3) **OI-19** — `Parts.Item.CountryOfOrigin NVARCHAR(2) NULL` (ISO 3166-1 alpha-2). Honda compliance field surfaced in the Flexware Material configuration. (4) **OI-20** — new `Workorder.ScrapSource` read-only code table (seeded `Inventory` + `Location` at Phase G) and `Workorder.ProductionEvent.ScrapSourceId BIGINT NULL FK → ScrapSource.Id` (column deferred to Arc 2 Phase 1 — ProductionEvent table doesn't exist yet; code table lands in Phase G). Captures the Flexware "Scrap from inventory" vs "Scrap from the selected location" distinction on the Lot Details screen. `Audit.LogEntityType` gains 1 row (ScrapSource) in Phase G. All four changes are additive — no breaking changes to existing procs or tests. SQL lands in Phase G migration `0010_phase9_tools_and_workorder.sql` alongside the Tools schema. Discovery items (OI-24..30) parked for MPP input. Source: `Meeting_Notes/2026-04-20_OI_Review_Status_Summary.md` v1.1 §"Additional discovered gaps" + `MPP_MES_Open_Issues_Register.md` v2.5. |
+| 1.9h | 2026-04-27 | Blue Ridge Automation | **UJ-04 — `Lots.AimShipperIdPool` + `Lots.AimPoolConfig` for synchronous container closure (zero AIM latency).** Per Jacques's 2026-04-27 design lock: AIM Shipper IDs are pre-fetched into a local pool by a background Gateway script and consumed FIFO by `Container_Complete` synchronously — never blocks production on AIM availability. Container closure with an empty pool **hard fails** (rejects close, operator sees error, line stops). All Assembly Lines have dedicated terminals; AIM IDs attach to Containers only (never sub-assemblies / sub-LOTs). New `Lots.AimShipperIdPool` table: `AimShipperId` (the Honda-issued ID, UNIQUE), `FetchedAt`, `FetchedInterfaceLogId` FK → `Audit.InterfaceLog` (provenance), `ConsumedAt` / `ConsumedByContainerId` FK → `Lots.Container` / `ConsumedByUserId` FK → `Location.AppUser` (all NULL while available). Filtered index `IX_AimShipperIdPool_Available (FetchedAt) WHERE ConsumedAt IS NULL` drives the FIFO claim. **No reuse on void** — once `ConsumedAt` is set, the row never returns to available state regardless of subsequent container void / re-pack (Honda treats every issued ID as permanently consumed). **No expiry** — Honda doesn't TTL Shipper IDs. New `Lots.AimPoolConfig` single-row table (`Id INT CHECK Id=1`) holds the operator-configurable thresholds: `TargetBufferDepth INT DEFAULT 50`, `TopupThreshold INT DEFAULT 30` (topup script refills toward target when below this), `AlarmWarningDepth INT DEFAULT 20` (supervisor wallboard tile), `AlarmCriticalDepth INT DEFAULT 10` (supervisor alarm + IT notification). Configuration Tool exposes the four thresholds via `Lots.AimPoolConfig_Get` / `_Update`. Procs (Arc 2 Phase 7): `Lots.AimShipperIdPool_Claim` (atomic FIFO claim using `UPDATE TOP (1) WITH (UPDLOCK, READPAST, ROWLOCK) ... OUTPUT ... ORDER BY FetchedAt`, raises on empty pool — caller's transaction ROLLBACKs the container close), `_Topup`, `_GetDepth`, `_GetByContainer`. `Audit.LogEntityType` +2 rows (`AimShipperIdPool`, `AimPoolConfig`) at Arc 2 Phase 7. SQL deferred to Arc 2 Phase 7 (Container schema doesn't yet exist either). |
 | 1.9g | 2026-04-27 | Blue Ridge Automation | **OI-21 — `Lots.PauseEvent` table for Pausable LOT at Workstation.** Per Jacques's 2026-04-27 design lock: pause is a (Lot, Location) lifecycle event — operator pauses a partially-progressed LOT at a Cell to attend to a different LOT at the same Cell, returns later (could be the next shift, by a different operator). New append-only table `Lots.PauseEvent` with open + close lifecycle (mirrors `Quality.HoldEvent` shape): `LotId`, `LocationId`, `PausedByUserId`, `PausedAt`, optional `PausedReason`, nullable `ResumedByUserId`/`ResumedAt`/`ResumedRemarks`. CHECK pairing on resume columns; filtered UNIQUE on `(LotId, LocationId) WHERE ResumedAt IS NULL` (at most one open pause per LOT-at-Location — same LOT MAY pause at multiple Cells simultaneously, e.g., Machining + Assembly partial-progress). No TTL — paused LOTs persist indefinitely; manual operational cleanup. Pause is **orthogonal** to `Workorder.WorkOrderStatus` and `Workorder.OperationStatus` — no `Paused` rows added to those code tables (WO/WOO are MVP-LITE/invisible per OI-07; pause is a LOT-level operator workflow concept). No `Paused` row added to `Lots.LotStatusCode` — pause is a transient operator focus shift, not a LOT quality status. `Audit.LogEntityType` +1 row (`PauseEvent`) at Arc 2 Phase 1 alongside the rest of the Lots schema CREATE. FDS-05-038 authoritative. SQL deferred to Arc 2 Phase 1 (Lots schema does not yet exist in the Phase 1–8 codebase). |
 | 1.9f | 2026-04-24 | Blue Ridge Automation | **OI-16 additions — `RequiresCompletionConfirm` LocationAttribute on `Terminal`.** Per Jacques's 2026-04-24 OIR review: new `LocationAttributeDefinition` seed row on the `Terminal` `LocationTypeDefinition` with `Code='RequiresCompletionConfirm'`, `DataType='Boolean'`, `IsRequired=0` (NULL = no confirm button, treated as 0). Meaningful only on Dedicated Terminals (FDS-02-010). Toggles between "large Confirm Completion button" UX and passive popup UX on the Perspective Assembly view at WO/Tray/Container close. PLC confirmation BIT (expected tag name `CompletionConfirmed` on the MIP) is a Gateway-script concern — no schema column; observed via OPC tag reads and participates in the FDS-06-028 auto-close gate. Phase G LocationAttributeDefinition seed delta: +1 row for `RequiresCompletionConfirm`. No other schema changes. |
 | 1.9e | 2026-04-24 | Blue Ridge Automation | **OI-23 — `Lots.v_LotDerivedQuantities` view for TotalInProcess / InventoryAvailable.** Per Jacques's 2026-04-24 OIR review: LOT derived quantities are computed via a SQL view, not materialized on the `Lots.Lot` row. No columns added to `Lots.Lot`. New view `Lots.v_LotDerivedQuantities (LotId, TotalInProcess, InventoryAvailable)` joins `Lots.Lot` with aggregations over `Workorder.ProductionEvent` (checkpoint counters: `Σ StartedCount − Σ CompletedCount − Σ ScrappedCount` grouped by LocationId) and `Workorder.ConsumptionEvent` (consumed quantities). Arc 2 Phase 2 migration creates the view. Read procs join it to base `Lots.Lot` at read time; no on-write maintenance. If performance becomes an issue post-MVP, the view MAY be replaced by an indexed view or materialized table without changing caller contracts. FDS-05-031 revised accordingly. |
@@ -747,6 +748,57 @@ Container shipping label print/void history.
 **Audit:** `Audit.LogEntityType` gains a `PauseEvent` row (added at Arc 2 Phase 1 alongside the rest of the Lots schema CREATE). Place / Resume operations write to `Audit.OperationLog`.
 
 > **⚠ Implementation deferred to Arc 2 Phase 1.** The Lots schema does not yet exist in the Phase 1–8 codebase — `Lots.Lot` and `Lots.PauseEvent` both CREATE in the Arc 2 Phase 1 migration. The column contract above is authoritative.
+
+### AimShipperIdPool
+
+**Added v1.9h (UJ-04 — AIM Shipper ID local pool).** Local buffer of pre-fetched Honda AIM Shipper IDs. A background Gateway script (Arc 2 Phase 7) calls `AIM.GetNextNumber` to keep the pool topped up; `Container_Complete` claims one row FIFO, synchronously, inside its own transaction — sub-millisecond, never blocked on AIM. AIM IDs attach to **`Lots.Container` only** — never to sub-assemblies, sub-LOTs, or any other entity. Honda treats every issued ID as permanently consumed; once `ConsumedAt` is set the row stays terminal regardless of any downstream container void / re-pack (the new container at re-pack draws a fresh ID from the pool). Honda does not expire IDs — no TTL column.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | BIGINT | PK IDENTITY | |
+| AimShipperId | NVARCHAR(50) | NOT NULL, UNIQUE | The Honda-issued shipper ID returned by `AIM.GetNextNumber`. UNIQUE protects against double-INSERT under topup-script retries. |
+| FetchedAt | DATETIME2(3) | NOT NULL, DEFAULT SYSUTCDATETIME() | When AIM gave this ID to us. Drives FIFO ordering at claim time. |
+| FetchedInterfaceLogId | BIGINT | FK → Audit.InterfaceLog.Id, NOT NULL | Provenance — points at the exact AIM call that issued this ID. |
+| ConsumedAt | DATETIME2(3) | NULL | NULL = available in the pool. Non-NULL = permanently consumed. |
+| ConsumedByContainerId | BIGINT | FK → Lots.Container.Id, NULL | The container that claimed this ID. NULL ↔ ConsumedAt NULL. |
+| ConsumedByUserId | BIGINT | FK → Location.AppUser.Id, NULL | The operator whose closing-container action consumed this ID. NULL ↔ ConsumedAt NULL. |
+
+**Constraints:**
+
+- `CK_AimShipperIdPool_ConsumedFieldsPaired` — `(ConsumedAt IS NULL AND ConsumedByContainerId IS NULL AND ConsumedByUserId IS NULL) OR (ConsumedAt IS NOT NULL AND ConsumedByContainerId IS NOT NULL AND ConsumedByUserId IS NOT NULL)`. The three consumption columns are paired; either all NULL (available) or all set (consumed).
+
+**Indexes:**
+
+- `IX_AimShipperIdPool_Available (FetchedAt) WHERE ConsumedAt IS NULL` — drives the FIFO `_Claim` query (`UPDATE TOP (1) WITH (UPDLOCK, READPAST, ROWLOCK)`) and the `_GetDepth` count.
+- `IX_AimShipperIdPool_Container ON (ConsumedByContainerId) WHERE ConsumedByContainerId IS NOT NULL` — supports `_GetByContainer` traceability.
+
+**Audit:** `Audit.LogEntityType` gains an `AimShipperIdPool` row at Arc 2 Phase 7. `_Claim` writes an `OperationLog` `Consumed` row (linked back to the closing container's audit chain). Each `_Topup` is *itself* preceded by an `Audit.InterfaceLog` row (the AIM call) — `FetchedInterfaceLogId` carries the FK so provenance is end-to-end queryable.
+
+> **⚠ Implementation deferred to Arc 2 Phase 7.** The Container schema does not yet exist in the Phase 1–8 codebase — `Lots.Container`, `Lots.AimShipperIdPool`, and `Lots.AimPoolConfig` all CREATE in the Arc 2 Phase 7 migration. The column contract above is authoritative.
+
+### AimPoolConfig
+
+**Added v1.9h (UJ-04 — AIM Pool configuration).** Single-row table holding the operator-configurable thresholds for the AIM Shipper ID pool. The Configuration Tool exposes these via `Lots.AimPoolConfig_Get` / `_Update`. Single-row enforced via `CHECK (Id = 1)`.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| Id | INT | PK, CHECK (Id = 1) | Always 1. Single-row table. |
+| TargetBufferDepth | INT | NOT NULL, DEFAULT 50, CHECK (TargetBufferDepth > 0) | The desired pool depth — topup script refills toward this value. |
+| TopupThreshold | INT | NOT NULL, DEFAULT 30, CHECK (TopupThreshold >= 0 AND TopupThreshold < TargetBufferDepth) | Topup script triggers when `AvailableCount < TopupThreshold`. |
+| AlarmWarningDepth | INT | NOT NULL, DEFAULT 20, CHECK (AlarmWarningDepth >= 0 AND AlarmWarningDepth < TopupThreshold) | Supervisor wallboard tile turns yellow when `AvailableCount < AlarmWarningDepth`. |
+| AlarmCriticalDepth | INT | NOT NULL, DEFAULT 10, CHECK (AlarmCriticalDepth >= 0 AND AlarmCriticalDepth < AlarmWarningDepth) | Supervisor alarm + IT notification fires when `AvailableCount < AlarmCriticalDepth`. |
+| UpdatedAt | DATETIME2(3) | NULL | |
+| UpdatedByUserId | BIGINT | FK → Location.AppUser.Id, NULL | |
+
+**Seed (at Arc 2 Phase 7 migration):**
+
+| Id | TargetBufferDepth | TopupThreshold | AlarmWarningDepth | AlarmCriticalDepth |
+|---|---|---|---|---|
+| 1 | 50 | 30 | 20 | 10 |
+
+**Audit:** `Audit.LogEntityType` gains an `AimPoolConfig` row at Arc 2 Phase 7. `_Update` writes a `ConfigLog` row.
+
+> **⚠ Implementation deferred to Arc 2 Phase 7.**
 
 ---
 
