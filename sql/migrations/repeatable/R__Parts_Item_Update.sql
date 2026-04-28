@@ -27,6 +27,8 @@
 --   @UnitWeight DECIMAL(10,4) NULL
 --   @WeightUomId BIGINT NULL      - Required if UnitWeight provided.
 --   @CountryOfOrigin NVARCHAR(2) NULL - ISO 3166-1 alpha-2. OI-19 (Phase E).
+--   @MaxParts INT NULL            - Hard cap on pieces per container. OI-12.
+--                                   Validated > 0 when supplied.
 --   @AppUserId BIGINT             - Required for audit.
 --
 -- Result set:
@@ -41,6 +43,7 @@
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
 --   2026-04-23 - 2.1 - Phase G.3: @CountryOfOrigin added (OI-19)
+--   2026-04-27 - 2.2 - OI-12 correction: @MaxParts added (moved from ContainerConfig)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.Item_Update
     @Id               BIGINT,
@@ -52,6 +55,7 @@ CREATE OR ALTER PROCEDURE Parts.Item_Update
     @UnitWeight       DECIMAL(10,4)  = NULL,
     @WeightUomId      BIGINT         = NULL,
     @CountryOfOrigin  NVARCHAR(2)    = NULL,
+    @MaxParts         INT            = NULL,
     @AppUserId        BIGINT
 AS
 BEGIN
@@ -68,7 +72,8 @@ BEGIN
                 @DefaultSubLotQty AS DefaultSubLotQty,
                 @MaxLotSize AS MaxLotSize, @UomId AS UomId,
                 @UnitWeight AS UnitWeight, @WeightUomId AS WeightUomId,
-                @CountryOfOrigin AS CountryOfOrigin
+                @CountryOfOrigin AS CountryOfOrigin,
+                @MaxParts AS MaxParts
          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
     BEGIN TRY
@@ -138,10 +143,23 @@ BEGIN
             RETURN;
         END
 
+        -- Business rule: MaxParts, when supplied, must be positive
+        IF @MaxParts IS NOT NULL AND @MaxParts <= 0
+        BEGIN
+            SET @Message = N'MaxParts must be greater than zero when supplied.';
+            EXEC Audit.Audit_LogFailure
+                @AppUserId = @AppUserId, @LogEntityTypeCode = N'Item',
+                @EntityId = @Id, @LogEventTypeCode = N'Updated',
+                @FailureReason = @Message, @ProcedureName = @ProcName,
+                @AttemptedParameters = @Params;
+            SELECT @Status AS Status, @Message AS Message;
+            RETURN;
+        END
+
         -- Capture OldValue for audit BEFORE the UPDATE
         DECLARE @OldValue NVARCHAR(MAX) =
             (SELECT Description, MacolaPartNumber, DefaultSubLotQty, MaxLotSize,
-                    UomId, UnitWeight, WeightUomId, CountryOfOrigin
+                    UomId, UnitWeight, WeightUomId, CountryOfOrigin, MaxParts
              FROM Parts.Item WHERE Id = @Id
              FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
@@ -156,6 +174,7 @@ BEGIN
             UnitWeight       = @UnitWeight,
             WeightUomId      = @WeightUomId,
             CountryOfOrigin  = @CountryOfOrigin,
+            MaxParts         = @MaxParts,
             UpdatedAt        = SYSUTCDATETIME(),
             UpdatedByUserId  = @AppUserId
         WHERE Id = @Id;

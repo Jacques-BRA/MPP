@@ -26,7 +26,6 @@
 --   @CustomerCode NVARCHAR(50) NULL
 --   @ClosureMethod NVARCHAR(20) NULL   -- OI-02 pending
 --   @TargetWeight DECIMAL(10,4) NULL   -- OI-02 pending
---   @MaxParts INT NULL                 -- OI-12 (Phase E). Hard cap on pieces per container.
 --   @AppUserId BIGINT               - Required for audit.
 --
 -- Result set:
@@ -41,6 +40,7 @@
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-15 - 2.0 - SELECT result for Named Query compatibility
 --   2026-04-23 - 2.1 - Phase G.3: @MaxParts added (OI-12)
+--   2026-04-27 - 2.2 - OI-12 correction: @MaxParts removed (moved to Parts.Item)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.ContainerConfig_Create
     @ItemId            BIGINT,
@@ -51,7 +51,6 @@ CREATE OR ALTER PROCEDURE Parts.ContainerConfig_Create
     @CustomerCode      NVARCHAR(50)   = NULL,
     @ClosureMethod     NVARCHAR(20)   = NULL,
     @TargetWeight      DECIMAL(10,4)  = NULL,
-    @MaxParts          INT            = NULL,
     @AppUserId         BIGINT
 AS
 BEGIN
@@ -67,8 +66,7 @@ BEGIN
         (SELECT @ItemId AS ItemId, @TraysPerContainer AS TraysPerContainer,
                 @PartsPerTray AS PartsPerTray, @IsSerialized AS IsSerialized,
                 @DunnageCode AS DunnageCode, @CustomerCode AS CustomerCode,
-                @ClosureMethod AS ClosureMethod, @TargetWeight AS TargetWeight,
-                @MaxParts AS MaxParts
+                @ClosureMethod AS ClosureMethod, @TargetWeight AS TargetWeight
          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 
     BEGIN TRY
@@ -111,29 +109,16 @@ BEGIN
             RETURN;
         END
 
-        -- Business rule: MaxParts, when supplied, must be positive
-        IF @MaxParts IS NOT NULL AND @MaxParts <= 0
-        BEGIN
-            SET @Message = N'MaxParts must be greater than zero when supplied.';
-            EXEC Audit.Audit_LogFailure
-                @AppUserId = @AppUserId, @LogEntityTypeCode = N'ContainerConfig',
-                @EntityId = NULL, @LogEventTypeCode = N'Created',
-                @FailureReason = @Message, @ProcedureName = @ProcName,
-                @AttemptedParameters = @Params;
-            SELECT @Status AS Status, @Message AS Message, @NewId AS NewId;
-            RETURN;
-        END
-
         BEGIN TRANSACTION;
 
         INSERT INTO Parts.ContainerConfig
             (ItemId, TraysPerContainer, PartsPerTray, IsSerialized,
              DunnageCode, CustomerCode, ClosureMethod, TargetWeight,
-             MaxParts, CreatedAt)
+             CreatedAt)
         VALUES
             (@ItemId, @TraysPerContainer, @PartsPerTray, @IsSerialized,
              @DunnageCode, @CustomerCode, @ClosureMethod, @TargetWeight,
-             @MaxParts, SYSUTCDATETIME());
+             SYSUTCDATETIME());
 
         SET @NewId = CAST(SCOPE_IDENTITY() AS BIGINT);
 

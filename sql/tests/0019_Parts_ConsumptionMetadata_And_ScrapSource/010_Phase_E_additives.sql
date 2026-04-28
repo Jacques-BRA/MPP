@@ -3,13 +3,17 @@
 -- Author:       Blue Ridge Automation
 -- Created:      2026-04-23
 -- Description:
---   Tests for the Phase E additive schema changes delivered in G.1/G.3:
+--   Tests for the Phase E additive schema changes delivered in G.1/G.3
+--   plus the 0013 corrections:
 --     Parts.Item.CountryOfOrigin (OI-19)
---     Parts.ContainerConfig.MaxParts (OI-12) + validation
 --     Parts.ItemLocation consumption metadata (OI-18)
 --     Parts.ItemLocation_SetConsumptionMetadata
---     Workorder.WorkOrderType_List (3 seed rows)
+--     Workorder.WorkOrderType_List (single Production seed, post-OI-07)
 --     Workorder.ScrapSource_List (2 seed rows, OI-20)
+--
+--   MaxParts coverage moved to 0008_Parts_Item/010_Item_crud.sql after
+--   the OI-12 correction relocated MaxParts from Parts.ContainerConfig
+--   to Parts.Item.
 -- =============================================
 
 EXEC test.BeginTestFile @FileName = N'0019_Parts_ConsumptionMetadata_And_ScrapSource/010_Phase_E_additives.sql';
@@ -63,56 +67,11 @@ EXEC test.Assert_IsEqual
 GO
 
 -- =============================================
--- Test 3: ContainerConfig_Create with MaxParts + GetByItem exposes it
+-- Tests 3 + 4 (ContainerConfig MaxParts) removed: OI-12 correction
+-- (migration 0013) relocated MaxParts from Parts.ContainerConfig to
+-- Parts.Item. Equivalent coverage now lives in
+-- 0008_Parts_Item/010_Item_crud.sql.
 -- =============================================
-DECLARE @ItemId BIGINT = (SELECT Id FROM Parts.Item WHERE PartNumber = N'PH-E-TEST-001');
-
-CREATE TABLE #CC (Status BIT, Message NVARCHAR(500), NewId BIGINT);
-INSERT INTO #CC EXEC Parts.ContainerConfig_Create
-    @ItemId = @ItemId, @TraysPerContainer = 4, @PartsPerTray = 25,
-    @MaxParts = 100, @AppUserId = 1;
-DECLARE @S BIT = (SELECT Status FROM #CC);
-DECLARE @SStr NVARCHAR(1) = CAST(@S AS NVARCHAR(1));
-DROP TABLE #CC;
-
-EXEC test.Assert_IsEqual
-    @TestName = N'[CC Create MaxParts=100] Status is 1',
-    @Expected = N'1', @Actual = @SStr;
-
-CREATE TABLE #G (
-    Id BIGINT, ItemId BIGINT, TraysPerContainer INT, PartsPerTray INT,
-    IsSerialized BIT, DunnageCode NVARCHAR(50), CustomerCode NVARCHAR(50),
-    ClosureMethod NVARCHAR(20), TargetWeight DECIMAL(10,4),
-    MaxParts INT, CreatedAt DATETIME2(3), UpdatedAt DATETIME2(3),
-    DeprecatedAt DATETIME2(3)
-);
-INSERT INTO #G EXEC Parts.ContainerConfig_GetByItem @ItemId = @ItemId;
-DECLARE @MaxParts INT = (SELECT TOP 1 MaxParts FROM #G);
-DECLARE @MaxPartsStr NVARCHAR(10) = CAST(@MaxParts AS NVARCHAR(10));
-EXEC test.Assert_IsEqual
-    @TestName = N'[CC GetByItem] MaxParts = 100',
-    @Expected = N'100', @Actual = @MaxPartsStr;
-DROP TABLE #G;
-GO
-
--- =============================================
--- Test 4: ContainerConfig_Update rejects MaxParts = 0
--- =============================================
-DECLARE @ItemId BIGINT = (SELECT Id FROM Parts.Item WHERE PartNumber = N'PH-E-TEST-001');
-DECLARE @CcId BIGINT = (SELECT Id FROM Parts.ContainerConfig WHERE ItemId = @ItemId AND DeprecatedAt IS NULL);
-
-CREATE TABLE #U (Status BIT, Message NVARCHAR(500));
-INSERT INTO #U EXEC Parts.ContainerConfig_Update
-    @Id = @CcId, @TraysPerContainer = 4, @PartsPerTray = 25,
-    @MaxParts = 0, @AppUserId = 1;
-DECLARE @S BIT = (SELECT Status FROM #U);
-DECLARE @SStr NVARCHAR(1) = CAST(@S AS NVARCHAR(1));
-DROP TABLE #U;
-
-EXEC test.Assert_IsEqual
-    @TestName = N'[CC Update MaxParts=0] rejected Status 0',
-    @Expected = N'0', @Actual = @SStr;
-GO
 
 -- =============================================
 -- Test 5: ItemLocation_Add writes consumption metadata on INSERT
@@ -233,20 +192,23 @@ EXEC test.Assert_IsEqual
 GO
 
 -- =============================================
--- Test 9: Workorder.WorkOrderType_List has 3 seed rows
+-- Test 9: Workorder.WorkOrderType_List has 1 seed row (post-OI-07)
 -- =============================================
+-- OI-07 correction (migration 0013) collapsed the original 3-type seed
+-- (Demand / Maintenance / Recipe) to a single Production row.
+-- Maintenance + Recipe are FUTURE hooks.
 CREATE TABLE #WT (Id BIGINT, Code NVARCHAR(20), Name NVARCHAR(100), Description NVARCHAR(500));
 INSERT INTO #WT EXEC Workorder.WorkOrderType_List;
 DECLARE @Count INT = (SELECT COUNT(*) FROM #WT);
 EXEC test.Assert_RowCount
-    @TestName = N'[WorkOrderType_List] 3 seed rows',
-    @ExpectedCount = 3, @ActualCount = @Count;
+    @TestName = N'[WorkOrderType_List] 1 seed row',
+    @ExpectedCount = 1, @ActualCount = @Count;
 
-DECLARE @HasDemand INT = (SELECT COUNT(*) FROM #WT WHERE Code = N'Demand');
-DECLARE @HasDemandStr NVARCHAR(5) = CAST(@HasDemand AS NVARCHAR(5));
+DECLARE @HasProduction INT = (SELECT COUNT(*) FROM #WT WHERE Code = N'Production');
+DECLARE @HasProductionStr NVARCHAR(5) = CAST(@HasProduction AS NVARCHAR(5));
 EXEC test.Assert_IsEqual
-    @TestName = N'[WorkOrderType_List] Contains Demand',
-    @Expected = N'1', @Actual = @HasDemandStr;
+    @TestName = N'[WorkOrderType_List] Contains Production',
+    @Expected = N'1', @Actual = @HasProductionStr;
 DROP TABLE #WT;
 GO
 

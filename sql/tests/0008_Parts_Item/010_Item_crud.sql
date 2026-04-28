@@ -53,6 +53,7 @@ CREATE TABLE #List0 (
     WeightUomId       BIGINT,
     WeightUomCode     NVARCHAR(20),
     CountryOfOrigin   NVARCHAR(2),
+    MaxParts          INT,
     CreatedAt         DATETIME2(3),
     UpdatedAt         DATETIME2(3),
     CreatedByUserId   BIGINT,
@@ -385,6 +386,7 @@ CREATE TABLE #Get1 (
     WeightUomId       BIGINT,
     WeightUomCode     NVARCHAR(20),
     CountryOfOrigin   NVARCHAR(2),
+    MaxParts          INT,
     CreatedAt         DATETIME2(3),
     UpdatedAt         DATETIME2(3),
     CreatedByUserId   BIGINT,
@@ -435,6 +437,7 @@ CREATE TABLE #GetP1 (
     WeightUomId       BIGINT,
     WeightUomCode     NVARCHAR(20),
     CountryOfOrigin   NVARCHAR(2),
+    MaxParts          INT,
     CreatedAt         DATETIME2(3),
     UpdatedAt         DATETIME2(3),
     CreatedByUserId   BIGINT,
@@ -480,6 +483,7 @@ CREATE TABLE #GetP2 (
     WeightUomId       BIGINT,
     WeightUomCode     NVARCHAR(20),
     CountryOfOrigin   NVARCHAR(2),
+    MaxParts          INT,
     CreatedAt         DATETIME2(3),
     UpdatedAt         DATETIME2(3),
     CreatedByUserId   BIGINT,
@@ -699,6 +703,7 @@ CREATE TABLE #ListByType (
     WeightUomId       BIGINT,
     WeightUomCode     NVARCHAR(20),
     CountryOfOrigin   NVARCHAR(2),
+    MaxParts          INT,
     CreatedAt         DATETIME2(3),
     UpdatedAt         DATETIME2(3),
     CreatedByUserId   BIGINT,
@@ -753,6 +758,7 @@ CREATE TABLE #ListSearch (
     WeightUomId       BIGINT,
     WeightUomCode     NVARCHAR(20),
     CountryOfOrigin   NVARCHAR(2),
+    MaxParts          INT,
     CreatedAt         DATETIME2(3),
     UpdatedAt         DATETIME2(3),
     CreatedByUserId   BIGINT,
@@ -860,6 +866,162 @@ DECLARE @AuditCond BIT = CASE WHEN @AuditCount >= 3 THEN 1 ELSE 0 END;
 EXEC test.Assert_IsTrue
     @TestName  = N'[Audit] ConfigLog has >= 3 Item entries',
     @Condition = @AuditCond;
+GO
+
+-- =============================================
+-- Test 21: Item_Create with MaxParts roundtrips through GetByPartNumber
+--   OI-12 (migration 0013): MaxParts moved from ContainerConfig to Item.
+-- =============================================
+DECLARE @S    BIT,
+        @M    NVARCHAR(500),
+        @SStr NVARCHAR(1),
+        @NewId BIGINT;
+
+CREATE TABLE #Rmp1 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rmp1
+EXEC Parts.Item_Create
+    @ItemTypeId = 4,
+    @PartNumber = N'TEST-MP-001',
+    @Description = N'MaxParts roundtrip',
+    @UomId = 1,
+    @MaxParts = 100,
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rmp1;
+DROP TABLE #Rmp1;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[CreateMaxParts] Status is 1',
+    @Expected = N'1',
+    @Actual   = @SStr;
+
+CREATE TABLE #Gmp1 (
+    Id                BIGINT,
+    ItemTypeId        BIGINT,
+    ItemTypeName      NVARCHAR(200),
+    PartNumber        NVARCHAR(50),
+    Description       NVARCHAR(500),
+    MacolaPartNumber  NVARCHAR(50),
+    DefaultSubLotQty  INT,
+    MaxLotSize        INT,
+    UomId             BIGINT,
+    UomCode           NVARCHAR(20),
+    UnitWeight        DECIMAL(10,4),
+    WeightUomId       BIGINT,
+    WeightUomCode     NVARCHAR(20),
+    CountryOfOrigin   NVARCHAR(2),
+    MaxParts          INT,
+    CreatedAt         DATETIME2(3),
+    UpdatedAt         DATETIME2(3),
+    CreatedByUserId   BIGINT,
+    UpdatedByUserId   BIGINT,
+    DeprecatedAt      DATETIME2(3)
+);
+
+INSERT INTO #Gmp1
+EXEC Parts.Item_GetByPartNumber @PartNumber = N'TEST-MP-001';
+
+DECLARE @StoredMax INT = (SELECT TOP 1 MaxParts FROM #Gmp1);
+DECLARE @StoredMaxStr NVARCHAR(10) = CAST(@StoredMax AS NVARCHAR(10));
+EXEC test.Assert_IsEqual
+    @TestName = N'[CreateMaxParts] GetByPartNumber surfaces MaxParts = 100',
+    @Expected = N'100',
+    @Actual   = @StoredMaxStr;
+DROP TABLE #Gmp1;
+GO
+
+-- =============================================
+-- Test 22: Item_Create rejects MaxParts = 0
+-- =============================================
+DECLARE @S    BIT,
+        @M    NVARCHAR(500),
+        @SStr NVARCHAR(1),
+        @NewId BIGINT;
+
+CREATE TABLE #Rmp2 (Status BIT, Message NVARCHAR(500), NewId BIGINT);
+INSERT INTO #Rmp2
+EXEC Parts.Item_Create
+    @ItemTypeId = 4,
+    @PartNumber = N'TEST-MP-002',
+    @Description = N'MaxParts zero',
+    @UomId = 1,
+    @MaxParts = 0,
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message, @NewId = NewId FROM #Rmp2;
+DROP TABLE #Rmp2;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[CreateMaxPartsZero] Status is 0',
+    @Expected = N'0',
+    @Actual   = @SStr;
+
+DECLARE @MsgMatchStr NVARCHAR(1) = CASE WHEN @M LIKE N'%MaxParts%' THEN N'1' ELSE N'0' END;
+EXEC test.Assert_IsEqual
+    @TestName = N'[CreateMaxPartsZero] Message mentions MaxParts',
+    @Expected = N'1',
+    @Actual   = @MsgMatchStr;
+GO
+
+-- =============================================
+-- Test 23: Item_Update sets MaxParts; rejects MaxParts = 0
+-- =============================================
+DECLARE @S    BIT,
+        @M    NVARCHAR(500),
+        @SStr NVARCHAR(1),
+        @ItemId BIGINT;
+
+SELECT @ItemId = Id FROM Parts.Item WHERE PartNumber = N'TEST-MP-001';
+
+-- Happy path: change MaxParts to 250
+CREATE TABLE #Ump1 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ump1
+EXEC Parts.Item_Update
+    @Id = @ItemId,
+    @UomId = 1,
+    @MaxParts = 250,
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ump1;
+DROP TABLE #Ump1;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[UpdateMaxParts] Status is 1',
+    @Expected = N'1',
+    @Actual   = @SStr;
+
+DECLARE @StoredMax INT;
+SELECT @StoredMax = MaxParts FROM Parts.Item WHERE Id = @ItemId;
+DECLARE @StoredMaxStr NVARCHAR(10) = CAST(@StoredMax AS NVARCHAR(10));
+EXEC test.Assert_IsEqual
+    @TestName = N'[UpdateMaxParts] MaxParts now 250',
+    @Expected = N'250',
+    @Actual   = @StoredMaxStr;
+
+-- Rejection: MaxParts = 0
+CREATE TABLE #Ump2 (Status BIT, Message NVARCHAR(500));
+INSERT INTO #Ump2
+EXEC Parts.Item_Update
+    @Id = @ItemId,
+    @UomId = 1,
+    @MaxParts = 0,
+    @AppUserId = 1;
+SELECT @S = Status, @M = Message FROM #Ump2;
+DROP TABLE #Ump2;
+
+SET @SStr = CAST(@S AS NVARCHAR(1));
+EXEC test.Assert_IsEqual
+    @TestName = N'[UpdateMaxPartsZero] Status is 0',
+    @Expected = N'0',
+    @Actual   = @SStr;
+
+-- Verify MaxParts unchanged
+SELECT @StoredMax = MaxParts FROM Parts.Item WHERE Id = @ItemId;
+SET @StoredMaxStr = CAST(@StoredMax AS NVARCHAR(10));
+EXEC test.Assert_IsEqual
+    @TestName = N'[UpdateMaxPartsZero] MaxParts unchanged at 250',
+    @Expected = N'250',
+    @Actual   = @StoredMaxStr;
 GO
 
 -- =============================================
