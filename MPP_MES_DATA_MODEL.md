@@ -1,6 +1,6 @@
 # MPP MES — Data Model Reference
 
-**Version:** v1.9 working draft (rev 2026-04-27i — UJ-18 Gateway-script-async print pattern — `Lots.ShippingLabel` +5 print-state columns; see revision history)
+**Version:** v1.9 working draft (rev 2026-04-28j — `Parts.ContainerConfig.ClosureMethod` value list extended with `ByVision`; UpperCamelCase casing applied; OI-02 caveat retired. See revision history)
 **Schemas:** 8 | **Tables:** ~73
 **Target:** Microsoft SQL Server 2022 Standard Edition
 
@@ -10,6 +10,7 @@
 
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
+| 1.9j | 2026-04-28 | Blue Ridge Automation | **§3 ContainerConfig — `ClosureMethod` extended with `ByVision`.** Camera-validated container closure added per Jacques's 2026-04-28 review: a third trigger alongside the existing count and weight modes. Camera validates each part (pass/fail), PLC accumulates the validated count, asserts `ContainerFullFlag` when target met. Code values renamed to UpperCamelCase per project convention (`ByCount` / `ByWeight` / `ByVision`; previously documented as `BY_COUNT` / `BY_WEIGHT`). "Pending OI-02 closure" caveat retired (OI-02 ✅ Resolved 2026-04-24 per OIR v2.14). No schema change — `ClosureMethod` is `NVARCHAR(20) NULL`; the new value is purely an additional allowed string. FDS-03-017 + FDS-06-014 are authoritative for the per-method mechanics. |
 | 0.1 | 2026-04-02 | Blue Ridge Automation | Initial data model — 7 schemas, ~50 tables |
 | 0.2 | 2026-04-09 | Blue Ridge Automation | Eliminated `Terminal` table — terminals are now `Location` records (type=Terminal) with config as `LocationAttribute`. Renamed `TerminalId` FKs to `TerminalLocationId` across all event tables. Added `ShotCount` to `DowntimeEvent` for warm-up tracking (UJ-14). Added hardware interlock bypass flag discussion on `ContainerSerial` (UJ-16). Updated workorder schema scope to MVP-LITE (OI-07). |
 | 0.3 | 2026-04-09 | Blue Ridge Automation | Naming convention changed from snake_case to UpperCamelCase for all DB identifiers. Merged Department into Area per ISA-95 — `DepartmentLocationId` FKs renamed to `AreaLocationId`, `ChargeToDepartment` renamed to `ChargeToArea`. Added Enterprise (level 0) to `LocationType`. Updated `LocationType` seed rows. |
@@ -419,8 +420,8 @@ Honda-specified packing rules per product.
 | TraysPerContainer | INT | NOT NULL | |
 | PartsPerTray | INT | NOT NULL | |
 | IsSerialized | BIT | NOT NULL, DEFAULT 0 | |
-| ClosureMethod | NVARCHAR(20) | NULL | `BY_COUNT` or `BY_WEIGHT`. Added in Phase 4 pending OI-02 closure. |
-| TargetWeight | DECIMAL(10,4) | NULL | Target weight for BY_WEIGHT closure. Added in Phase 4 pending OI-02 closure. |
+| ClosureMethod | NVARCHAR(20) | NULL | One of `ByCount`, `ByWeight`, or `ByVision` (NULL when not yet configured). Selects the closure trigger per FDS-06-014. `ByCount` = operator-entered count; `ByWeight` = scale feedback via OmniServer (target on `TargetWeight`); `ByVision` = camera validates each part, PLC accumulates the count and asserts `ContainerFullFlag` at target. |
+| TargetWeight | DECIMAL(10,4) | NULL | Target weight for `ByWeight` closure. Required when `ClosureMethod = 'ByWeight'`; ignored otherwise. |
 | DunnageCode | NVARCHAR(50) | NULL | Returnable dunnage identifier |
 | CustomerCode | NVARCHAR(50) | NULL | Honda customer code |
 | CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |

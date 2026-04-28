@@ -4,38 +4,14 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.11j — Working Draft
-**Date:** 2026-04-27
+**Version:** 0.11m — Working Draft
+**Date:** 2026-04-28
 
 ---
 
 ## Revision History
 
-> Newest at top. Each entry: **§ section(s) — driver/topic.** Specific FDS-XX-NNN req IDs created or rewritten. Companion data model / OIR / ERD versions where applicable.
-
-| Version | Date | Author | Change Summary |
-|---|---|---|---|
-| 0.11j | 2026-04-27 | Blue Ridge Automation | **§1.6, §4.3, §6.5, §7.2, §7.3, §9.4, §10.3 — UJ batch closures (UJ-09, -10, -17, -18 with downstream design impact).** FDS-01-014 NEW (Gateway-script-async cross-cutting integration pattern, UJ-18); FDS-04-007 elevated-action list extended (UJ-09 BOM substitute override); FDS-06-011 extended (UJ-09 supervisor-override flow at scan-in); FDS-07-005 amended (print extracted from atomic block, UJ-18); FDS-07-006a NEW (print dispatch + 3×2s retry, UJ-18); FDS-07-006b NEW (banner + safety-sweep + stranded-prints alarm at 5, UJ-18); FDS-09-015 NEW (shift-end summary screen, UJ-10 Option D); FDS-10-013 NEW (`ConfirmationMethod` LocationAttribute, UJ-17 Option A). Data Model v1.9i (`Lots.ShippingLabel` +5 print-state columns). OIR v2.14. |
-| 0.11i | 2026-04-27 | Blue Ridge Automation | **§7.2, §7.4 — UJ-04 AIM Shipper ID local pool.** FDS-07-005 rewritten, FDS-07-008 amended, FDS-07-010 rewritten; FDS-07-010a/b/c NEW. Data Model v1.9h. |
-| 0.11h | 2026-04-27 | Blue Ridge Automation | **§5.3 — OI-21 Pausable LOT at Workstation.** FDS-05-038 NEW. Data Model v1.9g. |
-| 0.11g | 2026-04-24 | Blue Ridge Automation | **§6.10 — OI-16 PLC confirm + RequiresCompletionConfirm LocationAttribute.** FDS-06-028 extended. Data Model v1.9f. |
-| 0.11f | 2026-04-24 | Blue Ridge Automation | **§5.1 — OI-23 Lot derived quantities as a view.** FDS-05-031 rewritten. Data Model v1.9e. |
-| 0.11e | 2026-04-24 | Blue Ridge Automation | **§2.5, §4 — OI-08 Terminal mode by parent Location tier.** FDS-02-010, FDS-04-003 rewritten. (No data model change.) |
-| 0.11d | 2026-04-24 | Blue Ridge Automation | **§3.5 — OI-18 ItemLocation hierarchy cascade.** FDS-03-014 rewritten; FDS-03-015, FDS-03-018 extended. Data Model v1.9d. |
-| 0.11c | 2026-04-24 | Blue Ridge Automation | **§3.6 — OI-12 MaxParts moved to Parts.Item.** FDS-03-019 rewritten. Data Model v1.9c. |
-| 0.11b | 2026-04-24 | Blue Ridge Automation | **§6.10 — OI-07 WorkOrderType corrected to single Production seed.** FDS-06-022 renamed; FDS-06-027 deleted; FDS-06-025, FDS-06-028 updated. Data Model v1.9b. |
-| 0.11 | 2026-04-24 | Blue Ridge Automation | **§3.4, §5.1, §5.2, §5.3, §5.4, §5.5, §6.2, §6.10, §16 (NEW) — Arc 2 model revisions (Tool/Cavity on Lot, ProductionEvent checkpoint shape, IdentifierSequence, cavity-parallel LOTs as peers).** FDS-03-017a rewritten; FDS-05-003 revised; FDS-05-030, -034, -035, -036, -037 NEW; FDS-06-003 revised; FDS-06-030 NEW; FDS-16-001..003 NEW. Data Model v1.9. |
-| 0.10-rev | 2026-04-22 | Blue Ridge Automation | **§5.10 — OI-11 Casting → Trim via 1-line BOM (no new schema).** FDS-05-033..035 consolidated into FDS-05-033. Data Model v1.8-rev. |
-| 0.10 | 2026-04-22 | Blue Ridge Automation | **§1.4, §3.1, §3.5, §3.6, §4.3, §5.1, §5.3, §5.10, §6.8, §6.10, §8.2, §12.5, §14 — Phase E of OI review refactor (OI-11..23).** FDS-01-013, FDS-03-018, FDS-03-019, FDS-03-020, FDS-05-031, FDS-05-032, FDS-05-033, FDS-06-023a, FDS-06-028, FDS-06-029, FDS-08-007a, FDS-12-009..011 NEW; FDS-03-001, FDS-04-007 extended. Data Model v1.8. |
-| 0.9 | 2026-04-21 | Blue Ridge Automation | **§2.5, §5.4, §5.5, §6.10, §9.4, §10.3 — Phase D of OI review refactor (OI-04, -05, -07, -08 addenda, -09 addenda, -03).** FDS-02-010..014, FDS-05-022..024 NEW; FDS-05-025..027 (merge rules); FDS-06-025..027; FDS-09-012..014 NEW; FDS-10-005 rewritten; FDS-10-009..012 NEW. Data Model v1.7. |
-| 0.8 | 2026-04-21 | Blue Ridge Automation | **§1.6, §4 — OI-06 security rewrite (initials-based operator presence; AD elevation per-action; clock# + PIN removed).** FDS-01-010 updated; FDS-04-001..010 (entire section rewritten); FDS-04-009, FDS-04-010 NEW. Data Model v1.6. |
-| 0.7 | 2026-04-15 | Blue Ridge Automation | **§3.4, §6.2 — Production data collection capture (template→event gap closed).** FDS-03-012 rewritten; FDS-03-017a NEW; FDS-06-001, FDS-06-003 rewritten. Data Model v1.4. |
-| 0.6 | 2026-04-15 | Blue Ridge Automation | **§11 — Phase 5/6 SQL completion + Ignition JDBC convention.** FDS-11-011 NEW (single-result-set / no-OUTPUT-params rule). Data Model v1.3. |
-| 0.5 | 2026-04-10 | Blue Ridge Automation | **§11 — Audit fourth log stream (FailureLog).** FDS-11-004 NEW; FDS-11-005..010 renumbered. |
-| 0.4 | 2026-04-10 | Blue Ridge Automation | **§2.1–2.5, §5.3, §5.20, §6.19, §7.19 — Location model restructure (LocationType / LocationTypeDefinition / LocationAttributeDefinition).** FDS-05-008 NEW; FDS-05-004, FDS-05-020, FDS-06-019, FDS-07-019 updated. Word table styling added. |
-| 0.3 | 2026-04-09 | Blue Ridge Automation | **§2.2, §2.3 — Naming convention to UpperCamelCase; Department merged into Area; Enterprise added to ISA-95 hierarchy.** FDS-02-001, FDS-02-003 updated. |
-| 0.2 | 2026-04-09 | Blue Ridge Automation | **§1.4, §1.6, §2.5, §3.6, §4.2, §5.4, §5.5, §6.3, §6.5, §6.6, §6.10, §10.3 — OI/UJ design decisions integrated (OI-01, OI-08, OI-09 resolved).** FRS references added throughout OI register. |
-| 0.1 | 2026-04-06 | Blue Ridge Automation | Initial draft — front matter, architecture, plant model, master data. |
+The detailed change log lives in **`MPP_MES_FDS_CHANGELOG.docx`** for the duration of pre-release development. The current FDS version and date are in the header above. On customer-review release the change log will be reintegrated into this document in tightened release-by-release form.
 
 ---
 
@@ -66,10 +42,10 @@ This FDS describes how Blue Ridge Automation will implement the MES requirements
 | Document | Purpose |
 |---|---|
 | Flexware FRS v1.0 (3/15/2024) | Functional requirements (what the system needs to do) |
-| `MPP_MES_SUMMARY.md` | System summary with scope flags and data model overview |
-| `MPP_MES_DATA_MODEL.md` | Column-level data model specification v1.7 (8 schemas, ~70 tables — adds Tools schema and `Workorder.WorkOrderType` in Phase B rollup) |
+| `MPP_MES_SUMMARY.docx` | System summary with scope flags and data model overview |
+| `MPP_MES_DATA_MODEL.docx` | Column-level data model specification v1.9 (8 schemas, ~73 tables — Location, Parts, Lots, Workorder, Quality, OEE, Tools, Audit) |
 | `MPP_MES_ERD.html` | Interactive ERD with scope badges |
-| `MPP_MES_USER_JOURNEYS.md` | Narrative user journeys with validated assumptions |
+| `MPP_MES_USER_JOURNEYS.docx` | Narrative user journeys with validated assumptions |
 | `sql_best_practices_mes.md` | SQL design conventions guiding the schema |
 | `reference/MPP_Scope_Matrix.xlsx` | Scope authority |
 
@@ -150,7 +126,7 @@ This FDS describes how Blue Ridge Automation will implement the MES requirements
 
 | Term | Definition |
 |---|---|
-| **Schema** | A logical grouping of related tables in the database. The MES has 7 schemas: location, parts, lots, workorder, quality, oee, audit. |
+| **Schema** | A logical grouping of related tables in the database. The MES has 8 schemas: location, parts, lots, workorder, quality, oee, tools, audit. |
 | **Surrogate PK** | Auto-incrementing integer primary key. Natural keys (lot names, part numbers) are unique-indexed columns, not PKs. |
 | **Soft Delete** | `DeprecatedAt` timestamp — non-null means inactive. No physical row deletion. |
 | **Code Table** | A lookup table backing a status or type field (e.g., `LotStatusCode`). Prevents magic integers and free-text drift. |
@@ -169,7 +145,7 @@ This FDS describes how Blue Ridge Automation will implement the MES requirements
 | **Web-native UI** | All operator and engineering screens are Ignition Perspective views, served via browser or Perspective Workstation to shop-floor terminals. No desktop clients. |
 | **Database as system of record** | SQL Server 2022 is the authoritative store for all transactional MES data. Ignition Tag Historian handles time-series process data separately. |
 | **Event-sourced traceability** | Every state change (LOT creation, movement, status transition, production event, consumption) is recorded as an immutable append-only event. Current state is derived from events. |
-| **Logged external interfaces** | External system calls (AIM, Zebra printers) are executed directly from the Ignition scripting layer. Every call — request payload, response payload, and any error condition — is logged to `Audit.InterfaceLog`. High-fidelity logging can be toggled per FRS 3.17.4. No outbox table or background worker is required. (FRS 3.17.4, Spark Dependency B.12) |
+| **Logged external interfaces** | External system calls (AIM, Zebra printers) are executed directly from the Ignition scripting layer. Every call — request payload, response payload, and any error condition — is logged to `Audit.InterfaceLog`. High-fidelity logging can be toggled per FRS 3.17.4. No outbox table or background worker is required. (FRS 3.17.4) |
 | **Separation of concerns** | Plan layer (what should happen) is separated from execution layer (what is happening) and evidence layer (what did happen). See Data Flow Summary in Section 1.4. |
 
 ### 1.2 System Topology
@@ -183,7 +159,7 @@ This FDS describes how Blue Ridge Automation will implement the MES requirements
 │  │  Gateway      │────▶│  Standard Ed.    │    │  Tag        │  │
 │  │  Server       │     │                  │    │  Historian   │  │
 │  │  (Primary)    │     │  MES Database    │    │  (on GW)    │  │
-│  │               │     │  (7 schemas)     │    │             │  │
+│  │               │     │  (8 schemas)     │    │             │  │
 │  │  Win Server   │     │  Win Server      │    │             │  │
 │  │  4+ cores     │     │  4+ cores        │    │             │  │
 │  │  16GB RAM     │     │  32GB RAM        │    │             │  │
@@ -219,7 +195,7 @@ This FDS describes how Blue Ridge Automation will implement the MES requirements
 The system SHALL run on a single Ignition Gateway Server on Windows Server 2019 or later (minimum 4 cores, 16GB RAM). The Gateway SHALL host the Perspective project, OPC device connections, Tag Historian, Gateway Scheduled Scripts, and all MES application logic.
 
 #### FDS-01-002 — Database Server
-The system SHALL use Microsoft SQL Server 2022 Standard Edition on a dedicated Windows Server instance (minimum 4 cores, 32GB RAM). The MES database SHALL use the 7-schema structure defined in `MPP_MES_DATA_MODEL.md`.
+The system SHALL use Microsoft SQL Server 2022 Standard Edition on a dedicated Windows Server instance (minimum 4 cores, 32GB RAM). The MES database SHALL use the 8-schema structure (Location, Parts, Lots, Workorder, Quality, OEE, Tools, Audit) defined in `MPP_MES_DATA_MODEL.docx`.
 
 #### FDS-01-003 — Redundancy
 Gateway redundancy is NOT included in current scope. The system SHOULD be architected so that a redundant gateway can be added in a future phase without schema or application changes.
@@ -229,48 +205,37 @@ A separate development/test Ignition Gateway SHALL be provisioned, mirroring pro
 
 ### 1.3 Scope Matrix Cross-Reference
 
-The definitive scope boundary is `reference/MPP_Scope_Matrix.xlsx`. The complete 37-row cross-reference with data model coverage is maintained in `MPP_MES_SUMMARY.md` Section "Scope Assessment." This FDS implements all MVP and MVP-EXPANDED items, and CONDITIONAL items where noted.
+The definitive scope boundary is `reference/MPP_Scope_Matrix.xlsx`. The complete 37-row cross-reference with data model coverage is maintained in `MPP_MES_SUMMARY.docx` Section "Scope Assessment." This FDS implements all MVP and MVP-EXPANDED items, and CONDITIONAL items where noted.
 
 ### 1.4 Data Flow Architecture
 
-The MES operates across four logical layers. Each layer has distinct immutability and access patterns:
+The MES organizes its data across **four logical layers**. Each layer has a distinct lifecycle and access pattern — the table below maps each layer to its tables, mutability, and what it answers in operator terms.
 
-```
-PLAN LAYER (what should happen — mutable, versioned)
-    Parts.Item → Parts.RouteTemplate → Parts.RouteStep → Parts.OperationTemplate
-    "This product follows this route, collecting this data at each stop"
+| Layer | Mutability | Tables | What it answers |
+|---|---|---|---|
+| **Plan** | Mutable, versioned | `Parts.Item` → `Parts.RouteTemplate` → `Parts.RouteStep` → `Parts.OperationTemplate` | *What should happen.* "This product follows this route, collecting this data at each stop." |
+| **Execution** | Mutable, current state | `Workorder.WorkOrder` → `Workorder.WorkOrderOperation` | *What is happening.* "This LOT is being processed at this location, at this step." |
+| **Evidence** | Immutable, append-only | `Workorder.ProductionEvent`, `Workorder.ConsumptionEvent`, `Workorder.RejectEvent` | *What did happen.* Production counts, consumption events that link source LOTs to output, and reject reasons. |
+| **Traceability** | Immutable, append-only | `Lots.LotGenealogy`, `Lots.LotMovement`, `Lots.LotStatusHistory`, `Lots.SerializedPart`, `Lots.ShippingLabel` | *The permanent record.* Parent/child relationships from splits, merges, and consumption; where each LOT has been; quality-status transitions; individual serial numbers traced to source LOTs; what shipped to Honda with AIM shipper IDs. |
 
-EXECUTION LAYER (what is happening — mutable current state)
-    Workorder.WorkOrder → Workorder.WorkOrderOperation
-    "This LOT is being processed at this location, at this step"
-
-EVIDENCE LAYER (what did happen — immutable, append-only)
-    Workorder.ProductionEvent    "This many good/bad parts came out"
-    Workorder.ConsumptionEvent   "These source LOTs were consumed to make this output"
-    Workorder.RejectEvent        "Here's why the bad parts were bad"
-
-TRACEABILITY LAYER (the permanent record — immutable, append-only)
-    Lots.LotGenealogy            "Parent/child relationships from splits, merges, consumption"
-    Lots.LotMovement             "Where this LOT has been"
-    Lots.LotStatusHistory        "Quality status transitions"
-    Lots.SerializedPart          "Individual serial numbers traced to source LOTs"
-    Lots.ShippingLabel           "What shipped to Honda, with AIM shipper IDs"
-```
+The Plan layer is where Engineering authors and revises specifications. The Execution layer is the runtime current state — what is happening *right now*. The Evidence and Traceability layers are append-only — once written, never updated or deleted (FDS-01-005). Honda genealogy queries walk the Traceability layer; production counts and OEE math draw from the Evidence layer.
 
 #### FDS-01-005 — Event Immutability
 Evidence layer and traceability layer records SHALL be append-only. Once written, they SHALL NOT be updated or deleted. Corrections are recorded as new events, not overwrites. (FRS 3.5.4, 3.9.6)
 
 #### FDS-01-006 — External Interface Dispatch Pattern
-External system calls (AIM API, Zebra label printing) SHALL be executed directly from the Ignition scripting layer (Gateway Scripts or Perspective session event handlers). All calls — request payload, response payload, and any error condition — SHALL be logged to `Audit.InterfaceLog`. High-fidelity logging (full request/response capture) SHALL be configurable per FRS 3.17.4. (FRS 3.17.4, 5.5.1, Spark Dependency B.12)
+External system calls (AIM API, Zebra label printing) SHALL be executed directly from the Ignition scripting layer (Gateway Scripts or Perspective session event handlers). All calls — request payload, response payload, and any error condition — SHALL be logged to `Audit.InterfaceLog`. High-fidelity logging (full request/response capture) SHALL be configurable per FRS 3.17.4. (FRS 3.17.4, 5.5.1)
 
-> ✅ **RESOLVED — OI-01:** The FRS requires logging of interface activity (FRS 3.17.4), not an event outbox or async dispatch pattern. External calls are made directly from the Ignition application layer with results logged to `InterfaceLog`. No outbox table, no background worker. This keeps the architecture simple and the database focused on MES transactional data.
+The FRS requires logging of interface activity (FRS 3.17.4), not an event outbox or async dispatch pattern. External calls are made directly from the Ignition application layer with results logged to `InterfaceLog`. No outbox table, no background worker. This keeps the architecture simple and the database focused on MES transactional data.
 
 #### FDS-01-007 — Tag Historian Separation
-Process data (PLC tag values, scale readings, cycle time measurements) SHALL be stored in Ignition's Tag Historian, not in the MES SQL database. The MES SQL layer stores transactional records (LOTs, events, movements); the Historian stores time-series data. The two systems are complementary, not duplicative. (FRS 3.4.10, 5.5.1)
+Process data (PLC tag values, scale readings, cycle time measurements) SHALL be stored in Ignition's Tag Historian, not in the MES SQL database. The MES SQL layer stores transactional records (LOTs, events, movements); the Historian stores time-series data. The two systems are complementary, not duplicative.
+
+The Tag Historian MAY be hosted on the same SQL Server instance as the MES, but SHALL use a **separate database** from the MES database (e.g., `MPP_MES_Historian` alongside `MPP_MES`). Sharing the instance is acceptable for hardware economy; sharing the database is not — the two have different access patterns (high-volume time-series append vs transactional MES writes), retention policies, backup cadences, and tuning needs. Co-locating them in one database would couple their lifecycles and risk Tag-Historian volume swamping MES query performance. (FRS 3.4.10, 5.5.1)
 
 #### FDS-01-013 — BOM Source System at Cutover — `MVP`
 
-**OI-13 resolution (pending MPP IT confirmation of export format):** Authoritative Bills of Material for MPP parts live in the legacy **Flexware application at IP `.919`** — the predecessor MES being replaced by this project. The new MES `Parts.Bom` and `Parts.BomLine` tables SHALL be seeded from a one-shot export of the Flexware BOM master at cutover.
+Authoritative Bills of Material for MPP parts live in the legacy **Flexware application at IP `.919`** — the predecessor MES being replaced by this project. The new MES `Parts.Bom` and `Parts.BomLine` tables SHALL be seeded from a one-shot export of the Flexware BOM master at cutover.
 
 - **Transfer mode:** One-shot CSV or Excel export handed off by MPP IT at cutover — no ongoing integration, since Flexware is being retired as part of the same rollout.
 - **Bulk-load proc:** A dedicated `Parts.Bom_BulkLoadFromSeed` stored procedure SHALL accept the export payload (JSON) and populate `Parts.Bom` + `Parts.BomLine` in a single transaction, idempotent on re-run, mirroring the pattern of `Oee.DowntimeReasonCode_BulkLoadFromSeed` (§9.3).
@@ -300,17 +265,17 @@ All OPC tags SHALL be organized under a consistent namespace: `[OPCServer]/[Line
 **Interactive users** (Quality, Supervisor, Engineering, Admin) SHALL authenticate via Active Directory. The Ignition Gateway SHALL be configured with an AD User Source. **Operators** SHALL NOT authenticate — they are identified by initials entered at a shop-floor terminal and stamped on events (see §4). Operator `AppUser` rows exist for attribution only and are managed through the Configuration Tool; they carry no AD account. (FRS 5.3)
 
 #### FDS-01-011 — Authorization
-Role-based access control SHALL be managed through Ignition's internal security system. AD groups SHALL map to Ignition security roles. Screen and function-level permissions SHALL be enforced via Ignition security zones. No custom RBAC tables in the MES database. (FRS Spark Dependency B.8)
+Role-based access control SHALL be managed through Ignition's internal security system. AD groups SHALL map to Ignition security roles. Screen and function-level permissions SHALL be enforced via Ignition security zones. No custom RBAC tables in the MES database.
 
 #### FDS-01-012 — Audit Attribution
 Every state-changing action SHALL be attributed to a user and terminal location. The `AppUser.Id` and `TerminalLocationId` (FK to `Location` where type = Terminal) are recorded on all mutable and event records. Actions performed by system processes (scheduled scripts, PLC-triggered events) SHALL use a designated system user account.
 
-#### FDS-01-014 — External Integration Pattern (Gateway-script-async) — `MVP` (v0.11j, UJ-18)
+#### FDS-01-014 — External Integration Pattern (Gateway-script-async) — `MVP`
 
 All MES outbound calls to external systems (AIM, Zebra printers, Honda EDI, future Macola pushes) SHALL use the **Gateway-script-async** pattern, not synchronous in-MES-proc calls. The pattern:
 
 1. The MES stored procedure commits its DB-side state changes atomically (e.g., `Container_Complete` writes the `ShippingLabel` row with `PrintedAt = NULL`, claims the AIM ID from the pool, etc.) and returns control to the calling Perspective view.
-2. The Perspective view (or a calling MES proc wrapper) fires `system.util.sendMessageAsync` to a Gateway-scoped message handler with the relevant entity ID(s) as payload.
+2. The Perspective view (or a calling MES proc wrapper) fires `system.util.sendRequestAsync` to a Gateway-scoped message handler with the relevant entity ID(s) as payload.
 3. The Gateway message handler performs the external call. On success, it updates DB state via a sibling proc (e.g., `ShippingLabel_MarkPrinted`). On failure, it retries per the integration-specific policy and ultimately writes to `Audit.FailureLog` if retries exhaust.
 4. Every external call SHALL log to `Audit.InterfaceLog` (success or failure) per FDS-11-005.
 5. Operator-facing failure surfaces (UI banners, wallboard alarms) SHALL bind to DB state — not to in-flight handler state — so that Gateway restarts do not lose visibility of failed integrations.
@@ -323,7 +288,7 @@ All MES outbound calls to external systems (AIM, Zebra printers, Honda EDI, futu
 
 ### 1.7 Database Design Conventions
 
-The MES database follows these conventions consistently. Full column-level specifications are in `MPP_MES_DATA_MODEL.md`.
+The MES database follows these conventions consistently. Full column-level specifications are in `MPP_MES_DATA_MODEL.docx`.
 
 | Convention | Rule |
 |---|---|
@@ -349,7 +314,7 @@ The plant model implements the ISA-95 equipment hierarchy using a polymorphic th
 
 1. **`LocationType`** — broad ISA-95 category (Enterprise, Site, Area, Work Center, Cell). Five rows total.
 2. **`LocationTypeDefinition`** — specific *kind* within a type (e.g., for type `Cell`: Terminal, DieCastMachine, CNCMachine, InventoryLocation). Every location has a definition; different definitions carry different attribute schemas.
-3. **`LocationAttributeDefinition`** — attribute schema per definition (e.g., `Terminal` has `IpAddress`, `DefaultPrinter`; `DieCastMachine` has `Tonnage`, `NumberOfCavities`).
+3. **`LocationAttributeDefinition`** — attribute schema per definition (e.g., `Terminal` has `IpAddress`, `DefaultPrinter`; `DieCastMachine` has `Tonnage`, `RefCycleTimeSec`).
 
 Every physical and logical place in the plant — from the enterprise itself down to individual machines, terminals, staging areas, and the Sort Cage — is a row in the single `Location` table, differentiated by its `LocationTypeDefinition`. The hierarchy is queried with recursive CTEs on `ParentLocationId` (adjacency list). (FRS 3.3.1–3.3.4, 3.7.1)
 
@@ -431,9 +396,10 @@ Each `LocationTypeDefinition` carries its own set of `LocationAttributeDefinitio
 | AttributeName | DataType | Required | Uom | Description |
 |---|---|---|---|---|
 | Tonnage | DECIMAL | No | tons | Die cast press tonnage |
-| NumberOfCavities | INT | No | — | Die cast cavity count |
 | RefCycleTimeSec | DECIMAL | No | seconds | Reference cycle time for OEE performance calculation |
 | OeeTarget | DECIMAL | No | — | Target OEE (0.00–1.00). FUTURE — designed for but not used in MVP. |
+
+> **Note on cavities.** Cavity count is *not* an attribute of the press. Cavities belong to the die (`Tools.Tool` / `Tools.ToolCavity` per Data Model v1.9 §15) — a single press may run different dies with different cavity counts on different days. Cavity-level data lives in the Tools schema, attached to the die that is currently mounted via `Tools.ToolAssignment`.
 
 **Example 3 — `Cell` → `InventoryLocation` definition:**
 
@@ -455,39 +421,61 @@ The ~230 machines from FRS Appendix B SHALL be loaded as seed data during deploy
 
 ### 2.5 Terminals
 
-> ✅ **RESOLVED — OI-08 / UJ-12 with 2026-04-20 addenda:** Terminals are a mix of **dedicated** (≈80% — 1:1 with a Cell) and **shared** (≈20% — e.g., trim shop with multiple stations served by one terminal). `Terminal` remains a `LocationTypeDefinition` under the `Cell` type. The dedicated-vs-shared mode is captured as a `LocationAttribute` on each Terminal (see FDS-02-010) and drives presence behaviour (§4). Operators cannot navigate a terminal off its mounted-machine context — a new machine context requires an explicit re-scan. Part ↔ machine validity is enforced via `Parts.ItemLocation` (§3.5). Honda plans to place RFID tags on container labels in the future; the MES SHALL stay RFID-agnostic (FUTURE).
+Terminals are a mix of **dedicated** and **shared**. `Terminal` is a `LocationTypeDefinition` under the `Cell` type, but a Terminal `Location` MAY be parented at any tier — Cell, WorkCenter, or Area — and its parent tier determines the mode. Dedicated terminals (Cell-parented) have a fixed Cell context that cannot be changed in the UI. Shared terminals (WorkCenter- or Area-parented) let the operator pick a Cell context — by **scan or dropdown** — constrained to descendant Cells of the parent Location. Part ↔ Cell eligibility is enforced via `Parts.ItemLocation` plus BOM-derived component eligibility (§3.5 + FDS-02-012). Honda plans to place RFID tags on container labels in the future; the MES SHALL stay RFID-agnostic (FUTURE).
 
 #### FDS-02-008 — Terminal as Cell Kind
-Each Ignition Perspective client station on the shop floor SHALL be registered as a `Location` record with `LocationTypeDefinition` = `Terminal` (which resolves to `LocationType` = `Cell`), parented under the appropriate Area in the hierarchy. Terminal-specific configuration (IP address, default Zebra printer, barcode scanner availability, **terminal mode** per FDS-02-010) SHALL be stored as `LocationAttribute` entries referencing the attribute definitions attached to the `Terminal` definition (see FDS-02-005 Example 1).
+Each Ignition Perspective client station on the shop floor SHALL be registered as a `Location` record with `LocationTypeDefinition` = `Terminal` (which resolves to `LocationType` = `Cell`), parented under the appropriate Cell, WorkCenter, or Area in the hierarchy. Terminal-specific configuration (IP address, default Zebra printer, barcode scanner availability) SHALL be stored as `LocationAttribute` entries referencing the attribute definitions attached to the `Terminal` definition (see FDS-02-005 Example 1). Terminal mode (Dedicated vs Shared) is derived from the parent tier per FDS-02-010 — not stored as an attribute.
 
-#### FDS-02-009 — Machine Context via Barcode Scan
-The operator's first action at any terminal in a new session SHALL be to scan a machine barcode or QR code. The system SHALL resolve the scanned value to a `Location` record whose `LocationTypeDefinition` is a machine kind (`DieCastMachine`, `CNCMachine`, `TrimPress`, `AssemblyStation`, etc.) and use that Cell as the production context for subsequent operations in the session. Event tables carry two location references:
+#### FDS-02-009 — Cell Context Selection
+Every event written from a terminal carries two `Location` references:
 
 - `TerminalLocationId` — FK → `Location.Id` where the definition is `Terminal` (where the operator is standing)
-- `LocationId` — FK → `Location.Id` where the definition is a machine kind (which machine they scanned)
+- `LocationId` — FK → `Location.Id` where the production happens (a Cell — `DieCastMachine`, `CNCMachine`, `TrimPress`, `AssemblyStation`, `InspectionStation`, etc.)
 
-On **Dedicated** terminals (FDS-02-010) the machine context SHALL be the Terminal Location's parent Location (itself a WorkCenter or Cell tier) — no per-session scan required. On **Shared** terminals the operator SHALL scan the machine barcode at the start of the session and SHALL re-scan to switch machines — direct in-UI navigation between machines SHALL NOT be offered (FDS-02-011).
+On **Dedicated** terminals (FDS-02-010) the Cell context SHALL be the Terminal Location's parent Cell — fixed, with no selector exposed in the UI.
 
-#### FDS-02-010 — Terminal Mode Determined by Location Assignment — `MVP` (revised v0.11e)
+On **Shared** terminals the Cell context SHALL be selected by the operator at session start using either of two equivalent mechanisms:
+
+1. **Scan** — the operator scans the destination Cell's barcode or QR code, or
+2. **Dropdown** — the operator picks from a dropdown of eligible Cells (the descendant Cells of the terminal's parent Location).
+
+The operator MAY change the Cell context mid-session by either mechanism. The new `LocationId` SHALL apply to all subsequent events written from the terminal until changed again.
+
+#### FDS-02-010 — Terminal Mode Determined by Location Assignment — `MVP`
 
 A Terminal's mode (Dedicated or Shared) is **derived from the tier of its parent Location in the ISA-95 hierarchy**. No separate `TerminalMode` attribute is configured.
 
 | Terminal's parent Location tier | Mode | Behavior |
 |---|---|---|
-| **WorkCenter** or **Cell** | **Dedicated** | Terminal is bound to a specific cell / workcenter context. Machine context is the parent Location — never prompted, never scanned. Operator initials persist through the shift with 30-min idle re-confirmation (FDS-04-006). Example: `DC-07-TERM` Terminal whose parent is `DC-07` Die Cast Machine (Cell tier). |
-| **Area** | **Shared** | Terminal serves multiple Cells under an Area. Machine context (the specific Cell within the Area) SHALL be prompted on first action and whenever the operator switches Cells via a barcode re-scan. Initials presence SHALL be re-prompted on first action after idle, and on machine-context change. Example: `TRIM-TERM-A` Terminal whose parent is `Trim Shop` Area, serving all Cells under it. |
+| **Cell** | **Dedicated** | Terminal is bound to a specific Cell. Cell context is the parent Cell — fixed, no selector exposed. Operator initials persist with 30-min idle re-confirmation (FDS-04-006). **Example:** a paired Machining + Assembly WorkCenter typically carries two terminals — `MS1-MachiningIntake-Term` parented to the `MS1-Machining` Cell, and `MS1-AssemblyOut-Term` parented to the `MS1-Assembly` Cell. Each terminal is dedicated to its own Cell; both are sibling children of the same WorkCenter. |
+| **WorkCenter** | **Shared** | Terminal serves multiple Cells within a single WorkCenter. Cell context (the specific Cell within the WorkCenter) SHALL be selected at session start by scan or dropdown (FDS-02-009) and MAY be changed mid-session by either mechanism. Initials presence SHALL be re-prompted on first action after idle and on Cell-context change. **Example:** a small trim line where one terminal serves a cluster of trim presses parented to the same WorkCenter. |
+| **Area** | **Shared** | Terminal serves multiple Cells under an Area. Same selection mechanics as the WorkCenter case but the picker spans the entire Area's descendant Cells. **Example:** a Die Cast cabin terminal parented to the `Die Cast` Area, serving all die cast machines beneath it; the operator picks the press by scan or dropdown at session start and re-picks on machine change. |
 
-The Gateway `Terminal_ResolveFromSession` proc SHALL read the Terminal Location's parent tier via the Location hierarchy and return `TerminalMode` as a derived result (not a stored attribute). Configuration Tool Location admin screens SHALL let Engineering attach a Terminal under any WorkCenter, Cell, or Area — the mode follows automatically.
+The Gateway `Terminal_ResolveFromSession` proc SHALL read the Terminal Location's parent tier via the Location hierarchy and return `TerminalMode` as a derived result (not a stored attribute). Configuration Tool Location admin screens SHALL let Engineering attach a Terminal under any Cell, WorkCenter, or Area — the mode follows automatically.
 
-**Rationale (Jacques's 2026-04-24 framing):** The mode **is** the assignment. A Terminal parked under a specific Cell IS a dedicated terminal for that Cell; a Terminal parked under an Area IS a shared terminal for that Area. Encoding mode as a separate attribute is redundant with the tree structure and invites drift between the two.
+**Why the model works:** The mode IS the assignment. A Terminal parked under a Cell is dedicated to that Cell; a Terminal parked under a WorkCenter or Area is shared across the descendant Cells of that scope. Encoding mode as a separate attribute would be redundant with the tree structure and would invite drift between the two.
 
 FUTURE: an `AutoReleaseOnIdle` attribute may be added to tune the re-confirmation interval per terminal — out of MVP.
 
-#### FDS-02-011 — Terminal Machine-Context Lock
-The UI SHALL NOT offer a dropdown, search, or other navigation control that lets the operator change the active machine context without a physical barcode re-scan. A "Force print" or equivalent workflow that requires switching to a different machine SHALL trigger the machine-scan prompt and write the new `LocationId` on any subsequent events. This prevents inadvertent cross-machine event attribution (the primary failure mode raised by MPP in the 2026-04-20 review).
+#### FDS-02-011 — Cell Context Change Rules
 
-#### FDS-02-012 — Part ↔ Machine Validity
-The set of parts eligible to run on a given machine SHALL be governed by the existing `Parts.ItemLocation` eligibility junction (FDS-03-014). Scan-in workflows SHALL reject a LOT whose `ItemId` is not eligible on the active machine's `LocationId`, with a clear error message ("Part 59B is not configured to run on DC-07"). Eligibility is Engineering-owned in the Configuration Tool; no duplicate table is needed for terminals.
+- On **Dedicated** terminals the active Cell context SHALL NOT be changeable via the UI. The terminal's parent Cell IS the context for the session; no scan, dropdown, or search is offered.
+- On **Shared** terminals the active Cell context SHALL be changeable only via the FDS-02-009 selectors (scan or dropdown), constrained to descendant Cells of the terminal's parent Location. Each change SHALL write the new `LocationId` on subsequent events. Workflows that require switching context (e.g., reprint on a different Cell) SHALL invoke the same scan-or-dropdown prompt rather than reaching into other Cells programmatically.
+
+Both rules together prevent the cross-machine event-attribution failure mode raised by MPP at the 2026-04-20 review. Dropdown selection on shared terminals — when constrained to the terminal's eligible descendant Cells — is functionally equivalent to a scan, and operationally faster for operators carrying multiple LOTs.
+
+#### FDS-02-012 — Part ↔ Cell Eligibility
+
+Every LOT entering a Cell — whether being produced there, consumed at a workstation, or staged at lineside inventory — SHALL pass an eligibility check against `Parts.ItemLocation`. The check resolves via two paths:
+
+1. **Direct eligibility.** A `Parts.ItemLocation` row for the LOT's `ItemId` exists at the scanned Cell or any ancestor tier (per FDS-03-014's hierarchy cascade — Cell → WorkCenter → Area → Site).
+2. **BOM-derived eligibility.** The LOT's `ItemId` appears as a child line on the active `Parts.Bom` of any Item whose direct eligibility (via path 1) matches this Cell.
+
+A LOT is eligible if **either** path resolves. Engineering configures direct eligibility only for produced finished goods and sub-assemblies (one row per produced Item per Cell-or-ancestor tier); component eligibility is automatic via BOM membership. This avoids the configuration explosion of enumerating every pass-through component (e.g., a 20-line BOM × N assembly Cells = 20N rows) and keeps the eligibility map small enough that Engineering can maintain it by hand.
+
+Active BOM membership requires `Parts.Bom.PublishedAt IS NOT NULL AND Parts.Bom.DeprecatedAt IS NULL`. The eligibility resolution is exposed via the read view `Parts.v_EffectiveItemLocation` (Direct ∪ BomDerived) and consumed by the `ItemLocation_CheckEligibility` proc that fronts every scan-in mutation.
+
+Reject message on miss: *"Part {PartNumber} is not configured for {CellCode} and is not a component of any part eligible there."*
 
 #### FDS-02-013 — Mobile-Friendly Design Input
 MPP plans to deploy **tablets** in the Die Cast area. Perspective views used on Die Cast screens SHALL be designed with tablet-friendly layouts (touch targets ≥ 44 px, one-handed operation where practical, portrait-orientation support). This is not a per-screen MVP requirement but an ongoing design constraint — tablet rollout can happen post-cutover without re-designing screens.
@@ -504,7 +492,7 @@ Honda plans to add RFID tags to container labels at a future date. The MES SHALL
 #### FDS-03-001 — Item Records
 Every part number that MPP manufactures, receives, or ships SHALL have an `Item` record. Each item SHALL have: part number (unique), description, item type, Macola cross-reference number (optional — FUTURE integration), counting UOM, unit weight, weight UOM, default sub-lot quantity, max lot size, and **Country of Origin (ISO 3166-1 alpha-2)**. (FRS 3.4.1–3.4.5; OI-19)
 
-> **OI-19 (new v0.10):** Country of Origin is a Honda compliance field surfaced on the legacy Flexware Material configuration. Stored as `Parts.Item.CountryOfOrigin NVARCHAR(2) NULL` (nullable because MPP's current parts list may not have values for every row at cutover; the Configuration Tool will expose a maintenance screen to backfill).
+Country of Origin is a Honda compliance field surfaced on the legacy Flexware Material configuration. Stored as `Parts.Item.CountryOfOrigin NVARCHAR(2) NULL` (nullable because MPP's current parts list may not have values for every row at cutover; the Configuration Tool will expose a maintenance screen to backfill).
 
 #### FDS-03-002 — Item Types
 Items SHALL be classified by type. The following types SHALL be seeded:
@@ -526,7 +514,7 @@ Items SHALL NOT be deleted. Inactive items SHALL be soft-deleted via `Deprecated
 Each assembled product SHALL have a versioned BOM defining its component parts. BOMs SHALL support: parent item, version number, effective date, and soft delete. BOM lines SHALL specify: child item, quantity per parent, UOM, and sort order. (FRS 3.4.2)
 
 #### FDS-03-005 — BOM Versioning
-When a BOM is revised, a new version SHALL be created with a new `EffectiveFrom` date. The previous version SHALL be soft-deleted (`DeprecatedAt` set). Production records SHALL FK to the BOM version active at time of manufacture, ensuring historical accuracy. (FRS Spark Dependency B.3)
+When a BOM is revised, a new version SHALL be created with a new `EffectiveFrom` date. The previous version SHALL be soft-deleted (`DeprecatedAt` set). Production records SHALL FK to the BOM version active at time of manufacture, ensuring historical accuracy.
 
 #### FDS-03-006 — Single-Level BOMs
 BOMs SHALL be single-level (one parent → multiple children). Multi-level BOM explosion is NOT required for MVP. If multi-level is needed in the future, recursive CTE queries across single-level BOMs provide the capability without schema changes.
@@ -543,7 +531,7 @@ Each route template SHALL contain ordered route steps. Each step SHALL reference
 Route steps SHALL reference an operation template, which defines the area and data collection requirements. Route steps SHALL NOT reference a specific machine or location. The operator selects from eligible machines at runtime based on the `ItemLocation` eligibility map. (FRS 3.11.6; confirmed per architectural review 2026-04-06)
 
 #### FDS-03-010 — Route Versioning
-When a route is revised, a new version SHALL be created. Production records SHALL FK to the route version active at time of execution. (FRS Spark Dependency B.4)
+When a route is revised, a new version SHALL be created. Production records SHALL FK to the route version active at time of execution.
 
 #### FDS-03-011 — Operation Sequence Flexibility
 The system SHALL allow insertion and deletion of operations within a route during execution (FRS 3.11.10). This enables handling parts that skip steps or require additional operations beyond the standard route.
@@ -566,12 +554,12 @@ Data collection requirements are modeled as a one-to-many junction (`Parts.Opera
 #### FDS-03-013 — Operation Templates Drive Screen Behavior
 The Perspective production screen SHALL dynamically render input fields based on the operation template's `OperationTemplateField` rows. A Die Cast screen shows die/cavity/weight fields; an Assembly screen shows serial number and material verification fields. The same screen component is reused — the junction rows control which sections are visible and whether each field is required. (FRS 3.11.6)
 
-#### FDS-03-017a — Data Collection Capture at Event Time (Checkpoint Shape, v0.11)
+#### FDS-03-017a — Data Collection Capture at Event Time (Checkpoint Shape)
 
 When a LOT passes through an operation, the MES writes one **checkpoint event** per operator logging action. Events carry **cumulative** counters (`ShotCount`, `ScrapCount`); deltas are derived by the reader via `LAG()` window function over `(LotId, EventAt)`. Operators are NOT at the terminal per shot — checkpoints are coarse (checkout from die cast, check-in to trim, complete + move, quality-operation transitions). A missed checkpoint does not compound errors; the next event carries truth.
 
 1. On screen load, the client SHALL read `OperationTemplateField` rows for the active template to determine the visible inputs.
-2. On submit, the Arc 2 Phase 1 `ProductionEvent_Record` stored procedure SHALL, in one transaction:
+2. On submit, the `ProductionEvent_Record` stored procedure SHALL, in one transaction:
    a. Insert one `Workorder.ProductionEvent` header row carrying `LotId`, `OperationTemplateId`, `EventAt`, cumulative `ShotCount` / `ScrapCount` (as-of-event), `ScrapSourceId` (only for scrap-driving checkpoints, per FDS-06-023a), optional `WeightValue` + `WeightUomId`, `AppUserId`, and `TerminalLocationId`.
    b. Insert one `Workorder.ProductionEventValue` child row per non-hot `DataCollectionField` configured on the template, keyed by `(ProductionEventId, DataCollectionFieldId)`, with both the string `Value` and the typed `NumericValue` / `UomId` where applicable.
    c. Reject the submission if any `IsRequired = 1` field on the template is missing from the payload.
@@ -581,7 +569,7 @@ When a LOT passes through an operation, the MES writes one **checkpoint event** 
 
 ### 3.5 Part-to-Location Eligibility
 
-#### FDS-03-014 — Eligibility Map with Hierarchy Cascade — `MVP` (revised v0.11d)
+#### FDS-03-014 — Eligibility Map with Hierarchy Cascade — `MVP`
 The `Parts.ItemLocation` table SHALL define which parts can run where. `LocationId` SHALL accept **any Location tier** — Area, WorkCenter, or Cell.
 
 When an operator scans a LOT into a specific Cell, the MES SHALL validate eligibility by walking UP the Location hierarchy from the scanned Cell:
@@ -598,12 +586,12 @@ Engineering configures eligibility at the coarsest appropriate tier — e.g., "P
 
 (FRS 3.4.7)
 
-#### FDS-03-015 — Eligibility Management — `MVP` (revised v0.11d)
+#### FDS-03-015 — Eligibility Management — `MVP`
 Engineering users SHALL be able to add, update, and remove `ItemLocation` rows via the Configuration Tool Eligibility screen. The screen SHALL let the user pick the target Location at any tier (Area / WorkCenter / Cell) when creating a row. Consumption metadata (Min/Max/Default/IsConsumptionPoint) inputs are shown whenever `IsConsumptionPoint` is enabled. Changes SHALL be logged to `Audit.ConfigLog`.
 
-#### FDS-03-018 — Consumption Metadata on Item-Location Eligibility — `MVP` (revised v0.11d)
+#### FDS-03-018 — Consumption Metadata on Item-Location Eligibility — `MVP`
 
-**OI-18 (extended 2026-04-24):** Each `ItemLocation` row SHALL carry optional **consumption metadata** that drives the runtime Allocations grid at the workstation:
+Each `ItemLocation` row SHALL carry optional **consumption metadata** that drives the runtime Allocations grid at the workstation:
 
 | Field | Purpose |
 |---|---|
@@ -622,13 +610,16 @@ At scan-in, the MES SHALL pre-populate `DefaultQuantity` and validate `MinQuanti
 Each finished good that ships to Honda SHALL have a container configuration record specifying: trays per container, parts per tray, whether serialized, dunnage code, and customer code. This configuration drives automatic container lifecycle management on the shop floor. (FRS 3.9.7)
 
 #### FDS-03-017 — Container Closure Logic
-The system SHALL close a container automatically when the configured capacity is reached. For serialized lines, closure is triggered by part count (tracked per serial). For non-serialized lines, closure MAY be triggered by part count or weight, configurable per container config.
+The system SHALL close a container automatically when the configured capacity is reached. The trigger varies by line type:
 
-> ✅ **RESOLVED — OI-09 / UJ-15:** Multi-part inspection lines (e.g., MS1FM-1028 running 59B, 5PA, 6NA variants) operate one part number at a time. The operator selects the active LOT for consumption, which determines the part number. Container configuration is resolved per part number. No mixed-part containers. Changeover between part numbers is an operator action, not a concurrent process.
+- **Serialized lines** — closure is driven by part count, tracked per serial assignment via the MIP handshake.
+- **Non-serialized lines** — closure is **two-stage**: a tray validates first (per `Parts.ContainerConfig.ClosureMethod` — `ByCount`, `ByWeight`, or `ByVision`), and the container's running parts count increments on every tray pass. The container is full when the running count reaches its configured capacity (`TraysPerContainer × PartsPerTray`, capped by `Parts.Item.MaxParts` per FDS-03-019 if non-NULL). See FDS-06-014 for the per-method tray-level mechanics and the container-accumulation rules.
+
+Multi-part inspection lines (e.g., MS1FM-1028 running 59B, 5PA, 6NA variants) operate one part number at a time. The operator selects the active LOT for consumption, which determines the part number. Container configuration is resolved per part number. No mixed-part containers. Changeover between part numbers is an operator action, not a concurrent process.
 
 #### FDS-03-019 — Per-Item Per-Location Piece Cap — `MVP`
 
-**OI-12 (revised 2026-04-24):** `Parts.Item.MaxParts INT NULL` SHALL hard-cap the total pieces of this Item allowed at any single Location at any one time. Scan-in mutations (LotMovement of a LOT to a Cell) SHALL:
+`Parts.Item.MaxParts INT NULL` SHALL hard-cap the total pieces of this Item allowed at any single Location at any one time. Scan-in mutations (LotMovement of a LOT to a Cell) SHALL:
 
 1. Sum existing pieces of this Item across all non-Closed LOTs currently at the destination Location.
 2. Add the incoming LOT's piece count.
@@ -638,21 +629,19 @@ Rationale: MPP reports operators over-scanning material into Cells to minimise r
 
 **Orthogonal to FDS-03-020** (`LinesideLimit` LocationAttribute, Location-scoped across all Items): `MaxParts` caps one Item at one Location; `LinesideLimit` caps the total staging capacity of a Location across everything. Both fire; either can reject the scan-in.
 
-> **Historical note:** An earlier v0.10 draft placed `MaxParts` on `Parts.ContainerConfig` (per-container cap). Jacques's 2026-04-24 OIR review clarified that `MaxParts` is a Part attribute, evaluated at check-in — not a container-packing attribute. Corrected in v0.11c.
-
 #### FDS-03-020 — Lineside Inventory Cap — `MVP`
 
-**OI-12 (new v0.10):** Each Cell (workstation, line-side inventory location) MAY carry a `LinesideLimit` `LocationAttribute` that caps the total pieces across *all* open LOTs of any Item present at that Cell. The scan-in mutation SHALL sum current lineside quantity + incoming scan quantity and reject if the result would exceed `LinesideLimit`. Complements FDS-03-019: the per-container cap stops bloat of one container; the lineside cap stops multiple containers from compounding past a physical staging limit. `LinesideLimit` is a per-Cell LocationAttribute (NOT a per-Item configuration) because the physical constraint is floor space, not part identity.
+Each Cell (workstation, line-side inventory location) MAY carry a `LinesideLimit` `LocationAttribute` that caps the total pieces across *all* open LOTs of any Item present at that Cell. The scan-in mutation SHALL sum current lineside quantity + incoming scan quantity and reject if the result would exceed `LinesideLimit`. Complements FDS-03-019: that requirement is a **per-Item LOT-volume cap** at a Cell — limiting how many pieces of one Item can sit there across all open LOTs of that Item. `LinesideLimit` (this requirement) is a **per-Cell total-volume cap** — limiting all pieces across all Items at the Cell. Both fire on every scan-in; either can reject it. `LinesideLimit` is a per-Cell LocationAttribute (NOT a per-Item configuration) because the physical constraint is floor space, not part identity.
 
 #### FDS-03-021 — Tray-Divisibility Validation on Work Order — `MVP`
 
-**OI-17 (new v0.10):** The MES SHALL validate at WorkOrder Create / Edit time that the WO target quantity is **evenly divisible by** the Item's `ContainerConfig.PartsPerTray` (and, where applicable, by `TraysPerContainer × PartsPerTray`). Non-divisible targets SHALL be rejected with a specific error code ("Target quantity {X} is not evenly divisible by tray quantity {Y}"). The same check SHALL fire at WO Close: if actual good count is not divisible by the tray quantity, the close is blocked (supervisor AD elevation can override per FDS-04-007 — the override reason is logged). Surfaced as a legacy Flexware error: *"Container processing error — Work order target quantity exceeded. Ensure target quantity is evenly divisible by the tray quantity."*
+The MES SHALL validate at WorkOrder Create / Edit time that the WO target quantity is **evenly divisible by** the Item's `ContainerConfig.PartsPerTray` (and, where applicable, by `TraysPerContainer × PartsPerTray`). Non-divisible targets SHALL be rejected with a specific error code ("Target quantity {X} is not evenly divisible by tray quantity {Y}"). The same check SHALL fire at WO Close: if actual good count is not divisible by the tray quantity, the close is blocked (supervisor AD elevation can override per FDS-04-007 — the override reason is logged). Surfaced as a legacy Flexware error: *"Container processing error — Work order target quantity exceeded. Ensure target quantity is evenly divisible by the tray quantity."*
 
 ---
 
 ## 4. User Identity, Authentication & Elevation — `MVP`
 
-> ✅ **RESOLVED — OI-06 / UJ-01 (2026-04-20):** Operators do not authenticate. They are identified on a terminal by their initials, which are stamped onto every event. Elevated actions (holds, overrides, scrap, maintenance WOs, admin edits) require an Active Directory login at the moment of action — no session-sticky elevation, no clock-number/PIN convenience login. The 5-minute-timeout proposal is dropped.
+Operators do not authenticate. They are identified on a terminal by their initials, which are stamped onto every event. Elevated actions (holds, overrides, scrap, maintenance WOs, admin edits) require an Active Directory login at the moment of action — no session-sticky elevation, no clock-number/PIN convenience login.
 
 ### 4.1 Identity Model
 
@@ -674,11 +663,11 @@ When an operator approaches a shop-floor terminal to perform their first action,
 
 Operator presence is NOT an authenticated session. It is a stamping context. The operator cannot perform elevated actions from within it.
 
-#### FDS-04-003 — Terminal Mode: Dedicated vs Shared — `MVP` (revised v0.11e)
+#### FDS-04-003 — Terminal Mode: Dedicated vs Shared — `MVP`
 Terminal mode is **derived from the Terminal Location's parent tier** in the ISA-95 hierarchy per FDS-02-010 — it is not configured as a separate attribute.
 
-- **Dedicated terminals** (Terminal's parent Location is a WorkCenter or Cell; approx. 80% of the plant). The presence context persists across idle gaps, subject only to the 30-minute re-confirmation prompt. Initials do not clear unless explicitly changed.
-- **Shared terminals** (Terminal's parent Location is an Area; trim shop and similar multi-station contexts). The presence context SHALL be requested on first action after any idle period longer than the presence-timeout and SHALL also be re-prompted when the operator scans a machine barcode that differs from the previous machine context (per FDS-02-008 machine-barcode-scan pattern).
+- **Dedicated terminals** (Terminal's parent Location is a Cell). The Cell context is fixed, so presence context persists across idle gaps subject only to the 30-minute re-confirmation prompt. Initials do not clear unless explicitly changed.
+- **Shared terminals** (Terminal's parent Location is a WorkCenter or Area; e.g., a Die Cast cabin or Trim Shop where one terminal serves multiple Cells). The presence context SHALL be requested on first action after any idle period longer than the presence-timeout, and SHALL also be re-prompted when the operator changes Cell context — by scan or dropdown — per FDS-02-009.
 
 #### FDS-04-004 — Interactive User Authentication
 Interactive users (Quality, Supervisor, Engineering, Admin) SHALL authenticate via Ignition's Active Directory User Source. AD groups SHALL map to the Ignition roles in FDS-04-008. Operators SHALL NOT exist in AD.
@@ -710,7 +699,7 @@ Actions with quality, financial, safety, or master-data impact SHALL require a f
 
 Elevation is not session-sticky. Each elevated action re-prompts. This removes the 5-minute-timeout concept entirely — elevation is per-action, not per-session.
 
-The initial elevated-action list (the full set will be validated by Tom, MPP's security SME, before Arc 2 screen design freezes):
+The initial elevated-action list (the full set will be validated by Tom, MPP's security SME, before MVP screen design freezes):
 
 - Place a LOT on hold
 - Release a LOT from hold
@@ -720,7 +709,7 @@ The initial elevated-action list (the full set will be validated by Tom, MPP's s
 - Merge or split LOTs outside of the normal sort workflow
 - Issue or close a maintenance work order against a tool
 - Deprecate an `AppUser`, `Item`, `Bom`, `RouteTemplate`, `OperationTemplate`, `ContainerConfig`, or `Tool`
-- Adjust inventory via the admin remove-item action (OI-14)
+- Adjust inventory via the admin remove-item action
 - BOM substitute override at material scan-in (UJ-09 — strict BOM check fails, supervisor approves a one-shot substitute; the override event records to `Audit.OperationLog` for traceability)
 
 #### FDS-04-008 — Ignition Role Mapping
@@ -764,22 +753,20 @@ Each LOT SHALL carry:
 | Attribute | Source | Description |
 |---|---|---|
 | LotName | LTT barcode scan | Unique identifier (minted from `Lots.IdentifierSequence`, `Code=Lot`, per §16) |
-| ItemId | Operator selection | Which part number |
-| LotOriginTypeId | System-determined | Manufactured, RECEIVED, or RECEIVED_OFFSITE |
-| LotStatusId | System-managed | Current quality status (GOOD, HOLD, SCRAP, CLOSED) |
+| ItemId | Operator selection | Which part number. Selection is constrained to Items eligible at the active Cell per FDS-02-012 (direct + BOM-derived eligibility). |
+| LotOriginTypeId | System-determined | `Manufactured`, `Received`, or `ReceivedOffsite` |
+| LotStatusId | System-managed | Current quality status (`Good`, `Hold`, `Scrap`, `Closed`) |
 | PieceCount | Operator entry | Current count (decremented by consumption, adjusted at Trim) |
-| MaxPieceCount | From item master | Reasonability ceiling |
+| MaxPieceCount | From item master | Reasonability ceiling, populated from `Parts.Item.MaxLotSize` (semantically `PartsPerBasket` — one LOT = one basket, so the basket capacity caps the LOT) |
 | Weight | Operator entry or scale | Total weight |
 | ToolId | System + operator confirm | FK → `Tools.Tool.Id`. Required for die-cast-origin LOTs per FDS-05-034. NULL elsewhere. |
 | ToolCavityId | System + operator confirm | FK → `Tools.ToolCavity.Id`. Required for die-cast-origin LOTs per FDS-05-034. NULL elsewhere. |
-| DieNumber | Legacy (v0.10) | Retained for cutover; superseded by `ToolId`. Slated for removal. |
-| CavityNumber | Legacy (v0.10) | Retained for cutover; superseded by `ToolCavityId`. Slated for removal. |
 | VendorLotNumber | Operator entry | Received LOTs only |
 | CurrentLocationId | System-tracked | Updated on every movement |
 
 (FRS 3.9.6, 2.2.2)
 
-#### FDS-05-034 — Die-Cast-Origin Tool + Cavity Required on Lot Create — `MVP` (v0.11)
+#### FDS-05-034 — Die-Cast-Origin Tool + Cavity Required on Lot Create — `MVP`
 
 At `Lots.Lot_Create` for die-cast-origin LOTs, the caller SHALL supply `@ToolId` and `@ToolCavityId`. The proc SHALL validate:
 
@@ -787,9 +774,9 @@ At `Lots.Lot_Create` for die-cast-origin LOTs, the caller SHALL supply `@ToolId`
 2. `@ToolCavityId` references a `Tools.ToolCavity` row where `ToolId = @ToolId`.
 3. The cavity's `StatusCodeId` resolves to `Active` (not Closed, not Scrapped).
 
-Failure of any check SHALL reject with a specific error code. Non-die-cast origins (Received, Trim / Machining intermediate, Assembly, Serialized) SHALL pass NULL for both and the proc SHALL NOT require them. (OI-09 closed)
+Failure of any check SHALL reject with a specific error code. Non-die-cast origins (Received, Trim / Machining intermediate, Assembly, Serialized) SHALL pass NULL for both and the proc SHALL NOT require them.
 
-#### FDS-05-035 — Tools System of Record — On Lot, Not On ProductionEvent — `MVP` (v0.11)
+#### FDS-05-035 — Tools System of Record — On Lot, Not On ProductionEvent — `MVP`
 
 Tool and Cavity SHALL live on `Lots.Lot`, never on `Workorder.ProductionEvent`. Reports and exports that need Tool context on an event SHALL derive it via `ProductionEvent.LotId → Lot.ToolId / Lot.ToolCavityId`.
 
@@ -809,11 +796,9 @@ SELECT DISTINCT ChildLotId FROM Descendants
 OPTION (MAXRECURSION 100);
 ```
 
-(OI-09 closed)
+#### FDS-05-031 — LOT Computed Quantities (TotalInProcess, InventoryAvailable) — `MVP`
 
-#### FDS-05-031 — LOT Computed Quantities (TotalInProcess, InventoryAvailable) — `MVP` (revised v0.11f)
-
-**OI-23 (revised 2026-04-24):** The Lot Details screen SHALL surface two derived quantities in the header:
+The Lot Details screen SHALL surface two derived quantities in the header:
 
 - **TotalInProcess** — sum of pieces currently held at all non-terminal workstations (pieces started at a location but not yet completed out of it). Derived from `Workorder.ProductionEvent` aggregation: `Σ StartedCount − Σ CompletedCount − Σ ScrappedCount`, grouped by `(LotId, LocationId)`.
 - **InventoryAvailable** — pieces still available on the LOT for consumption or scrap (neither in-process nor consumed). Derived as: `Lot.PieceCount − TotalInProcess − Σ ConsumedCount`.
@@ -826,13 +811,14 @@ Legacy Flexware exposes these as header fields on its Lot Details screen.
 
 ### 5.2 LOT Creation Workflows
 
-#### FDS-05-004 — Manufactured LOT Creation (Die Cast) — revised v0.11
+#### FDS-05-004 — Manufactured LOT Creation (Die Cast)
 At Die Cast, the operator SHALL:
+
 1. Fill a basket with parts from the active cavity of the die cast machine.
 2. Attach a **pre-printed LTT barcode sticker** to the basket (LTTs are printed in batches outside the MES per FRS 2.2.1).
 3. Scan the LTT barcode at the MES terminal — this scan creates the LOT record; the physical label already exists.
 4. On Cell selection, the screen SHALL **auto-populate the currently mounted Tool** from `Tools.ToolAssignment_ListActiveByCell(@CellLocationId)`. Operator SHALL confirm the populated Tool matches the physical die. **Edit** (elevated action per FDS-04-007) SHALL trigger inline `Tools.ToolAssignment_Release` + `Tools.ToolAssignment_Assign` to correct the system of record when physical ≠ system.
-5. Operator SHALL select the active `ToolCavityId` producing this basket (cavity dropdown filtered to cavities where `Tool.Id = @ToolId` AND `StatusCode = Active`). Part number is implied by the current order / schedule; piece count is operator-entered.
+5. Operator SHALL select the active `ToolCavityId` producing this basket (cavity dropdown filtered to cavities where `Tool.Id = @ToolId` AND `StatusCode = Active`). Operator SHALL select the produced `ItemId` from a dropdown constrained to Items eligible at this Cell per FDS-02-012 (typically a short list at Die Cast). Piece count is operator-entered.
 6. The MES SHALL validate: piece count ≤ `Item.MaxLotSize` (now labeled `PartsPerBasket` — basket capacity), part is eligible on this Cell, Tool + Cavity per FDS-05-034.
 7. The MES SHALL create the LOT with origin type Manufactured, status Good, location = scanned Cell (per FDS-02-009), `ToolId` and `ToolCavityId` set.
 8. The MES SHALL write a `Workorder.ProductionEvent` checkpoint row with cumulative `ShotCount` / `ScrapCount` as-of-this-basket-close (per FDS-03-017a checkpoint shape).
@@ -841,10 +827,11 @@ At Die Cast, the operator SHALL:
 
 **Note:** Other areas (Trim, Machining, Assembly) do NOT require operator Tool validation at LOT create — their LOTs carry NULL `ToolId` / `ToolCavityId`.
 
-> 🔶 **PENDING CUSTOMER VALIDATION — UJ-02:** Confirms that LTT tags at Die Cast are pre-printed and the first scan creates the record. No in-MES print for Die Cast LOT creation.
+LTT tags at Die Cast are pre-printed in batches by MPP per FRS 2.2.1; the first scan creates the LOT record. The MES does not print at Die Cast LOT creation.
 
 #### FDS-05-005 — Received LOT Creation (Pass-Through Parts)
 At the Receiving Dock, the operator SHALL:
+
 1. Scan or manually enter the vendor reference (PO number, packing slip, etc.)
 2. Enter: part number, vendor lot number, piece count
 3. The MES SHALL create the LOT with origin type Received, status Good, location = Receiving Dock
@@ -866,7 +853,7 @@ Every time a LOT physically moves to a new location, the system SHALL record an 
 A LOT movement is always initiated by an operator at a terminal. The explicit workflow SHALL be:
 
 1. **Presence** — The terminal already has an operator presence context established via initials (per §4). If 30 minutes have elapsed, the operator confirms or changes presence via the re-confirmation overlay. The terminal's `TerminalLocationId` is the `Location` where the operator is standing.
-2. **Scan Location** — Operator scans the machine/location barcode for the destination (the Cell where the LOT is arriving). The system resolves the scanned code to a `Location.Id` and verifies it is a valid production context (Cell-tier, appropriate definition).
+2. **Set destination Cell** — On a dedicated terminal the destination defaults to the terminal's parent Cell (FDS-02-009) and is read-only. On a shared terminal the operator selects the destination Cell by scan or dropdown (constrained to descendant Cells of the terminal's parent Location). Either path resolves to a `Location.Id` and SHALL verify the destination is a valid production context (Cell-tier, appropriate definition).
 3. **Scan LOT** — Operator scans the LOT's LTT barcode. The system looks up the LOT by `LotName`, validates it is not CLOSED, and reads its current `CurrentLocationId` as the from-location.
 4. **Record Movement** — The system writes a `LotMovement` row (from-location, to-location, resolved `AppUserId` from the pre-populated initials, terminal location, timestamp) and updates the LOT's `CurrentLocationId` to the scanned destination.
 5. **Confirm** — The screen displays the movement confirmation and transitions to the appropriate next action (production recording, inspection, split, etc.) based on the destination's `LocationTypeDefinition`.
@@ -875,13 +862,13 @@ The presence → scan location → scan lot sequence ensures that every movement
 
 **Implicit movement:** The system SHALL also infer a movement when a LOT is consumed or produced at a machine without a prior explicit scan. For example, if an assembly operator records consumption of a source LOT currently at the WIP staging area, the system SHALL implicitly write a `LotMovement` from WIP → the assembly Cell before writing the `ConsumptionEvent`. This keeps the traceability record complete without requiring redundant scans.
 
-#### FDS-05-036 — Lazy, Operator-Driven LOT Creation — `MVP` (v0.11)
+#### FDS-05-036 — Lazy, Operator-Driven LOT Creation — `MVP`
 
 LOT creation SHALL be **lazy and operator-driven**. The MES SHALL NOT auto-create N LOTs at run start, nor prescribe when an operator must log a new LOT. Valid moments for `Lot_Create` include: on physical completion of a basket (operator goes to terminal to log + move it), after completing a prior LOT and before starting the next (pre-emptive creation), or any other moment the operator chooses.
 
-Physical-but-unlogged baskets exist until the operator logs them. The Arc 2 Phase 3 Die Cast UX and associated procs SHALL NOT require a LOT row to exist for an in-progress cavity. Tool + Cavity assignment happens at `Lot_Create` time, not at any abstract "run start" event.
+Physical-but-unlogged baskets exist until the operator logs them. The Die Cast UX and associated procs SHALL NOT require a LOT row to exist for an in-progress cavity. Tool + Cavity assignment happens at `Lot_Create` time, not at any abstract "run start" event.
 
-#### FDS-05-037 — LOT Close Semantics — `MVP` (v0.11)
+#### FDS-05-037 — LOT Close Semantics — `MVP`
 
 LOT close behavior SHALL vary by origin:
 
@@ -894,9 +881,9 @@ No other close paths are defined. Scrapped material SHALL still move through eit
 
 #### FDS-05-032 — Partial Start and Partial Complete — `MVP`
 
-**OI-21 (new v0.10):** Start and Complete at a workstation SHALL be independent operations with independent quantities. An operator MAY start N pieces at a workstation now and complete M of them (where M ≤ N) later — including across shift boundaries. The `Workorder.ProductionEvent_Record` proc SHALL accept independent Start and Complete event emission. Derivation of in-process quantities (FDS-05-031) and runtime workstation WIP grids SHALL work by event replay of Start / Complete / Scrap events, not by maintaining a running counter that assumes atomic start-and-complete. Legacy Flexware surfaces this as separate "Start lot quantity" and "Complete lot quantity" fields on the Move Lot screen. The implementation SHALL be verified against this requirement before Arc 2 screen design freezes.
+Start and Complete at a workstation SHALL be independent operations with independent quantities. An operator MAY start N pieces at a workstation now and complete M of them (where M ≤ N) later — including across shift boundaries. The `Workorder.ProductionEvent_Record` proc SHALL accept independent Start and Complete event emission. Derivation of in-process quantities (FDS-05-031) and runtime workstation WIP grids SHALL work by event replay of Start / Complete / Scrap events, not by maintaining a running counter that assumes atomic start-and-complete. Legacy Flexware surfaces this as separate "Start lot quantity" and "Complete lot quantity" fields on the Move Lot screen. The implementation SHALL be verified against this requirement before MVP rollout.
 
-#### FDS-05-038 — Pausable LOT at Workstation — `MVP` (v0.11h, OI-21)
+#### FDS-05-038 — Pausable LOT at Workstation — `MVP`
 
 **Concept.** Pause is a `(Lot, Location)` lifecycle event capturing operator focus shift. A partially-progressed LOT at a Cell MAY be paused so the operator may attend to a different LOT at the same Cell. The paused LOT remains in-process at the original Cell with its prior partial-start state intact (FDS-05-032); the operator MAY freely run other LOTs at that same Cell while the pause is open.
 
@@ -912,49 +899,48 @@ No other close paths are defined. Scrapped material SHALL still move through eit
 
 **Optional reason / remarks.** `PauseEvent.PausedReason` is optional — operators MAY pause without entering a reason. `PauseEvent.ResumedRemarks` is also optional.
 
-**Procs.** Arc 2 Phase 1 SHALL deliver:
+**Procs.** The proc layer SHALL provide:
+
 - `Lots.LotPause_Place(@LotId, @LocationId, @PausedByUserId, @PausedReason NVARCHAR(500) = NULL)` — opens a pause; rejects with a clear message if `(LotId, LocationId)` already has an open pause.
 - `Lots.LotPause_Resume(@LotId, @LocationId, @ResumedByUserId, @ResumedRemarks NVARCHAR(500) = NULL)` — closes the open pause; rejects if no open pause exists.
 - `Lots.LotPause_GetByLocation(@LocationId)` — single result set: `(LotId, LotName, ItemId, PartCode, PausedByUserId, PausedAt, PausedReason)` for currently-paused LOTs at this Cell. Joined to `Lots.v_LotDerivedQuantities` so the detail list can show in-process counts at a glance.
 - `Lots.LotPause_GetCountsByLocation` — single result set: `(LocationId, OpenPauseCount)` across all Cells for wallboard / indicator binding.
 
-All four procs follow the FDS-11-011 single-result-set convention. Mutations write to `Audit.OperationLog`; the new `PauseEvent` `Audit.LogEntityType` row is added in the Arc 2 Phase 1 migration.
-
-**Implementation deferred.** Like the rest of the Lots schema, `Lots.PauseEvent` and its procs CREATE in Arc 2 Phase 1 — they do not exist in the Phase 1–8 codebase. Data model contract: §3 PauseEvent.
+All four procs follow the FDS-11-011 single-result-set convention. Mutations write to `Audit.OperationLog`; the `PauseEvent` `Audit.LogEntityType` row is added when the Lots schema is created.
 
 ### 5.4 Sub-LOT Splitting
 
-> ✅ **REVISED — OI-09 closed (2026-04-23):** The 2026-04-20 addenda conflated two distinct workflows. Restated in v0.11:
-> - **Cavity-parallel LOTs at Die Cast are peers, NOT sublots.** A die with N active cavities produces **N parallel independent LOTs**. Each LOT has `ToolId` + `ToolCavityId` set at creation (FDS-05-034), fills at its own rate, closes independently. No parent/child FK between cavity peers. One LTT barcode per LOT. Genealogy is flat at Die Cast. See §5.2 FDS-05-004 for creation flow.
-> - **Machining sub-LOT split IS a sublot pattern.** The workflow below (FDS-05-022, -024, -009..011) remains authoritative for Machining OUT. Parent FK + split genealogy + sublot labels.
-> - **Basket-level sublots** from the 2026-04-20 addenda are absorbed by the Die Cast cavity-parallel-LOT model (one basket = one LOT = one label) or by the Machining sub-LOT split below.
+The MES distinguishes two LOT-multiplication patterns. Only the second is a true sublot pattern; the first is peer creation.
+
+- **Cavity-parallel LOTs at Die Cast are peers, NOT sublots.** A die with N active cavities produces **N parallel independent LOTs**. Each LOT has `ToolId` + `ToolCavityId` set at creation (FDS-05-034), fills at its own rate, and closes independently. There is no parent/child FK between cavity peers. One LTT barcode per LOT. Genealogy is flat at Die Cast. See §5.2 FDS-05-004 for creation flow.
+- **Machining sub-LOT split IS a sublot pattern.** The workflow below (FDS-05-022, -024, -009..011) is authoritative for Machining OUT — parent FK, split genealogy, sublot labels.
+- **Basket-level sublots** are absorbed by the two patterns above: at Die Cast, one basket = one cavity-parallel LOT = one label; at Machining, basket-level splitting is the Machining sub-LOT pattern.
 
 #### FDS-05-022 — Sublot Pattern (Machining)
 A sublot SHALL be a `Lots.Lot` row with a non-NULL `ParentLotId` FK. Sublots carry an independent `LotNumber` (from the LTT barcode scanned at creation), their own piece count, status, and movement history, but trace back to the parent via the FK plus a `LotGenealogy` row with `RelationshipType = Split`. Sublots SHALL persist for the full LOT lifecycle — they are never re-merged back into the parent, and their labels travel with the physical container. The parent LOT's piece count SHALL be decremented by the total pieces split off; the parent reaches `LotStatusCode = Closed` when its piece count hits zero (all pieces split off to sublots or consumed).
 
 Sublots created under FDS-05-022 inherit the parent's `ToolId` / `ToolCavityId` (both typically NULL for Machining-origin parents). If the parent is unusually die-cast-origin and is split at Machining, the children SHALL carry `ToolId = NULL` and `ToolCavityId = NULL` — the Tool/Cavity identity is already recorded on the parent LOT's row and on the genealogy edge; sublots are Machining LOTs, not die cast.
 
-#### FDS-05-023 — [Superseded v0.11]
-~~Per-cavity sublots at Die Cast~~ — superseded by the cavity-parallel-LOT-as-peer pattern. Each cavity produces a first-class LOT with its own `ToolId`/`ToolCavityId` per FDS-05-034. See §5.2 FDS-05-004 for creation. This requirement slot is retained empty to avoid renumbering downstream requirements.
-
 #### FDS-05-024 — Sublot Labels
 Every sublot LTT label SHALL display both the sublot's own `LotNumber` and the `ParentLotNumber`. The `Lots.LotLabel` row SHALL carry a `ParentLotId` reference column (nullable — non-sublot labels have no parent) for label-regeneration and audit purposes. The operator-visible genealogy view SHALL let a user enter either number and see the other. Label reprint workflows (FDS-05-020) for a sublot SHALL preserve the parent reference.
 
-#### FDS-05-009 — Machining Auto-Split Workflow
+#### FDS-05-009 — Trim → Machining Sub-LOT Split Workflow
 
-> 🔶 **PENDING INTERNAL REVIEW — UJ-03:** Reconciled with OI-09 sublot pattern per FDS-05-022 — the auto-split at Machining IN is one specific case of the broader sublot pattern. Still needs review with Ben on the even-split default vs. alternative defaults.
+> 🔶 **PENDING INTERNAL REVIEW — UJ-03:** Even-split default vs. alternative defaults still needs review with Ben.
 
-On arrival at the Machining IN screen, when a LOT is scanned, the system SHALL present an auto-split confirmation dialog:
-1. Calculate an even 2-way split of the parent LOT's piece count (e.g., 50 → 25/25; 51 → 26/25)
-2. Display the proposed split with editable quantities — the operator confirms or adjusts
-3. On confirmation, create two child LOT records per FDS-05-022 (sublot pattern), each requiring the operator to scan a fresh LTT barcode
-4. Decrement the parent LOT's piece count by the total pieces split off
-5. If all pieces are split off, set the parent LOT's status to `Closed`
-6. Write `LotGenealogy` records with relationship type `Split` for each parent→child link
-7. Print LTT labels for each child sublot — labels follow the FDS-05-024 parent-reference rule
-8. Log all operations to `Audit.OperationLog`
+The sub-LOT split that distributes a trimmed cast LOT across multiple Machining Cells SHALL happen at **Trim OUT** (not Machining IN). The mechanics:
 
-The operator MAY cancel the auto-split and process the LOT without splitting. The operator MAY also adjust the number of sublots (not limited to 2) or the quantities before confirming. (FRS 2.1.4, 2.2.5, 3.9.12)
+1. When the operator completes Trim work on a parent LOT and triggers Trim OUT (FDS-06-006), the system SHALL present a sub-LOT split confirmation dialog.
+2. Calculate an even N-way split of the parent LOT's piece count (default N=2; e.g., 50 → 25/25; 51 → 26/25). The operator MAY adjust the number of sublots and per-sublot quantities; the total SHALL equal the parent's piece count.
+3. For each sub-LOT, the operator SHALL select the destination Machining Cell (scan or dropdown per FDS-02-009) — this writes the sub-LOT into that Cell's FIFO queue.
+4. On confirmation, create N child LOT records per FDS-05-022 (sublot pattern). Each sub-LOT inherits the parent's `ItemId` (the cast/trim Item — the **Trim → Machining rename does not happen yet**; that fires at Machining IN per FDS-05-033). Each child requires a fresh LTT barcode scan.
+5. Decrement the parent LOT's piece count by the total pieces split off; close the parent if all pieces moved (`LotStatusCode = Closed`).
+6. Write `LotGenealogy` records with `RelationshipType = Split` for each parent→child link.
+7. Write a `LotMovement` for each sub-LOT moving from the Trim Cell to the destination Machining Cell.
+8. Print LTT labels for each child sublot — labels follow the FDS-05-024 parent-reference rule.
+9. Log all operations to `Audit.OperationLog`.
+
+The operator MAY cancel the split and process the LOT as a single sub-LOT routed to one Machining Cell. (FRS 2.1.4, 2.2.5, 3.9.12)
 
 #### FDS-05-010 — Uneven Split Handling
 If the parent LOT's piece count is odd, the system SHALL propose the closest even split (e.g., 51 → 26/25). The operator MAY adjust these sizes before confirming. The total of all child quantities SHALL equal the parent's piece count.
@@ -964,46 +950,47 @@ The parent→child relationship created by a split SHALL be permanent and immuta
 
 ### 5.5 LOT Merging — `MVP`
 
-> 🔶 **REVISED — OI-05 (2026-04-20):** MPP delivered concrete merge rules at the 2026-04-20 review:
-> - Merges SHALL be allowed only **after sort is complete** (post-inspection stage; Sort Cage output merges are not permitted — see FDS-07-019).
-> - Same **part number** SHALL be required.
-> - Same **die** → merge proceeds.
-> - Different dies → merge proceeds only when the pair's rank is compatible per `Tools.DieRankCompatibility` (Phase B Tools schema).
-> - **Machining** is FIFO-by-cavity — not a merge operation.
-> - Quality-status mixing SHALL be blocked (no merging `Hold` with `Good`).
-> - Piece counts SHALL be additive; merged LOTs SHALL NOT be un-mergeable.
->
-> Supervisor AD elevation (FDS-04-007) unlocks merges that would otherwise be rejected. Full die-rank compatibility matrix is still owed by MPP Quality — until delivered, cross-die merges are rejected with a clear message and the supervisor override is the only path.
+LOT merge rules are concrete and enforced at the proc layer (see FDS-05-025 through FDS-05-030 below for the per-rule requirements):
+
+- Merges SHALL be allowed only **after sort is complete** (post-inspection stage; Sort Cage output merges are not permitted — see FDS-07-019).
+- Same **part number** SHALL be required.
+- Same **die** → merge proceeds.
+- Different dies → merge proceeds only when the pair's rank is compatible per `Tools.DieRankCompatibility`.
+- **Machining** is FIFO-by-cavity — not a merge operation.
+- Quality-status mixing SHALL be blocked (no merging `Hold` with `Good`).
+- Piece counts SHALL be additive; merged LOTs SHALL NOT be un-mergeable.
+
+Supervisor AD elevation (FDS-04-007) unlocks merges that would otherwise be rejected. The full die-rank compatibility matrix is owed by MPP Quality — until delivered, cross-die merges are rejected with a clear message and the supervisor override is the only path.
 
 #### FDS-05-012 — Merge Capability
 The system SHALL support merging multiple LOTs into a single new LOT. The `LotGenealogy` table records the relationship using `RelationshipType = Merge`. Merge rules SHALL be enforced in the `Lots.Lot_Merge` stored procedure — no frontend-only validation. (FRS 3.9.13)
 
 #### FDS-05-025 — Post-Sort Requirement
-`Lots.Lot_Merge` SHALL reject any merge where one or more source LOTs have not completed their configured sort/inspection operation. The check SHALL be: for every source LOT, a `Workorder.ProductionEvent` or `Quality.QualityResult` exists whose operation template is marked as a sort / inspection terminator on the LOT's route template. If the route has no sort step, merges on LOTs from that route are not permitted (every merge-eligible part SHALL have a sort step configured). (OI-05 revised; FRS 3.13.1)
+`Lots.Lot_Merge` SHALL reject any merge where one or more source LOTs have not completed their configured sort/inspection operation. The check SHALL be: for every source LOT, a `Workorder.ProductionEvent` or `Quality.QualityResult` exists whose operation template is marked as a sort / inspection terminator on the LOT's route template. If the route has no sort step, merges on LOTs from that route are not permitted (every merge-eligible part SHALL have a sort step configured). (FRS 3.13.1)
 
 #### FDS-05-026 — Part Number Match
-`Lots.Lot_Merge` SHALL reject any merge where source LOTs do not share the same `ItemId`. Different part numbers SHALL NOT be merged under any circumstance, including supervisor override. (OI-05 revised; FRS 3.9.13)
+`Lots.Lot_Merge` SHALL reject any merge where source LOTs do not share the same `ItemId`. Different part numbers SHALL NOT be merged under any circumstance, including supervisor override. (FRS 3.9.13)
 
 #### FDS-05-027 — Die Rank Compatibility
 Cross-die merges SHALL be gated by `Tools.DieRankCompatibility` (Phase B Tools schema):
 
-1. Resolve each source LOT's die via the `DieIdentifier` captured on the originating `Workorder.ProductionEvent` (optionally joined to `Tools.Tool` once the analytics FK is added — see Data Model v1.7 §7 cross-references).
+1. Resolve each source LOT's die via `Lots.Lot.ToolId` (FK → `Tools.Tool.Id`, populated at die-cast LOT create per FDS-05-034).
 2. If all source LOTs share the same die, the compatibility check is bypassed; proceed to FDS-05-028 (Quality Status Gating).
 3. If the source LOTs span different dies, look up each distinct pair in `Tools.DieRankCompatibility`. If **every** pair has `CanMix = 1`, the merge proceeds.
 4. If any pair is missing from the matrix OR has `CanMix = 0`, the merge SHALL be rejected with the message "Die ranks for dies [X] and [Y] are not compatible for merge" (or "...not configured for merge" when the row is missing).
 5. A Supervisor or Quality user MAY override the rejection via the FDS-04-007 AD elevation prompt. Overridden merges SHALL record the overriding user and the rejected rule set on the resulting `LotGenealogy` row's `Notes` column.
 
-Until MPP Quality delivers the full `DieRankCompatibility` matrix (seeded empty in Phase B), all cross-die merges SHALL fall through to the supervisor override path. (OI-05 revised; couples to Phase B Tools schema.)
+Until MPP Quality delivers the full `DieRankCompatibility` matrix (seeded empty in Phase B), all cross-die merges SHALL fall through to the supervisor override path.
 
 #### FDS-05-028 — Quality Status Gating
-`Lots.Lot_Merge` SHALL reject any merge where the source LOTs do not share the same `LotStatusCode` value, except that `Closed` LOTs SHALL never participate in a merge (they are already fully consumed). Specifically: merging a `Hold` LOT with a `Good` LOT SHALL be rejected. Supervisor override via FDS-04-007 is NOT allowed for mixed quality status — a held LOT must be released via the hold-release workflow (§8.2) before it can be merged. (OI-05 revised)
+`Lots.Lot_Merge` SHALL reject any merge where the source LOTs do not share the same `LotStatusCode` value, except that `Closed` LOTs SHALL never participate in a merge (they are already fully consumed). Specifically: merging a `Hold` LOT with a `Good` LOT SHALL be rejected. Supervisor override via FDS-04-007 is NOT allowed for mixed quality status — a held LOT must be released via the hold-release workflow (§8.2) before it can be merged.
 
 #### FDS-05-029 — Machining Is Not a Merge — FIFO-by-Cavity
-The machining workflow SHALL NOT issue merge events. When multiple cavity-parallel LOTs (`Lot.ToolCavityId` set) arrive at a machining cell, the cell SHALL process them first-in-first-out (FIFO) keyed by LOT `CreatedAt`, grouped by `ToolCavityId`. Each LOT retains its identity through the machining operation; no `LotGenealogy` `Merge` row is written. (OI-05 revised; FRS 3.13.1)
+The machining workflow SHALL NOT issue merge events. When multiple cavity-parallel LOTs (`Lot.ToolCavityId` set) arrive at a machining cell, the cell SHALL process them first-in-first-out (FIFO) keyed by LOT `CreatedAt`, grouped by `ToolCavityId`. Each LOT retains its identity through the machining operation; no `LotGenealogy` `Merge` row is written. (FRS 3.13.1)
 
-#### FDS-05-030 — Post-Merge LOT Has NULL Tool / Cavity — `MVP` (v0.11)
+#### FDS-05-030 — Post-Merge LOT Has NULL Tool / Cavity — `MVP`
 
-After a successful `Lots.Lot_Merge`, the resulting merged LOT SHALL have `ToolId = NULL` and `ToolCavityId = NULL` — blended-origin material from multiple source LOTs cannot be denormalized into a single Tool/Cavity FK pair. Tool-specific trace SHALL be reconstructed via `Lots.LotGenealogy` traversal of the pre-merge source LOTs (each of which retains its own Tool/Cavity FKs immutably). The merge proc SHALL NOT attempt to pick a "representative" Tool. (OI-09 closed; Decision 10)
+After a successful `Lots.Lot_Merge`, the resulting merged LOT SHALL have `ToolId = NULL` and `ToolCavityId = NULL` — blended-origin material from multiple source LOTs cannot be denormalized into a single Tool/Cavity FK pair. Tool-specific trace SHALL be reconstructed via `Lots.LotGenealogy` traversal of the pre-merge source LOTs (each of which retains its own Tool/Cavity FKs immutably). The merge proc SHALL NOT attempt to pick a "representative" Tool.
 
 ### 5.6 LOT Status Transitions
 
@@ -1067,39 +1054,40 @@ The system SHALL track these label print reasons:
 | Merge | New merged LOT created | Output LOT from a merge operation |
 | SortCageReIdentify | Re-identification during Sort Cage re-pack | Containers being re-sorted |
 
-> 🔶 **PENDING CUSTOMER VALIDATION — Initial Print for Die Cast:** Die Cast LOTs do NOT trigger an `Initial` print event in the MES. Per UJ-02, LTT tags at Die Cast are pre-printed in batches by MPP (per FRS 2.2.1) — the physical label is already on the basket when the operator scans it to create the LOT record. The first scan creates the LOT; the MES does not print the label because the label already exists. This assumption needs MPP validation before go-live.
->
-> The `Initial` print reason still applies to:
-> - **Received LOTs** (pass-through parts): no pre-printed tag exists for vendor material, so the MES generates and prints an LTT at receiving time
-> - **Off-site receiving**: same as above
-> - **Any system-generated LOT without a pre-printed tag** (edge case — e.g., emergency re-identification)
+Die Cast LOTs do NOT trigger an `Initial` print event in the MES. LTT tags at Die Cast are pre-printed in batches by MPP per FRS 2.2.1 — the physical label is already on the basket when the operator scans it to create the LOT record. The first scan creates the LOT; the MES does not print the label because the label already exists.
 
-(FRS 3.13.1, 2.2.1, UJ-02)
+The `Initial` print reason still applies to:
+
+- **Received LOTs** (pass-through parts): no pre-printed tag exists for vendor material, so the MES generates and prints an LTT at receiving time
+- **Off-site receiving**: same as above
+- **Any system-generated LOT without a pre-printed tag** (edge case — e.g., emergency re-identification)
+
+(FRS 3.13.1, 2.2.1)
 
 ### 5.9 LOT Attribute Auditing
 
 #### FDS-05-021 — Attribute Change Log
 Every change to a LOT attribute (piece count, weight, die number, cavity number, status) SHALL be recorded in the `LotAttributeChange` table: LOT, attribute name, old value, new value, changed-by user, terminal, timestamp. This is in addition to the domain-specific history tables (status history, movement history). (FRS 3.9.6)
 
-### 5.10 Part Identity Change — Casting to Trim — `MVP` (OI-11 resolved 2026-04-22)
+### 5.10 Part Identity Change — Trim to Machining — `MVP`
 
-Per MPP Engineering (2026-04-20 meeting): a part **changes identity** as it crosses from Casting into the Trim Shop — the physical piece is the same but carries a different part number on each side of the boundary. Honda genealogy queries MUST resolve across this rename so a shipped part traces back to its cast origin.
+Per MPP Engineering: a part **changes identity** as it crosses from the Trim Shop into Machining — the physical piece is the same but carries a different part number on each side of the boundary. Within Casting and Trim the LOT keeps a single cast-part identity (Trim is sprue removal and deburr; yield losses are recorded as `RejectEvent` rows on the same LOT, not as a rename). The rename happens only when Machining begins. Honda genealogy queries MUST resolve across this rename so a shipped part traces back to its cast origin.
 
-> **OI-11 resolution (2026-04-22):** The v0.10 draft initially added a dedicated `Parts.ItemTransform` table + FDS-05-033..035 to bridge the rename. On review the table was redundant — every column duplicated `Workorder.ConsumptionEvent`, and the Casting → Trim boundary is a **degenerate 1-line BOM consumption**. The existing `Parts.Bom`, `Workorder.ConsumptionEvent`, and `Lots.LotGenealogy` machinery covers this case without new schema. FDS-05-033..035 retired; the single requirement below replaces them.
+The Trim → Machining boundary is modeled as a **degenerate 1-line BOM consumption**. The existing `Parts.Bom`, `Workorder.ConsumptionEvent`, and `Lots.LotGenealogy` machinery covers this case without new schema — no dedicated `Parts.ItemTransform` bridge table is needed.
 
-#### FDS-05-033 — Casting → Trim Rename via 1-Line BOM — `MVP`
+#### FDS-05-033 — Trim → Machining Rename via 1-Line BOM — `MVP`
 
-The trim-side `Parts.Item` SHALL be defined with a single-line `Parts.Bom` whose `BomLine.ChildItemId` references the cast-side `Item` at `QtyPer = 1`. At the first Trim Shop Cell, when an operator scans a cast-side LOT into the Cell, the MES SHALL:
+The machining-side `Parts.Item` SHALL be defined with a single-line `Parts.Bom` whose `BomLine.ChildItemId` references the trim-side `Item` (the cast part as it exits Trim) at `QtyPer = 1`. At the first Machining Cell, when an operator scans a trim-side LOT into the Cell, the MES SHALL:
 
 1. Look up finished items produced at this Cell (via `Parts.ItemLocation` where `IsConsumptionPoint = 0` and the Item has a published `Parts.Bom`).
-2. For each such item, check whether its BOM's single line references the scanned LOT's Item. The matching finished item is the destination part.
+2. For each such item, check whether its BOM's single line references the scanned LOT's Item. The matching machined item is the destination part.
 3. Prompt the operator to confirm: *"This LOT is {sourcePart}. Receive as {destinationPart}?"* with Yes / No controls.
-4. On **Yes**: create a new destination LOT under the trim part (operator scans a fresh LTT), write a `Workorder.ConsumptionEvent` with `ConsumedItemId = cast`, `ProducedItemId = trim`, `PieceCount = N` piece-for-piece (plus a `Workorder.RejectEvent` for any yield loss), and a `Lots.LotGenealogy` row with `RelationshipType = Consumption` linking source and destination LOTs.
+4. On **Yes**: create a new destination LOT under the machined part (operator scans a fresh LTT), write a `Workorder.ConsumptionEvent` with `ConsumedItemId = trim`, `ProducedItemId = machined`, `PieceCount = N` piece-for-piece (plus a `Workorder.RejectEvent` for any yield loss), and a `Lots.LotGenealogy` row with `RelationshipType = Consumption` linking source and destination LOTs.
 5. On **No / Cancel**: abort the scan-in. Operator may re-scan or escalate (supervisor AD elevation per FDS-04-007 required for any override of the BOM-implied destination).
 
-**Backward trace** (Honda genealogy): standard `Lots.LotGenealogy` walk from the shipped trim LOT recovers the cast LOT via the `Consumption` edge, then onwards to the cast machine / die / cavity / operator / timestamp. No special join or ItemTransform lookup — trace works exactly as for any assembly consumption.
+**Backward trace** (Honda genealogy): standard `Lots.LotGenealogy` walk from a shipped machined LOT (or any LOT downstream of Machining) recovers the trim/cast LOT via the `Consumption` edge written at Machining IN. Because Casting and Trim are the same `LotId`, the trim/cast LOT carries the original Die Cast `ProductionEvent` rows directly — the cast machine, die, cavity, operator, and timestamp are reachable in one read against that same LOT. No special join or ItemTransform lookup — trace works exactly as for any assembly consumption.
 
-**Why this is enough:** the trim part is a *new Item master record*, so the part-number distinction is already captured. The source-and-destination semantics are captured by `ConsumptionEvent.ConsumedItemId` vs `ProducedItemId`. The piece mapping is captured by `ConsumptionEvent.PieceCount`. Operator, terminal, location, and timestamp are all existing columns. A dedicated "rename" table adds no information the consumption model doesn't already carry.
+**Why this is enough:** the machined part is a *new Item master record*, so the part-number distinction is already captured. The source-and-destination semantics are captured by `ConsumptionEvent.ConsumedItemId` vs `ProducedItemId`. The piece mapping is captured by `ConsumptionEvent.PieceCount`. Operator, terminal, location, and timestamp are all existing columns. A dedicated "rename" table adds no information the consumption model doesn't already carry.
 
 ---
 
@@ -1131,8 +1119,9 @@ Before recording production, the system SHALL validate:
 - The piece count does not exceed the item's max lot size
 - If any validation fails, the system SHALL display a clear error and prevent the recording
 
-#### FDS-06-003 — Die Cast Production Event — revised v0.11 (checkpoint shape)
+#### FDS-06-003 — Die Cast Production Event
 On operator submission at a Die Cast checkpoint (e.g., basket close, end-of-shift handoff, scrap-from-location action), the system SHALL (per FDS-03-017a, in one transaction):
+
 1. Write an immutable `Workorder.ProductionEvent` row carrying `LotId`, `OperationTemplateId`, `EventAt`, cumulative `ShotCount` / `ScrapCount` as-of-this-moment, optional `ScrapSourceId` (non-NULL only when this checkpoint is a scrap-driving action), optional `WeightValue` + `WeightUomId`, `AppUserId`, `TerminalLocationId`.
 2. Write one `Workorder.ProductionEventValue` child row per non-hot `DataCollectionField` configured on the active operation template.
 3. Update the LOT's `PieceCount` to reflect the current good count (derivation: `ShotCount - ScrapCount` since last event, plus any adjustments).
@@ -1140,38 +1129,62 @@ On operator submission at a Die Cast checkpoint (e.g., basket close, end-of-shif
 
 Reports that need per-event good-count deltas SHALL compute `ShotsSinceLast = ShotCount - LAG(ShotCount) OVER (PARTITION BY LotId ORDER BY EventAt)`. Reports that need Tool/Cavity context SHALL join to `Lots.Lot` on `ProductionEvent.LotId` and read `Lot.ToolId` / `Lot.ToolCavityId` (per FDS-05-035).
 
-> 🔶 **PENDING INTERNAL REVIEW — UJ-14:** Warm-up shots are tracked as a downtime sub-category rather than on the production event. The Die Cast operator logs warm-up time as a `DowntimeEvent` with `ReasonType` = Setup and records the warm-up shot count in the `ShotCount` column on that downtime event. Good/bad production shot counts remain on the `ProductionEvent`. This separates warm-up activity (time + shots wasted) from production activity (good parts made). Needs review with Ben.
+Warm-up shots are tracked as a downtime sub-category rather than on the production event. The Die Cast operator SHALL log warm-up time as a `DowntimeEvent` with `ReasonType` = `Setup` and SHALL record the warm-up shot count in the `ShotCount` column on that downtime event. Good and bad production shot counts remain on the `ProductionEvent`. This separates warm-up activity (time and shots wasted) from production activity (good parts made).
 
 ### 6.3 Trim Shop Workflow
 
-#### FDS-06-004 — Trim Shop LOT Processing
-When a LOT arrives at the Trim Shop, the operator SHALL scan the LTT barcode. The system SHALL record a `LotMovement` to the Trim area. (FRS 2.2.3)
+The Trim Shop deburrs and sprues cast pieces. The LOT keeps its original cast `ItemId` throughout Trim — sprue removal is yield loss recorded as `RejectEvent` rows on the same LOT (per FDS-06-019), not a part-identity change. The Trim → Machining rename happens at Machining IN per FDS-05-033, not at Trim OUT. What does happen at Trim OUT is a sub-LOT split that distributes the trimmed pieces across multiple Machining Cells.
+
+#### FDS-06-004 — Trim IN
+When a LOT arrives at the Trim Shop, the operator SHALL scan the LTT barcode (or pick from FIFO if the operator workflow surfaces a queue). The system SHALL record a `LotMovement` to the Trim Cell. (FRS 2.2.3)
 
 #### FDS-06-005 — Weight-Based Piece Count Estimation
 The Trim Shop screen SHALL support weight-based piece count estimation:
+
 1. Operator reads the basket weight from the scale (manual entry or OmniServer integration)
 2. The system SHALL calculate a theoretical piece count: `Weight / Item.UnitWeight`
 3. If the calculated count differs from the LOT's current `PieceCount`, the system SHALL display both values and allow the operator to accept the new count or keep the existing count
 4. The system SHALL NOT block production if the count changes — it logs the adjustment (FRS 2.2.3: "MES takes no specific action if the LOT quantity has changed")
 5. Any count adjustment SHALL be recorded in `LotAttributeChange`
 
-#### FDS-06-006 — Trim Production Event
-On completion, the system SHALL write a `ProductionEvent` for the Trim operation, confirming the LOT passed through this step.
+#### FDS-06-006 — Trim OUT (ProductionEvent + Sub-LOT Split to Machining FIFO)
+
+When Trim work completes, the operator SHALL trigger Trim OUT for the LOT. The system SHALL, in one transaction:
+
+1. Write a `Workorder.ProductionEvent` checkpoint row recording cumulative `ShotCount` / `ScrapCount` for the Trim operation. Per-piece scrap (sprue removal yield loss) is captured in the cumulative `ScrapCount` delta; defective trim outputs use `RejectEvent` per FDS-06-019.
+2. Invoke the sub-LOT split workflow per FDS-05-009 — N child sub-LOTs are created, each inheriting the parent's cast/trim `ItemId`, each routed to a Machining Cell selected by the operator (scan or dropdown per FDS-02-009).
+3. The split operation deposits each sub-LOT into the destination Machining Cell's FIFO queue (visible at FDS-06-007). The parent LOT closes when all pieces are split off (`LotStatusCode = Closed`); a partial parent may persist if the operator splits off only some pieces and resumes later.
+
+A LOT with only one Machining destination MAY skip the multi-way split — the operator selects a single destination Cell and the LOT moves there as a single (degenerate) sub-LOT, retaining its cast/trim `ItemId` until Machining IN.
 
 ### 6.4 Machining Workflow
 
-#### FDS-06-007 — Machining IN
-The Machining IN screen SHALL allow the operator to scan a LOT's LTT barcode to receive it at a machining center. The system SHALL:
-1. Record a `LotMovement` to the machine's location
-2. Display the LOT's current piece count and item details
-3. Show the FIFO queue of LOTs waiting at this machine (ordered by arrival time), with operator ability to override the queue order (FRS 2.2.4)
+Machining receives sub-LOTs from Trim OUT (FDS-06-006), processes them, and feeds the machined output directly to a coupled Assembly Cell. The Machining → Assembly hand-off is automatic — operators do not scan or move LOTs out of Machining.
 
-#### FDS-06-008 — Machining OUT
-The Machining OUT screen SHALL support two actions:
-1. **Production recording** — good count, reject count with defect codes (Machine Shop area codes), operator, timestamp
-2. **Sub-LOT splitting** — per FDS-05-009 through FDS-05-011
+#### FDS-06-007 — Machining IN (FIFO Pick + Trim → Machining Rename)
 
-The operator MAY perform production recording and splitting in a single workflow (record machining results, then split the output into sub-LOTs for downstream operations). (FRS 2.2.5)
+Each Machining Cell SHALL surface a FIFO queue of cast/trim sub-LOTs that have been routed to it via Trim OUT (FDS-06-006). The queue is ordered by arrival time (`LotMovement.MovedAt` of the most recent move into this Cell). Operators MAY override queue order (FRS 2.2.4).
+
+When the operator picks the next sub-LOT (or the system advances to it automatically when the prior LOT completes), the MES SHALL:
+
+1. Apply the **Trim → Machining rename** per FDS-05-033 — write a `Workorder.ConsumptionEvent` consuming the cast/trim sub-LOT and producing a new machined LOT under the destination Item (the machined-side `Parts.Item` whose 1-line BOM matches the picked sub-LOT's `ItemId`). The operator scans a fresh LTT for the new machined LOT.
+2. Set the new machined LOT's `CurrentLocationId` to this Machining Cell.
+3. Write a `LotGenealogy` row with `RelationshipType = Consumption` linking the cast/trim sub-LOT to the new machined LOT.
+4. Display the LOT's current piece count and Item details for operator confirmation.
+
+No separate "scan LTT to receive at Machining" step exists — the sub-LOT was already placed in this Cell's queue at Trim OUT, and the rename + machined-LOT creation are the receive event.
+
+#### FDS-06-008 — Machining OUT (Auto-Completion + Auto-Move to Coupled Assembly Cell)
+
+Machining OUT SHALL be event-driven, not operator-initiated. When the machine signals completion of the Machining operation on a LOT (via PLC integration per §10), the MES SHALL:
+
+1. Write a `Workorder.ProductionEvent` checkpoint row for the Machining operation — cumulative counters, defect codes via `RejectEvent` if any, operator, timestamp.
+2. Auto-write a `LotMovement` from this Machining Cell to the **coupled downstream Cell** (typically the paired Assembly Cell within the same WorkCenter). No operator scan or confirmation is required.
+3. Update the machined LOT's `CurrentLocationId` to the coupled downstream Cell.
+
+**Coupling configuration.** Each Machining Cell that is coupled to a specific downstream Cell SHALL carry a `CoupledDownstreamCellLocationId` `LocationAttribute` referencing that Cell. When non-NULL, completion fires the auto-move described above. When NULL, completion writes the `ProductionEvent` only — the LOT stays at the Machining Cell awaiting an explicit operator-driven movement (the legacy / uncoupled path).
+
+The pairing is configured at deployment via the Configuration Tool's Location admin screens. Typical setup: a paired Machining + Assembly WorkCenter has a Machining Cell whose `CoupledDownstreamCellLocationId` points at the sibling Assembly Cell — see §2.5 example of paired terminals. (FRS 2.2.5)
 
 #### FDS-06-009 — Machining Production Event
 On submission, the system SHALL write a `ProductionEvent` and update the LOT's piece count. If rejects are entered, a `RejectEvent` SHALL be written for each defect code used.
@@ -1180,6 +1193,7 @@ On submission, the system SHALL write a `ProductionEvent` and update the LOT's p
 
 #### FDS-06-010 — Serialized Assembly (PLC-Integrated)
 On serialized assembly lines (e.g., 5G0 Fronts/Rears), the MES SHALL integrate with the PLC via Machine Integration Panel (MIP) using the handshake protocol defined in Section 10. For each part cycle:
+
 1. The PLC signals `DataReady=1`
 2. The MES reads the serial number from `PartSN`
 3. The MES validates: serial number is not a duplicate, format is correct, source LOT is not on HOLD
@@ -1200,7 +1214,7 @@ Before production begins on a serialized line, the operator SHALL identify the s
 - The source LOT SHALL have sufficient piece count
 - If the scanned LOT's item does not appear in the BOM, the system SHALL reject the material with a clear error
 
-**UJ-09 closed (2026-04-27, Option C — strict + supervisor override).** Strict BOM check is the default — wrong-part scans are rejected. When a substitute is genuinely required (rare; right part not available), a supervisor SHALL be able to authorize a one-shot override via FDS-04-007 elevation (AD prompt for "BOM substitute override"). On successful elevation:
+Strict BOM check is the default — wrong-part scans are rejected. When a substitute is genuinely required (rare; right part not available), a supervisor SHALL be able to authorize a one-shot override via FDS-04-007 elevation (AD prompt for "BOM substitute override"). On successful elevation:
 
 1. The system SHALL accept the scanned LOT despite the BOM mismatch.
 2. The system SHALL write an `Audit.OperationLog` row with the override event — capturing the original BOM expectation, the substitute scanned, the supervisor's `AppUserId`, the operator's `AppUserId`, the terminal, and the timestamp.
@@ -1210,28 +1224,47 @@ Permanent substitutes — recurring or planned — SHALL be handled via BOM revi
 
 #### FDS-06-012 — Hardware Interlock Bypass
 When the automation sets `HardwareInterlockEnable=false`, the MIP SHALL write `PartSN="NoRead"` and the machine proceeds without MES serial validation (per Touchpoint Agreement 1.1). The system SHALL:
+
 - Still record the production event
 - Log the `NoRead` serial as a flag for quality review
-- Record that the hardware interlock was bypassed (see data model discussion below)
+- Set `Lots.ContainerSerial.HardwareInterlockBypassed = 1` to record that serial validation was skipped for that specific serial assignment
 - NOT block production — this is a valid operating mode, not an error condition
-
-> 🔶 **PENDING INTERNAL REVIEW — UJ-16:** A `HardwareInterlockBypassed` flag is needed to record that serial validation was skipped. Two placement options are under discussion: (a) on `ContainerSerial` — marks the specific serial assignment, (b) on `ProductionEvent` — marks the broader production event. The circumstances under which MPP bypasses the interlock are not yet understood. Both options presented for discussion with Ben. See data model for details.
 
 ### 6.6 Assembly Workflow — Non-Serialized Lines
 
 #### FDS-06-013 — Non-Serialized Assembly
 On non-serialized lines (e.g., 6B2 Cam Holder, RPY Assembly Sets), the operator SHALL:
-1. Identify source LOT(s) by scanning LTT barcodes
-2. Enter the good count produced
-3. The system SHALL write `ConsumptionEvent` records linking source LOTs to the output LOT or container
-4. The system SHALL decrement source LOT piece counts per the BOM quantity-per
 
-For lines with PLC integration (MicroLogix1400 PLCs per Appendix C), `PartDisposition` flags and `ContainerName` tags provide automated validation without individual serial tracking.
+1. Identify source LOT(s) by scanning LTT barcodes (consumption sources for the BOM).
+2. Place parts into the open **tray**. The tray is the validation unit — its closure is gated by `Parts.ContainerConfig.ClosureMethod` (`ByCount` / `ByWeight` / `ByVision` per FDS-06-014).
+3. On each tray pass, the MES SHALL write a `Workorder.ConsumptionEvent` decrementing source LOT piece counts by `PartsPerTray × BomLine.QtyPer` per source, increment the container's running parts count by `PartsPerTray`, and open the next tray.
+4. The container closes automatically when its running count reaches capacity (FDS-06-014). If WO auto-finish is enabled (FDS-06-028), the WO close cascades from there.
 
-#### FDS-06-014 — Non-Serialized Container Filling
-On non-serialized lines, containers SHALL be filled by count (operator enters quantity placed in container) or by weight (scale integration via OmniServer where available). The container closes when the configured capacity is reached. (See Open Item OI-02 below)
+For lines with PLC integration (MicroLogix1400 PLCs per Appendix C), `PartDisposition` flags and `ContainerName` tags provide automated tray validation without individual serial tracking.
 
-> 🔶 **PENDING CUSTOMER VALIDATION — OI-02:** Non-serialized lines should receive feedback from a scale. Blue Ridge recommends adding `ClosureMethod` (BY_COUNT / BY_WEIGHT) and `TargetWeight` fields to `ContainerConfig` so the MES can drive closure logic using OPC scale data (`TargetWeightValue`, `TargetWeightMetFlag` via OmniServer). Needs MPP confirmation that scale-driven closure is the desired behavior (vs. PLC-only "container full" signal).
+#### FDS-06-014 — Tray Validation + Container Accumulation
+
+Non-serialized assembly fills containers **one tray at a time**. The validation gate is the tray; the container's full count is the accumulation of validated trays. `Parts.ContainerConfig.ClosureMethod` selects the **tray-level** closure trigger.
+
+**Per-tray closure trigger:**
+
+| ClosureMethod | Tray-level trigger | Required Config | Signal Source |
+|---|---|---|---|
+| **`ByCount`** | Operator confirms the tray's quantity matches `PartsPerTray`. | `PartsPerTray` | Operator submission via the workstation screen — no PLC signal required. |
+| **`ByWeight`** | Scale reports the tray weight has reached the per-tray target. | `TargetWeight` per tray (+ optional tolerance) | OPC tags `TargetWeightValue`, `TargetWeightMetFlag` via OmniServer assert when the per-tray target is met. |
+| **`ByVision`** | Camera validates each part in the tray (pass/fail per piece); the PLC accumulates validated parts and asserts the tray-full flag when `PartsPerTray` is reached. | `PartsPerTray` (vision counts validated parts; no weight target). | OPC tags fed by the PLC — `TrayCountValue` (running validated count for the open tray) and `TrayFullFlag` (asserts when the tray is full). Tag names TBD by integration team; reserved on the Machine Integration Panel. |
+
+For `ByVision` and `ByWeight` the MES SHALL NOT fire tray close on the running count alone — the PLC's `TrayFullFlag` (or `TargetWeightMetFlag`) is authoritative.
+
+**Container accumulation:**
+
+1. On each tray close, the MES SHALL increment the container's running parts count by `PartsPerTray` (or by the operator-confirmed count when `ClosureMethod = ByCount`).
+2. The container is **full** when its running count reaches its configured capacity (`TraysPerContainer × PartsPerTray`, capped by `Parts.Item.MaxParts` per FDS-03-019 if non-NULL).
+3. On container-full, the MES SHALL fire the container-close transaction — writes the `Lots.LotContainer` row, claims an AIM Shipper ID from the local pool per §7.4, dispatches the shipping label print per FDS-07-006a, and (when configured per FDS-06-028) advances toward WO auto-finish.
+
+Container-fill is derived in MES from accumulated tray closes; no separate `ContainerFullFlag` PLC tag is required. (Each tray pass is the authoritative fact; the container is just the running sum.)
+
+**Three-tier signal chain** — tray pass → container fill → WO auto-finish. The PLC asserts BITs for the tier(s) it owns (`TrayFullFlag` per tray, optional `CompletionConfirmed` per WO under FDS-06-028); the MES owns the container-fill derivation in between.
 
 ### 6.7 Production Events
 
@@ -1272,7 +1305,7 @@ The operator splits the LOT into good and bad sub-LOTs (per FDS-05-010). The bad
 
 #### FDS-06-023a — Scrap Source Distinction (Inventory vs Location) — `MVP`
 
-**OI-20 (new v0.10):** Scrap events SHALL carry a `ScrapSource` discriminator via `Workorder.ProductionEvent.ScrapSourceId` FK → `Workorder.ScrapSource`. The code table is read-only, seeded with two rows:
+Scrap events SHALL carry a `ScrapSource` discriminator via `Workorder.ProductionEvent.ScrapSourceId` FK → `Workorder.ScrapSource`. The code table is read-only, seeded with two rows:
 
 - **Inventory** — scrapping unallocated pieces on a LOT. Triggered from the Lot Details screen "Scrap from inventory" button. No workstation context required. Deducts from `InventoryAvailable` (FDS-05-031).
 - **Location** — scrapping in-process pieces at a specific Cell. Triggered from the workstation "Scrap from the selected location" button. Workstation context required. Deducts from `TotalInProcess` at that Cell.
@@ -1291,10 +1324,10 @@ Each consumption event SHALL also generate a `LotGenealogy` record with relation
 
 ### 6.10 Work Orders — `MVP-LITE` (with Demand + Maintenance flows `FUTURE`)
 
-> 🔶 **REVISED — OI-07 (2026-04-24 correction of 2026-04-20):** MVP ships **one active WO type — `Production`** — preserving the existing MVP-LITE bookkeeping (auto-generated on LOT start, invisible to operators). The 2026-04-20 meeting note was mis-recorded; the "Recipe" line was describing this same Production flow, not a separate type. Under MPP's actual taxonomy, `Demand` (planned preventative maintenance) and `Maintenance` (emergency maintenance) are genuinely separate future WO types — neither is being built in this project. The `Workorder.WorkOrderType` code table remains as a future hook so the maintenance engine project can INSERT `Demand` and `Maintenance` rows without schema change. The nullable `ToolId` FK on `Workorder.WorkOrder` remains as the Maintenance-targets-a-tool hook. FDS-06-027 Recipe has been **deleted** — there is no such concept.
+MVP ships **one active WO type — `Production`** — auto-generated on LOT start and invisible to operators (MVP-LITE bookkeeping). Under MPP's WO taxonomy, `Demand` (planned preventative maintenance) and `Maintenance` (emergency maintenance) are genuinely separate WO types neither of which is being built in this project. The `Workorder.WorkOrderType` code table is retained as a future hook so the maintenance-engine project can INSERT `Demand` and `Maintenance` rows without schema change, and the nullable `ToolId` FK on `Workorder.WorkOrder` is retained as the Maintenance-targets-a-tool hook. There is no Recipe WO concept.
 
 #### FDS-06-022 — Work Order Auto-Generation (Production Type)
-The system SHALL auto-generate **Production-type** internal work orders when production activity begins on a LOT. Operators SHALL NOT see, create, or interact with Production work orders directly — they remain invisible bookkeeping. Auto-generation semantics are unchanged from the pre-v0.9 MVP-Lite design. Production WOs SHALL be created with `WorkOrderType.Code = Production` and `ToolId = NULL`. (FRS 3.1.5)
+The system SHALL auto-generate **Production-type** internal work orders when production activity begins on a LOT. Operators SHALL NOT see, create, or interact with Production work orders directly — they remain invisible bookkeeping. Production WOs SHALL be created with `WorkOrderType.Code = Production` and `ToolId = NULL`. (FRS 3.1.5)
 
 #### FDS-06-023 — Work Order Structure
 Each work order SHALL carry:
@@ -1324,9 +1357,7 @@ The `Workorder.WorkOrderType` code table SHALL be seeded at migration time with 
 | Demand | Planned preventative maintenance. | `FUTURE` — out of scope for this project. |
 | Maintenance | Emergency maintenance. | `FUTURE` — out of scope for this project. |
 
-Existing `Workorder.WorkOrder` rows created before v1.7 SHALL be backfilled to `Production`. Create-proc defaults SHALL set `WorkOrderTypeId = Production` so Phase 1–8 callers keep working unchanged.
-
-> **SQL correction follow-up (queued):** Phase G migration `0010_phase9_tools_and_workorder.sql` shipped the `WorkOrderType` seed with 3 rows (`Demand`/`Maintenance`/`Recipe`). A follow-up versioned migration SHALL rename Id=1 `Demand`→`Production`, DELETE Id=2 (`Maintenance`) and Id=3 (`Recipe`), and correct the test in `sql/tests/0019_Parts_ConsumptionMetadata_And_ScrapSource/010_Phase_E_additives.sql` (currently asserts 3 rows + Code='Demand'). Not executed this turn; tracked in OIR OI-07.
+Create-proc defaults SHALL set `WorkOrderTypeId = Production` for any caller that doesn't supply one explicitly.
 
 #### FDS-06-026 — Future Maintenance-Engine Schema Hooks — `FUTURE`
 The system reserves two schema hooks for a future maintenance-engine project scoped separately from this MES:
@@ -1336,11 +1367,9 @@ The system reserves two schema hooks for a future maintenance-engine project sco
 
 **Neither flow ships in MVP.** No Perspective screens, no state machine, no scheduling, no integration with the MPP maintenance team's existing tooling. The Configuration Tool does NOT surface any admin UI for creating these WOs. This FDS section exists so the data model commitment is explicit: the hooks are stable and survive the MVP build.
 
-*(FDS-06-027 Recipe Work Orders — **DELETED 2026-04-24** per OI-07 correction. The 2026-04-20 meeting note was mis-recorded; there is no Recipe WO concept. Requirement slot left vacant to avoid renumbering.)*
+#### FDS-06-028 — Auto-Finish on Target (Camera / Scale) — `MVP`
 
-#### FDS-06-028 — Auto-Finish on Target (Camera / Scale) — `MVP` (extended v0.11g)
-
-**OI-16 (Jacques additions, 2026-04-24):** Production Work Orders SHALL support two automatic-finish modes, configurable per WO:
+Production Work Orders SHALL support two automatic-finish modes, configurable per WO:
 
 - **Camera-count mode** — the WO carries a target piece count + a tray quantity. Cumulative `ProductionEvent.ShotCount` − `ScrapCount` (derived via `LAG()` over checkpoint events per FDS-06-003) across all events under the WO is compared against the target on every write. When the cumulative count reaches the target, the `Workorder.ProductionEvent_Record` proc SHALL check the PLC confirmation BIT (per **Requirement 1** below). If BIT is set, the proc emits a WO-close event (transitions `WorkOrderStatus` to `Completed`) in the same transaction as the event write. Driven by Cognex camera output through FDS-03-017a capture.
 - **Scale-weight mode** — the WO carries a target weight. Cumulative `ProductionEvent.WeightValue` is compared against the target on every write; on hit (AND PLC confirmation BIT set), the same auto-close fires. Driven by scale input through OmniServer.
@@ -1363,13 +1392,13 @@ Rationale: some production lines require explicit operator acknowledgement at cl
 
 #### FDS-06-029 — Tray-Divisibility Validation on WO Close — `MVP`
 
-**OI-17 (new v0.10):** At WO Close (whether manual or via FDS-06-028 auto-finish), the MES SHALL verify that cumulative `GoodCount` is evenly divisible by `PartsPerTray` from the Item's `ContainerConfig`. A non-divisible result SHALL block the close with error *"Work order target quantity exceeded. Ensure target quantity is evenly divisible by the tray quantity"* (matching the legacy Flexware wording). Supervisor AD elevation per FDS-04-007 overrides the block (reason logged to `Audit.OperationLog`). Also validated at WO Create per FDS-03-021; re-validated at Close because `ProductionEvent` writes can push actual count below or past the planned target.
+At WO Close (whether manual or via FDS-06-028 auto-finish), the MES SHALL verify that cumulative `GoodCount` is evenly divisible by `PartsPerTray` from the Item's `ContainerConfig`. A non-divisible result SHALL block the close with error *"Work order target quantity exceeded. Ensure target quantity is evenly divisible by the tray quantity"* (matching the legacy Flexware wording). Supervisor AD elevation per FDS-04-007 overrides the block (reason logged to `Audit.OperationLog`). Also validated at WO Create per FDS-03-021; re-validated at Close because `ProductionEvent` writes can push actual count below or past the planned target.
 
-> **Note (v0.11):** "Cumulative `GoodCount` across the WO" is computed by summing `ShotCount - ScrapCount` deltas across all `ProductionEvent` rows whose `LotId` is associated with the WO (via `WorkOrderOperationId` or, when that is NULL, via LOT-WO matching on `ItemId` + time window). The v0.11 ProductionEvent reshape removed the per-event `GoodCount` column — it is derived from the cumulative counters.
+**Cumulative GoodCount derivation.** "Cumulative `GoodCount` across the WO" is computed by summing `ShotCount - ScrapCount` deltas across all `ProductionEvent` rows whose `LotId` is associated with the WO — via `WorkOrderOperationId` when set, or by LOT-WO matching on `ItemId` + time window when NULL. There is no per-event `GoodCount` column on `ProductionEvent`; the value is always derived from the cumulative counters.
 
-#### FDS-06-030 — WorkOrder BIT-Flag Enumeration at Phase 0 — `MVP` (Arc 2 Phase 0 input, v0.11)
+#### FDS-06-030 — WorkOrder BIT-Flag Enumeration — `MVP`
 
-The legacy Flexware `WorkOrder` table carries a set of BIT / attribute flags whose MVP status is unknown. Arc 2 Phase 0 SHALL confirm with MPP which of the following are live in production; live flags become columns on `Workorder.WorkOrder` at the Arc 2 Phase 1 `CREATE`; dead flags do not ship:
+The legacy Flexware `WorkOrder` table carries a set of BIT / attribute flags whose MVP status is unknown. Engineering SHALL confirm with MPP which of the following are live in production; live flags become columns on `Workorder.WorkOrder` when the table is created; dead flags do not ship:
 
 | Flexware flag / field | Proposed home if live |
 |---|---|
@@ -1416,6 +1445,7 @@ Container status SHALL be managed via `ContainerStatusCode`:
 
 #### FDS-07-003 — Container Filling — Serialized Lines
 On serialized lines, each part cycle (per FDS-06-010) SHALL:
+
 1. Place the `SerializedPart` into the current open container
 2. Create a `ContainerSerial` record with container, tray, serial, and tray position
 3. Increment the current tray's `PieceCount`
@@ -1424,12 +1454,14 @@ On serialized lines, each part cycle (per FDS-06-010) SHALL:
 
 #### FDS-07-004 — Container Filling — Non-Serialized Lines
 On non-serialized lines, the operator SHALL assign a piece count to the container. The system SHALL:
+
 1. Create `ContainerTray` records as trays are filled
 2. Close the container when the configured capacity is reached
 3. On lines with weight-based tracking, the system MAY use the scale reading to validate the piece count before closure
 
-#### FDS-07-005 — Container Closure — revised v0.11j (UJ-04 + UJ-18)
+#### FDS-07-005 — Container Closure
 When a container reaches capacity, the system SHALL, in **one synchronous DB transaction** (no external calls inside the block):
+
 1. Set container status to COMPLETE.
 2. Atomically claim the next FIFO available AIM Shipper ID from `Lots.AimShipperIdPool` via `Lots.AimShipperIdPool_Claim @ContainerId, @AppUserId`. Sub-millisecond local DB operation. (See FDS-07-010 for the pool model and FDS-07-010a for empty-pool behavior.)
 3. Store the claimed `AimShipperId` on the container record.
@@ -1439,7 +1471,7 @@ When a container reaches capacity, the system SHALL, in **one synchronous DB tra
 
 **The entire close transaction is local-DB-only.** It succeeds or fails atomically — there is no in-between state where a container is COMPLETE without an `AimShipperId`. The synchronous claim + ShippingLabel-INSERT model means container closure has zero external-system latency in the steady state.
 
-**Print dispatch is asynchronous (UJ-18 / FDS-01-014 Gateway-script-async).** On successful return of step 6, the calling Perspective view SHALL fire `system.util.sendMessageAsync('mes', 'print-shipping-label', {ShippingLabelId})`. The Gateway message handler then performs the print per FDS-07-006a; failures surface to the operator per FDS-07-006b. The container is COMPLETE and reported to the operator instantly — the physical label arrives shortly after.
+**Print dispatch is asynchronous (UJ-18 / FDS-01-014 Gateway-script-async).** On successful return of step 6, the calling Perspective view SHALL fire `system.util.sendRequestAsync('mes', 'print-shipping-label', {ShippingLabelId})`. The Gateway message handler then performs the print per FDS-07-006a; failures surface to the operator per FDS-07-006b. The container is COMPLETE and reported to the operator instantly — the physical label arrives shortly after.
 
 ### 7.3 Shipping Labels
 
@@ -1449,8 +1481,9 @@ Each completed container SHALL receive a shipping label containing the AIM shipp
 #### FDS-07-007 — Shipping Label Tracking
 Every shipping label print, void, and reprint SHALL be recorded in the `ShippingLabel` table: container, AIM shipper ID, label type, ZPL content, void flag, printed/voided timestamps, and printed-by user.
 
-#### FDS-07-008 — Shipping Label Void — amended v0.11i (UJ-04)
+#### FDS-07-008 — Shipping Label Void
 When a shipping label is voided (e.g., container sent to Sort Cage), the system SHALL:
+
 1. Set `IsVoid = 1` and record `VoidedAt` on the shipping label record
 2. Notify AIM of the void via the appropriate interface call
 3. The voided label SHALL remain in the database for audit trail — it is NOT deleted
@@ -1460,9 +1493,9 @@ When a shipping label is voided (e.g., container sent to Sort Cage), the system 
 #### FDS-07-009 — Shipping Label Reprint
 If a shipping label is damaged or unreadable, an authorized user SHALL be able to reprint it. The reprint SHALL be tracked as a new `ShippingLabel` record (the original is NOT modified). (FRS 3.13.1)
 
-#### FDS-07-006a — Print Dispatch (Gateway-script-async) — `MVP` (v0.11j, UJ-18)
+#### FDS-07-006a — Print Dispatch (Gateway-script-async) — `MVP`
 
-The Gateway message handler `print-shipping-label` SHALL receive a `ShippingLabelId` payload from FDS-07-005's `sendMessageAsync` call and SHALL:
+The Gateway message handler `print-shipping-label` SHALL receive a `ShippingLabelId` payload from FDS-07-005's `sendRequestAsync` call and SHALL:
 
 1. SELECT the `ShippingLabel` row + the printer endpoint (resolved via `LocationAttribute` on the Cell that is parent to `ShippingLabel.TerminalLocationId`).
 2. UPDATE `ShippingLabel SET LastPrintAttemptAt = SYSUTCDATETIME(), PrintAttempts = PrintAttempts + 1` (records the attempt before firing — defensive against handler crash mid-print).
@@ -1470,33 +1503,38 @@ The Gateway message handler `print-shipping-label` SHALL receive a `ShippingLabe
 4. **On success** — UPDATE `ShippingLabel SET PrintedAt = SYSUTCDATETIME(), PrintedByUserId = @CallingAppUserId`; write `Audit.InterfaceLog` (success).
 5. **On failure** — capture the exception text, UPDATE `ShippingLabel SET LastPrintError = @Err`. If `PrintAttempts < 3`, sleep 2 seconds and retry from step 2. If `PrintAttempts >= 3`, UPDATE `SET PrintFailedAt = SYSUTCDATETIME()`, write `Audit.FailureLog` (exhausted retries), and STOP. The operator banner (FDS-07-006b) fires off this DB state.
 
-**Retry policy.** 3 attempts, fixed 2s gap. **No `sendMessageAsync` re-send-to-self pattern** — the retry is inline within the single message-handler invocation. Re-send-to-self risks Gateway thread-pool exhaustion if a printer cluster is misbehaving and many parallel re-sends pile up.
-
-**No polling on the print path.** The print attempt is event-driven from FDS-07-005's `sendMessageAsync`; there is no Gateway timer scanning for pending labels at high frequency.
+**Retry policy.** 3 attempts, fixed 2s gap, inline within the single message-handler invocation.
 
 **Idempotency.** Re-firing `print-shipping-label` for an already-Completed `ShippingLabel` (`PrintedAt IS NOT NULL`) SHALL be a no-op — the handler returns without error.
 
-#### FDS-07-006b — Print Failure Surfacing & Safety Sweep — `MVP` (v0.11j, UJ-18)
+#### FDS-07-006b — Print Failure Surfacing & Safety Sweep — `MVP`
 
-**Per-terminal banner.** Each shop-floor Perspective view SHALL bind to a query: `SELECT * FROM Lots.ShippingLabel WHERE PrintFailedAt IS NOT NULL AND TerminalLocationId = @MyTerminalId`. When any row matches, a banner SHALL display at that Terminal showing container number, AIM Shipper ID, last error, and three actions:
+**Detection — one Gateway timer.** A single Gateway timer script SHALL run every 5 seconds and SHALL query `Lots.ShippingLabel` for rows in either of two failure states:
 
-- **Retry now** — clears `PrintFailedAt`, sets `PrintAttempts = 0`, re-sends the `print-shipping-label` message. Useful when the printer issue has been physically resolved.
-- **Reprint** — fires the FDS-07-009 reprint workflow (creates a new `ShippingLabel` row).
-- **Acknowledge** — clears the banner without changing print state. Used when the supervisor handled the print out-of-band (e.g., manual ZPL send to a different printer).
+1. **Failed prints** — `PrintFailedAt IS NOT NULL AND BannerAcknowledgedAt IS NULL` (print exhausted its retries; not yet acknowledged).
+2. **Stranded prints** — `PrintedAt IS NULL AND PrintFailedAt IS NULL AND CreatedAt < DATEADD(SECOND, -60, GETDATE())` (label INSERTed at container-close but the `print-shipping-label` message never reached the handler — typically a Gateway restart between FDS-07-005 commit and dispatch). The 60-second floor avoids racing normal-path prints that haven't yet been picked up.
 
-The banner SHALL appear ONLY at the Terminal stamped on `ShippingLabel.TerminalLocationId` — operators at other terminals do not see it. Plant-wide visibility is a supervisor wallboard concern, not a per-terminal one.
+For each row found, the script SHALL fire `system.util.sendMessage('mes', 'print-failure-alert', {ShippingLabelId, TerminalLocationId, ContainerName, AimShipperId, LastPrintError, FailureKind})`. The broadcast goes to all Perspective sessions in the project; sessions filter on receipt. One DB query per 5 seconds regardless of terminal count.
 
-**Safety sweep — orphan recovery.** A Gateway timer script SHALL run every 5 minutes and SHALL:
+**Per-terminal banner — session message handler.** Every Perspective session SHALL register a handler for the `'print-failure-alert'` message. On receipt the handler SHALL:
 
-1. SELECT IDs `WHERE PrintedAt IS NULL AND PrintFailedAt IS NULL AND CreatedAt < DATEADD(SECOND, -60, GETDATE())` — these are labels that were INSERTed at close time but never had their `print-shipping-label` message handled (e.g., Gateway restart between FDS-07-005 commit and the message dispatch).
-2. For each orphan, re-send `system.util.sendMessageAsync('mes', 'print-shipping-label', {ShippingLabelId})`.
-3. The 60-second floor avoids racing with normal-path prints that haven't yet been picked up by the message handler.
+1. Compare `payload.TerminalLocationId` to the session's bound terminal context (per FDS-02-009).
+2. If they don't match, return immediately.
+3. If they match, add the failure to the session's local orphan list and render the banner showing `ContainerName`, `AimShipperId`, `LastPrintError`, and three actions:
 
-**Stranded-prints alarm.** If the safety sweep finds **more than 5** orphans in a single pass, supervisor wallboard tile SHALL turn Critical AND IT notification SHALL fire (mirroring the AIM pool alarm pattern from FDS-07-010b). Above 5 orphans means either the Gateway has been down long enough for a backlog or a systemic printer issue is affecting many lines. The threshold is hardcoded in the safety-sweep script for MVP; can be promoted to a `Lots.AimPoolConfig` column or a sibling `Lots.PrintQueueConfig` table if MPP later wants tunability.
+  - **Retry now** — clears `PrintFailedAt` and `LastPrintError`, sets `PrintAttempts = 0`, re-sends `print-shipping-label` per FDS-07-006a. Used when the printer issue has been physically resolved.
+  - **Reprint** — fires the FDS-07-009 reprint workflow (creates a new `ShippingLabel` row).
+  - **Acknowledge** — sets `BannerAcknowledgedAt = SYSUTCDATETIME()` on the row. The next sweep excludes it; the banner stops surfacing it. Used when the supervisor handled the print out-of-band (e.g., manual ZPL send to a different printer).
+
+The session's local orphan list is rebuilt from incoming messages — the 5-second heartbeat IS the source of truth. On any operator action above the row mutates and falls out of subsequent sweeps, so the local list shrinks naturally. After a session restart, up to 5 seconds elapse before the banner re-emerges — acceptable.
+
+**Stranded-prints alarm.** If a sweep finds **more than 5** orphans in a single pass, the supervisor wallboard tile SHALL turn Critical AND IT notification SHALL fire (mirroring the AIM pool alarm pattern from FDS-07-010b). Above 5 means either the Gateway has been down long enough for a backlog or a systemic printer / network issue is affecting multiple lines. The threshold is hardcoded for MVP; can be promoted to a config row later.
+
+**Schema impact.** `Lots.ShippingLabel` gains `BannerAcknowledgedAt DATETIME2(3) NULL` so the Acknowledge action can suppress further alerts without losing the `PrintFailedAt` audit trail. Data model follow-up flagged.
 
 ### 7.4 AIM Integration
 
-#### FDS-07-010 — AIM Shipper ID Local Pool — revised v0.11i (UJ-04)
+#### FDS-07-010 — AIM Shipper ID Local Pool
 
 The MES SHALL maintain a local pool of pre-fetched AIM Shipper IDs (`Lots.AimShipperIdPool`) so that container closure (FDS-07-005) is **synchronous and zero-latency** with respect to AIM availability. AIM Shipper IDs SHALL be pre-fetched in advance and consumed FIFO at container-close time.
 
@@ -1515,13 +1553,13 @@ The MES SHALL maintain a local pool of pre-fetched AIM Shipper IDs (`Lots.AimShi
 
 **End-to-end provenance.** Every consumed pool row links back to the originating AIM call via `AimShipperIdPool.FetchedInterfaceLogId` FK → `Audit.InterfaceLog`. Audit queries can trace an `AimShipperId` from the `Container` row, through the `AimShipperIdPool` consumption, back to the precise AIM `GetNextNumber` call that issued it.
 
-#### FDS-07-010a — Empty Pool Hard Fail — `MVP` (v0.11i, UJ-04)
+#### FDS-07-010a — Empty Pool Hard Fail — `MVP`
 
 If the pool is empty when `Container_Complete` attempts to claim, `Lots.AimShipperIdPool_Claim` SHALL raise an error and the entire close transaction SHALL roll back. The container SHALL remain in its prior pre-close state (typically OPEN); no `Container.AimShipperId` is set; no `ShippingLabel` row is written. The operator SHALL see a clear error message indicating that the AIM Shipper ID pool is exhausted and that the line is blocked from completing further containers until the pool refills.
 
 This is a **deliberate hard-fail design** (not soft-fallback): production stops on affected lines until either (a) AIM connectivity is restored and the topup script refills the pool, or (b) IT manually intervenes. Rationale: trucks cannot ship without valid AIM Shipper IDs, so allowing further closes against an empty pool would create a pile of un-shippable containers and obscure the actual integration outage.
 
-#### FDS-07-010b — Pool Depth Alarms — `MVP` (v0.11i, UJ-04)
+#### FDS-07-010b — Pool Depth Alarms — `MVP`
 
 The Gateway timer script (or a sibling alarm-evaluation script) SHALL evaluate pool depth on every tick against `Lots.AimPoolConfig` thresholds:
 
@@ -1531,7 +1569,7 @@ The Gateway timer script (or a sibling alarm-evaluation script) SHALL evaluate p
 
 Both alarm levels SHALL automatically clear when depth recovers above the corresponding threshold (the wallboard tile returns to Healthy / yellow; the IT notification logs a recovery event).
 
-#### FDS-07-010c — Pool Configuration via Configuration Tool — `MVP` (v0.11i, UJ-04)
+#### FDS-07-010c — Pool Configuration via Configuration Tool — `MVP`
 
 `Lots.AimPoolConfig` SHALL be operator-editable via the Configuration Tool (Admin-elevated per FDS-04-007). The Config Tool SHALL surface:
 
@@ -1542,7 +1580,7 @@ Both alarm levels SHALL automatically clear when depth recovers above the corres
 
 Validation: the four values SHALL satisfy `AlarmCriticalDepth < AlarmWarningDepth < TopupThreshold < TargetBufferDepth` (CHECK constraints enforce this at the DB level — `_Update` rejects invalid combinations). Updates SHALL be audited via `Audit.ConfigLog`.
 
-The four defaults (50 / 30 / 20 / 10) ship in the Arc 2 Phase 7 migration seed and reflect Jacques's initial sizing target — they are tunable post-deployment based on actual peak container throughput and observed AIM responsiveness.
+The four defaults (50 / 30 / 20 / 10) ship in the migration seed and reflect the initial sizing target — they are tunable post-deployment based on actual peak container throughput and observed AIM responsiveness.
 
 #### FDS-07-011 — AIM Hold Notification
 When a container is placed on hold, the system SHALL call AIM `PlaceOnHold` with the shipper ID. When released, the system SHALL call AIM `ReleaseFromHold`. Both calls SHALL be logged to `Audit.InterfaceLog`. (FRS 2.3.1)
@@ -1560,6 +1598,7 @@ At the Shipping Dock, the operator SHALL scan each container's shipping label be
 
 #### FDS-07-014 — Ship Confirmation
 On successful validation, the system SHALL:
+
 1. Set container status to SHIPPED
 2. Record a `LotMovement` for the source LOT to the Shipped location
 3. Log to `Audit.OperationLog`
@@ -1568,6 +1607,7 @@ On successful validation, the system SHALL:
 
 #### FDS-07-015 — Container Hold
 A quality-authorized user SHALL be able to place a hold on one or more containers. The system SHALL:
+
 1. Set container status to HOLD
 2. Record the hold number (optional reference)
 3. Call AIM `PlaceOnHold` (FDS-07-011)
@@ -1575,6 +1615,7 @@ A quality-authorized user SHALL be able to place a hold on one or more container
 
 #### FDS-07-016 — Container Hold Release
 A quality-authorized user SHALL be able to release a held container. The system SHALL:
+
 1. Set container status back to COMPLETE
 2. Call AIM `ReleaseFromHold`
 3. The container is now eligible for shipping
@@ -1583,6 +1624,7 @@ A quality-authorized user SHALL be able to release a held container. The system 
 
 #### FDS-07-017 — Sort Cage Workflow
 When held containers are sent to the Sort Cage for re-inspection:
+
 1. The containers SHALL be moved to the Sort Cage location (`LotMovement`)
 2. Operators unpack and inspect each part
 3. Good parts SHALL be re-packed into new containers
@@ -1645,7 +1687,7 @@ Hold management SHALL integrate with container holds (FDS-07-015/016) and AIM ho
 
 #### FDS-08-007a — Dedicated Hold Management Screen — `MVP-EXPANDED`
 
-**OI-22 (new v0.10):** The MES SHALL expose a dedicated **Hold Management** Perspective screen reachable from the home tile bar (mirroring the top-level Hold tile in the legacy Flexware MES). The screen SHALL provide:
+The MES SHALL expose a dedicated **Hold Management** Perspective screen reachable from the home tile bar (mirroring the top-level Hold tile in the legacy Flexware MES). The screen SHALL provide:
 
 - **Active holds list** — all LOTs currently in `LotStatusCode = Hold`, sorted by `HoldEvent.PlacedAt` descending, filterable by Area, Line, Cell, Part Number, Hold Type, and Placed-By user.
 - **Active container holds list** — all containers currently in `ContainerStatusCode = Hold`, same filtering set, with an indicator when the container references a source LOT also on hold.
@@ -1669,6 +1711,7 @@ Each spec version SHALL define measurable attributes with: name, data type, UOM,
 
 #### FDS-08-011 — Inspection Recording
 When an inspector takes a sample from a LOT, the system SHALL:
+
 1. Create a `QualitySample` record: LOT, spec version (active at time of sampling), location, sample trigger (SHIFT_START, DIE_CHANGE, TOOL_CHANGE, etc.), inspector, timestamp
 2. For each spec attribute, create a `QualityResult` record: measured value, UOM, pass/fail (auto-calculated from limits)
 3. Calculate the overall sample result (PASS if all required attributes pass, FAIL if any required attribute fails)
@@ -1727,6 +1770,7 @@ Downtime events SHALL be append-only. The `StartedAt` timestamp SHALL NOT be ove
 
 #### FDS-09-005 — Downtime Reason Code Filtering
 The downtime entry screen SHALL filter reason codes by:
+
 1. Area (matching the machine's area in the location hierarchy)
 2. Reason type (Equipment, Mold, Quality, Setup, Miscellaneous, Unscheduled)
 
@@ -1742,7 +1786,7 @@ The following reason types SHALL be seeded: Equipment, Miscellaneous, Mold, Qual
 
 ### 9.4 Shift Management — `MVP`
 
-> ✅ **RESOLVED — OI-03 (2026-04-20):** Shift availability is **derived from events**, not from operator-entered minute adjustments. The MES captures **events + durations**; available time = shift duration − total downtime. No `+30`-minute "through-lunch" entries, no `+110`-minute 10-hour-overtime fields. MPP-authored schedules (currently a 5–6 spreadsheet rollup) SHALL be imported; MPP owes the spreadsheet template. Shifts run Monday–Friday at consistent start times; lines run different durations. Early starts automatically increase availability because events drive runtime. Operators log breaks once at end-of-shift via a single uptime/downtime categorisation — no live per-break entry.
+Shift availability is **derived from events**, not from operator-entered minute adjustments. The MES captures **events + durations**; available time = shift duration − total downtime. No `+30`-minute "through-lunch" entries, no `+110`-minute 10-hour-overtime fields. MPP-authored schedules (currently a 5–6 spreadsheet rollup) SHALL be imported. Shifts run Monday–Friday at consistent start times; lines run different durations. Early starts automatically increase availability because events drive runtime. The only operator time entry is a single end-of-shift submission per FDS-09-013 capturing whether lunch was taken and which breaks — there is no live per-break entry.
 
 #### FDS-09-008 — Shift Schedules
 Engineering users SHALL configure shift schedules: name, start time, end time, days-of-week bitmask, and effective date. Common patterns: First Shift (6:00am–2:00pm M–F), Second Shift (2:00pm–10:00pm M–F), Weekend Overtime. Schedule data SHALL be imported from MPP's authoring spreadsheet at cutover (FDS-09-012) and maintained via the Configuration Tool thereafter. Shift-schedule rows persist across time via the `EffectiveFrom` column; old schedules are soft-deleted via `DeprecatedAt`, not overwritten.
@@ -1757,20 +1801,27 @@ The system SHALL create actual `Oee.Shift` instances from schedules as each shif
 The system SHALL NOT accept operator-entered minute adjustments (no "+30 for running through lunch", no "+110 for 10-hour OT"). Any effort that occurred outside the scheduled window — e.g., early-start production — is captured by the production event timestamps themselves (FDS-09-014).
 
 #### FDS-09-010 — Shift-Downtime Association
-Downtime events SHALL be associated with a shift instance (`ShiftId` FK). If a downtime event spans a shift boundary, it SHALL be associated with the shift in which it started. The system SHALL NOT auto-split events across shifts.
-
-> **Note:** This addresses User Journey Assumption #10 (shift boundary handling). Open downtime events at shift change remain open — the incoming shift operator closes them when the machine resumes. They do not auto-close and re-open.
+Downtime events SHALL be associated with a shift instance (`ShiftId` FK). If a downtime event spans a shift boundary, it SHALL be associated with the shift in which it started. The system SHALL NOT auto-split events across shifts. Open events at the shift boundary remain open; the incoming shift operator closes them when the machine resumes.
 
 #### FDS-09-012 — Shift Schedule Import
 At cutover, shift schedules SHALL be imported from MPP's authoring spreadsheet (a 5–6-file rollup consolidated into a single schedule sheet — MPP to share the template). Import fields: shift name, start time, end time, days-of-week, effective date, associated lines/areas. The import proc SHALL be idempotent — re-running it with a revised spreadsheet updates existing `Oee.ShiftSchedule` rows and adds new rows without duplicating. Manual Configuration Tool edits post-import SHALL be audit-logged with the edit reason. FUTURE: live integration with MPP's scheduling tool is out of MVP scope.
 
-#### FDS-09-013 — Break Logging
-Operators SHALL NOT log breaks live during a shift. At end-of-shift (or at the operator's choosing), a single end-of-shift view SHALL let the operator categorise the shift's idle spans as `Break` / `Lunch` / `Downtime` / `Changeover`. The categorisation writes `Oee.DowntimeEvent` rows with appropriate `DowntimeReasonCode` values spanning the identified idle time. This design avoids the paper-form-era friction of per-break entry while preserving the downtime classification Honda needs for OEE reporting. (OI-03 resolution; FRS 3.15.2)
+#### FDS-09-013 — End-of-Shift Time Entry
+The MES SHALL accept a single time entry per operator per shift, capturing whether the operator took lunch and which breaks they took. This is the only operator time entry — no live per-break entry during the shift, and no minute-level adjustment of the shift window.
+
+**Visibility window.** The header SHALL surface a time-entry control from approximately 15 minutes before through 15 minutes after the scheduled shift end. Outside that window the control is hidden.
+
+**Workflow varies by terminal mode** (per FDS-02-010):
+
+- **Dedicated terminals** (Cell-parented). Single button press. The submission is recorded against the operator's initials presence context (per FDS-04-002) and the current shift instance, with lunch and breaks taken per the schedule defaults.
+- **Shared terminals** (WorkCenter- or Area-parented). Operator presses the time-entry button → enters initials → selects time category (Regular by default) → confirms lunch (yes / no) and which breaks were taken → submits. Initials resolve to an `AppUser` per FDS-04-005; the submission writes against the current shift instance.
+
+The system SHALL write `Oee.DowntimeEvent` rows for each lunch / break submitted, with durations and start times populated from the shift schedule's break configuration (durations are NOT operator-entered). This preserves the downtime classification Honda needs for OEE reporting without imposing live-entry friction during production. (FRS 3.15.2)
 
 #### FDS-09-014 — Early-Start Behaviour
 When production events are captured with `RecordedAt` **earlier** than the shift's scheduled start, the MES SHALL accept those events without rejection. Availability reporting SHALL use the time-window bounded by the earliest event and the shift's scheduled end (effectively expanding the window backwards). MPP explicitly requested this behaviour at the 2026-04-20 review — early starts increase availability because events drive runtime, and operators should not be penalised for starting early. A shift that is NOT run (zero events across the entire scheduled window) SHALL still instantiate an `Oee.Shift` row and report as zero-run for auditability.
 
-#### FDS-09-015 — Shift-End Summary Screen — `MVP` (v0.11j, UJ-10)
+#### FDS-09-015 — Shift-End Summary Screen — `MVP`
 
 At shift end (or when the outgoing operator triggers a "Handover" action from the terminal), the MES SHALL present a one-screen summary of in-flight state at that Terminal. This is a Perspective view binding to three queries — no schema additions required:
 
@@ -1780,9 +1831,9 @@ At shift end (or when the outgoing operator triggers a "Handover" action from th
 
 The view is read-only. Outgoing operator acknowledges the summary; system records the handover acknowledgement to `Audit.OperationLog` (event type `ShiftHandoverAcknowledged`) for audit traceability. Incoming operator's initials prompt is per FDS-04-009 (terminal session re-confirmation).
 
-The shift-end summary is **optional** — operators MAY skip it. Open events / pauses / in-process LOTs persist regardless (per OI-03 event-spans-naturally model — events do not auto-split at shift boundaries). The summary is purely a continuity / handover convenience.
+The shift-end summary is **optional** — operators MAY skip it. Open events, pauses, and in-process LOTs persist regardless; events do not auto-split at shift boundaries. The summary is purely a continuity / handover convenience.
 
-**Implementation note (UJ-10 Q1 from Jacques):** the in-process-LOT join over `LotMovement` + `v_LotDerivedQuantities` is the most expensive query of the three. Recommended optimization: index `Lots.LotMovement (ToLocationId, MovedAt DESC)` to support the latest-movement-per-LOT scan. Same query pattern is reusable on the Lot Details screen (per OI-23) — not a new burden, but worth flagging.
+**Performance.** The in-process-LOT query joins `Lots.LotMovement` to `Lots.v_LotDerivedQuantities` and is the most expensive of the three. An index on `Lots.LotMovement (ToLocationId, MovedAt DESC)` supports the latest-movement-per-LOT scan; the same index serves the Lot Details screen (FDS-05-031).
 
 ### 9.5 OEE — `FUTURE`
 
@@ -1819,6 +1870,7 @@ For serialized assembly lines (5G0 Fronts/Rears), the MES SHALL implement the fo
 
 #### FDS-10-002 — MIP Transaction Flow
 For each part cycle:
+
 1. PLC sets `DataReady=1`
 2. MES sets `TransInProc=1` (acknowledging)
 3. MES reads `PartSN` and `HardwareInterlockEnable`
@@ -1836,7 +1888,7 @@ The MES SHALL write alarm messages to `AlarmMsg` for:
 
 ### 10.3 Non-Serialized Line Integration
 
-> 🔶 **REVISED — OI-04 (2026-04-20):** MPP rejected the earlier "auto-hold LOT + supervisor override" direction at the 2026-04-20 review. The revised model stops the operation, not the LOT: production halts until the specific issue is rectified, escalates to a leader after 10 consecutive failures, and branches by failure type (wrong part → leader flag; wrong orientation → no escalation). Hold release goes through either Quality or the Controlled Run Tag (CRT) workflow — CRT-released material requires a 200%-inspect downstream. Supervisor elevation everywhere uses the per-action AD prompt from FDS-04-007 (no PIN).
+Failures on non-serialized lines stop the **operation**, not the LOT. Production halts until the specific issue is rectified, escalates to a leader after 10 consecutive failures, and branches by failure type (wrong part → leader flag; wrong orientation → no escalation). Hold release goes through either Quality or the Controlled Run Tag (CRT) workflow — CRT-released material requires a 200%-inspect downstream. Supervisor elevation everywhere uses the per-action AD prompt from FDS-04-007.
 
 #### FDS-10-004 — Disposition-Based Lines
 For non-serialized lines with MicroLogix1400 PLCs (6B2, 6MA, RPY, 6FB per Appendix C), the MES SHALL read `PartDisposition` flags and `ContainerName` tags. These provide pass/fail validation without individual serial tracking.
@@ -1850,7 +1902,7 @@ On lines with Cognex vision systems, the MES SHALL read `VisionPartNumber` tags 
 4. Log the conflict to `Audit.OperationLog` with `LogEventType = LineStopped` and a `FailureLog` row capturing the conflicting values.
 5. Resume only when the issue is rectified (FDS-10-011) — either the operator corrects the part identification and the vision agrees on the next cycle, or Quality / Supervisor releases via FDS-10-011 / FDS-10-012.
 
-Stopping the operation (not the LOT) preserves LOT status continuity for downstream operations and avoids mass-hold cascades when a single cell misreads a part. (OI-04 revised; FRS 3.16.10 semantics retained at the event level.)
+Stopping the operation (not the LOT) preserves LOT status continuity for downstream operations and avoids mass-hold cascades when a single cell misreads a part. (FRS 3.16.10 — semantics retained at the event level.)
 
 #### FDS-10-009 — 10-Consecutive-Fail Escalation
 The MES SHALL track consecutive validation failures per Cell per active part (consecutive = not interrupted by a successful validation). On the **10th consecutive failure**, the system SHALL:
@@ -1866,12 +1918,12 @@ Not every failure type requires leader escalation. The system SHALL branch as fo
 
 | Failure type | Line stop? | Leader flag? |
 |---|---|---|
-| Wrong part (vision ≠ operator) | Yes | Yes — immediately on first failure (OI-04 direction: this is a traceability-critical error) |
+| Wrong part (vision ≠ operator) | Yes | Yes — immediately on first failure (traceability-critical error) |
 | Wrong orientation (vision detects flipped/rotated part) | Yes | No — operator corrects and retries, no escalation unless FDS-10-009 10-fail threshold is hit |
 | PartDisposition fail (PLC-side reject flag) | Yes | No — counts toward the FDS-10-009 threshold |
 | Raw-material / barcode mis-scan | No (operator just re-scans) | No |
 
-The branching rule SHALL be configurable per defect type via `Quality.DefectCode.LeaderFlagOnFirstOccurrence BIT` (new column, nullable — NULL means "no immediate flag, use FDS-10-009 threshold"). Seed data sets wrong-part defect codes to `1`; orientation and disposition codes to `0` or NULL.
+The branching rule is keyed on the event-type category, each of which is knowable at the point of failure from the source data: Wrong-part is a vision-tag-vs-operator-input comparison, Wrong-orientation is the vision system's own orientation flag, PartDisposition fail is a PLC tag, and barcode mis-scan is an MES-side scan rejection. No `Quality.DefectCode` configuration lookup is required — the branching is hardcoded by event-type in the line-stop handler.
 
 #### FDS-10-011 — Hold Release Path
 When a LOT is on `Hold` (not line-stopped — separate concept), release SHALL go through one of two paths:
@@ -1879,7 +1931,7 @@ When a LOT is on `Hold` (not line-stopped — separate concept), release SHALL g
 1. **Quality release:** A user in the `Quality` Ignition role authenticates via FDS-04-007 AD elevation and marks the hold as resolved. The hold's `HoldEvent` row is closed (`ReleasedAt = SYSUTCDATETIME()`); the LOT's `LotStatusCode` returns to `Good`. Used when the hold reason has been physically resolved (e.g., parts re-inspected and found conforming).
 2. **Controlled Run Tag (CRT) release:** See FDS-10-012 — a Quality user releases the hold with a CRT, which forces a 200%-inspect downstream. Used when the parts are likely acceptable but need explicit verification at the next operation.
 
-Supervisor AD elevation (FDS-04-007) is required for both paths. Operators SHALL NOT release holds directly. (OI-04 revised; FRS 3.16.10)
+Supervisor AD elevation (FDS-04-007) is required for both paths. Operators SHALL NOT release holds directly. (FRS 3.16.10)
 
 #### FDS-10-012 — Controlled Run Tag (CRT) Workflow
 A Controlled Run Tag (CRT) is a Quality-issued hold release that commits a downstream 200%-inspect obligation on the affected material. When Quality issues a CRT release:
@@ -1890,7 +1942,7 @@ A Controlled Run Tag (CRT) is a Quality-issued hold release that commits a downs
 4. If the CRT run was NOT inspected when executed (material passed through without the 200% check), the material SHALL be flagged for **re-run through the process** — a new `Quality.HoldEvent` is created with `HoldReason = MissedCrtInspect` and the LOT returns to `Hold`. This is the "if not when run, it needs to be run through again" rule from the 2026-04-20 notes.
 5. All CRT activity logs to `Audit.OperationLog` with dedicated event types (`CrtIssued`, `CrtCompleted`, `CrtMissed`).
 
-The CRT Perspective workflow lives in the Quality module (FDS §8.2 addenda in Phase E) — this FDS requirement captures the PLC-side and escalation-side behaviour only. (OI-04 revised; FRS 3.16.10 + MPP 2026-04-20 "CRT = 200% inspect")
+The CRT Perspective workflow lives in the Quality module (FDS §8.2) — this FDS requirement captures the PLC-side and escalation-side behaviour only. (FRS 3.16.10 + MPP 2026-04-20 "CRT = 200% inspect")
 
 ### 10.4 Scale Integration
 
@@ -1910,7 +1962,7 @@ Barcode scanners at terminals SHALL operate as keyboard wedge devices — scan d
 #### FDS-10-008 — Zebra Printer Integration
 ZPL label generation and printing SHALL be handled via Ignition's built-in TCP socket or serial communication to Zebra printers. Each terminal record specifies its associated printer. ZPL templates SHALL be configurable (not hard-coded) to accommodate label format changes. **Print dispatch is asynchronous via Gateway-script-async pattern (FDS-01-014); see FDS-07-006a/b for the shipping-label-specific flow including 3-attempt retry with 2s gap and per-terminal banner on failure.**
 
-#### FDS-10-013 — Confirmation Method LocationAttribute — `MVP` (v0.11j, UJ-17)
+#### FDS-10-013 — Confirmation Method LocationAttribute — `MVP`
 
 PLC-integrated assembly Cells SHALL declare which confirmation source(s) the line uses for part identity, via a `LocationAttribute` `ConfirmationMethod` on the Cell. Seeded `LocationAttributeDefinition` row on relevant `LocationTypeDefinition`s (e.g., `AssemblyStation`, `SerializedAssembly`):
 
@@ -1921,11 +1973,11 @@ PLC-integrated assembly Cells SHALL declare which confirmation source(s) the lin
 The Cell's `ConfirmationMethod` value is read by the production proc and the operator-facing UI:
 - **`Vision`** — only Cognex OCR confirms; barcode reads (if any) are ignored.
 - **`Barcode`** — only barcode confirms; vision reads (if any) are ignored.
-- **`Both`** — vision AND barcode SHALL confirm matching part identity before the production event records. Mismatch counts toward the 10-fail line-stop threshold (OI-04 / FDS-10-005).
+- **`Both`** — vision AND barcode SHALL confirm matching part identity before the production event records. Mismatch counts toward the 10-fail line-stop threshold (FDS-10-005).
 
 Edge-case handling for `Vision` or `Barcode` Cells where the configured source briefly fails (e.g., barcode unreadable but vision OK on a `Barcode`-configured Cell): operator manual override SHALL be available, logged via the FDS-06-009 / UJ-16 `HardwareInterlockBypassed` flag on the resulting `ContainerSerial` row. Override is supervisor-elevated per FDS-04-007.
 
-If MPP later identifies Cells where reconciling Vision and Barcode is operationally valuable (Option D from UJ-17), a fourth value `VisionAuthoritativeBarcodeReconcile` MAY be added without schema change — the proc layer interprets the new value.
+If MPP later identifies Cells where reconciling Vision and Barcode is operationally valuable, a fourth value `VisionAuthoritativeBarcodeReconcile` MAY be added without schema change — the proc layer interprets the new value.
 
 ---
 
@@ -2030,7 +2082,7 @@ A report of all LOTs and containers currently on hold: hold type, reason, placed
 #### FDS-12-011 — Shipping History
 A report of shipped containers by date range, part number, and AIM shipper ID. Supports Honda ASN reconciliation.
 
-### 12.5 Global Trace Tool — `MVP` (new in v0.10, OI-15)
+### 12.5 Global Trace Tool — `MVP`
 
 #### FDS-12-012 — Home-Tile Trace Access
 The MES home screen SHALL expose a **Track** tile (mirroring the legacy Flexware top-level Track tile) that opens a Global Trace operator tool accessible from any context — Configuration Tool, shop-floor terminal, or Supervisor dashboard. Access requires no elevation because all results are read-only.
@@ -2042,7 +2094,7 @@ The Global Trace screen SHALL accept a single input field labeled *"LOT / Serial
 - Sub-LOT `LotName`
 - Serialized part serial number (`SerializedPart.SerialNumber`)
 - Container `ContainerName`
-- AIM shipper ID (`ContainerShippingLabel.ShipperId`)
+- AIM shipper ID (`Lots.ShippingLabel.ShipperId`)
 
 Resolution SHALL be unambiguous — if the input matches multiple record types (e.g., a number used as both a LOT name and a container name), the screen SHALL prompt the user to disambiguate via a type selector. Scan input (barcode reader) SHALL be accepted in addition to keyboard entry.
 
@@ -2080,6 +2132,7 @@ The MES SHALL implement the following AIM interface calls:
 
 #### FDS-13-002 — AIM Error Handling
 If an AIM call fails, the system SHALL:
+
 1. Log the failure to `Audit.InterfaceLog` with error details
 2. Queue the call for retry (per FDS-01-006 dispatch pattern)
 3. Alert the shipping operator that the AIM call is pending
@@ -2137,9 +2190,9 @@ If approved, migration from the Productivity Database SHALL include historical p
 #### FDS-14-004 — Migration Validation
 All migrated data SHALL be validated against the source system before go-live. Validation SHALL include: record counts, LOT status verification, genealogy integrity checks, and sample-based detail verification.
 
-#### FDS-14-005 — Flexware BOM Import (OI-13) — `MVP`
+#### FDS-14-005 — Flexware BOM Import — `MVP`
 
-**OI-13 (new v0.10):** Per MPP IT, authoritative Bills of Material live in the legacy **Flexware application at IP `.919`** — the predecessor MES being replaced by this project. The new MES `Parts.Bom` and `Parts.BomLine` tables SHALL be seeded from a **one-shot export** of the Flexware BOM master at cutover. See FDS-01-013 for the architectural placement; this requirement covers the migration-mechanics detail.
+Per MPP IT, authoritative Bills of Material live in the legacy **Flexware application at IP `.919`** — the predecessor MES being replaced by this project. The new MES `Parts.Bom` and `Parts.BomLine` tables SHALL be seeded from a **one-shot export** of the Flexware BOM master at cutover. See FDS-01-013 for the architectural placement; this requirement covers the migration-mechanics detail.
 
 - **Export format (specification owed by MPP IT):** CSV or Excel, one row per BOM line. Required columns: `ParentPartNumber`, `ChildPartNumber`, `Quantity`, `Uom`, `SortOrder`, `EffectiveFrom` (optional — defaults to cutover date if absent), `BomVersion` (optional — defaults to 1). Filename convention and delimiter TBD with MPP IT.
 - **Pre-flight validation:** Before running the bulk-load proc, the migration script SHALL verify that every `ParentPartNumber` and `ChildPartNumber` resolves to an active `Parts.Item` row. Unresolved references SHALL produce a pre-flight report identifying the missing items; the import SHALL NOT run until the missing items are imported (via the Parts.Item seed path) or flagged as out-of-scope.
@@ -2195,7 +2248,7 @@ Each area SHALL receive operator training before shadow commissioning begins. Tr
 
 ---
 
-## 16. Identifier Sequences — `MVP` (new in v0.11, OI-31)
+## 16. Identifier Sequences — `MVP`
 
 Flexware's `IdentifierFormat` table drives two MPP-internal counters (Lot LTT barcode + SerializedItem ID) that are critical to cutover continuity. The replacement MES SHALL provide equivalent functionality via a dedicated sequence table.
 
@@ -2224,7 +2277,7 @@ All identifier-minting paths (Lot create, SerializedItem create, future counters
 
 #### FDS-16-003 — Cutover-Day Seeding
 
-The Arc 2 Phase 1 migration SHALL include a seeding step that fetches `LastCounterValue` from the Flexware `IdentifierFormat` table at cutover and seeds `Lots.IdentifierSequence.LastValue` at **or above** the Flexware value for each sequence, preventing LTT collisions with in-circulation LOTs.
+The cutover migration SHALL include a seeding step that fetches `LastCounterValue` from the Flexware `IdentifierFormat` table at cutover and seeds `Lots.IdentifierSequence.LastValue` at **or above** the Flexware value for each sequence, preventing LTT collisions with in-circulation LOTs.
 
 Baseline values sampled 2026-04-23 (subject to drift — re-sample on cutover day): `Lot=1,710,932`, `SerializedItem=2,492`.
 
@@ -2264,21 +2317,25 @@ Baseline values sampled 2026-04-23 (subject to drift — re-sample on cutover da
 
 ## Open Items Register
 
-> This grid is a status summary. Full per-item design rationale, options considered, and revised-decision text live in `MPP_MES_Open_Issues_Register.md` v2.4 — the authoritative source regenerated after the 2026-04-20 MPP review.
+This register lists only items that are **unresolved** (Open or In Review) as of the FDS version date. Resolved and superseded items are not listed here — once a decision is made, the FDS body section absorbs it as design fact rather than tracking it as an open issue.
 
-| ID | Section | Description | Decision Owner | Status |
+The full historical record (resolution rationale, options considered, revised-decision text, closed items, supersession history) lives in `MPP_MES_Open_Issues_Register.docx` — the canonical source.
+
+**Status as of 2026-04-28:** 14 unresolved items (2 In Review, 12 Open). Part A items (FDS open issues) numbered `OI-XX`; Part B items (user-journey open questions) numbered `UJ-XX`.
+
+| ID | FDS § | Description | Criticality | Owner |
 |---|---|---|---|---|
-| **OI-01** | 1.6 | External interface dispatch: direct calls + `InterfaceLog`, no outbox | Blue Ridge / MPP IT | ✅ Resolved |
-| **OI-02** | 6.6 | Weight-based container closure: scale feedback on non-serialized lines (`ClosureMethod`, `TargetWeight` nullable on `ContainerConfig` pending customer validation) | Blue Ridge / MPP Engineering | 🔶 Pending Customer Validation |
-| **OI-03** | 9.4 | Shift runtime adjustments — **Resolved 2026-04-20:** availability derived from events, no minute adjustments, schedule import from MPP spreadsheet | MPP Production Control | ✅ Resolved |
-| **OI-04** | 10.3 | Vision / operator conflict — **Revised 2026-04-20:** line-stop (not LOT-hold), 10-consecutive-fail escalation, branch by failure type, CRT 200%-inspect release | MPP Engineering / Quality | 🔶 Revised — In Review |
-| **OI-05** | 5.5 | LOT merge rules — **Revised 2026-04-20:** post-sort only, same part, cross-die gated by `Tools.DieRankCompatibility` (matrix empty pending MPP Quality), FIFO-by-cavity on machining | MPP Production Control / Quality | 🔶 Revised — Matrix pending |
-| **OI-06** | 4 (entire) | Operator identity — **Resolved 2026-04-21 (Phase C):** initials-only operator presence, per-action AD elevation for interactive users, no PIN/clock number | MPP Operations | ✅ Resolved |
-| **OI-07** | 6.10 | Work order scope — **Revised 2026-04-20:** three WO types (Demand / Maintenance / Recipe), Maintenance flow FUTURE (schema hook only), Ben owes maintenance-engine scope | MPP / Ben (MPP) | 🔶 Revised — Ben owes scope |
-| **OI-08** | 2.5 | Terminals — **Closed 2026-04-24:** dedicated vs shared derived from Terminal's parent Location tier (WorkCenter/Cell → Dedicated; Area → Shared); machine-context lock; part↔machine validity via `Parts.ItemLocation`; tablets in Casting | MPP IT / Operations | ✅ Closed |
-| **OI-09** | 3.6, 5.4 | Multi-part lines — **Revised 2026-04-20 (addenda):** sublot pattern formalised (parent FK, per-cavity concurrent sublots, label parent reference), "one part at a time" still holds | MPP Engineering | 🔶 Revised — Addenda |
-| **OI-10** | §7 Tools | Tool Life tracking — **Superseded 2026-04-21:** rolled into Phase B Tool Management design spec (Tools schema now first-class, v1.7 data model §7) | Blue Ridge / MPP Engineering | ⏹ Superseded |
-| **OI-11** | TBD (Phase E) | Part identity change at Casting → Trim Shop — **New 2026-04-20:** parts get renamed crossing that boundary; genealogy bridge via `Parts.ItemTransform` proposed | MPP Engineering / Blue Ridge | ⬜ Open (new) |
-| **OI-12** | 3 addenda (Phase E) | Lineside inventory caps — **New 2026-04-20:** max parts per basket (`ContainerConfig.MaxParts`) + lineside quantity limit (Cell `LocationAttribute`) | MPP Operations / Blue Ridge | ⬜ Open (new) |
-| **OI-13** | 1.4 / 3 (Phase E) | BOM source — **New 2026-04-20:** authoritative BOMs live in the Flexware app at IP `.919`; one-shot export into `Parts.Bom` at cutover | MPP IT / Blue Ridge | ⬜ Open (new, HIGH) |
-| **OI-14** | 4.3 (elevated actions) | Admin remove-item capability — **New 2026-04-20:** super-user scope in Configuration Tool; detail design in Phase E | Blue Ridge | ⬜ Open (new, LOW) |
+| **OI-07** | 6.10 | Work order scope — single active `Production` type confirmed; `Demand` / `Maintenance` retained as FUTURE code-table hooks. | **HIGH** (active flow); LOW (FUTURE hooks) | Blue Ridge / Ben (SME) |
+| **OI-33** | 7.4 (FDS-07-010a) | AIM Shipper ID pool empty-pool **hard-fail** behavior — when the local pool is exhausted, `Container_Complete` rolls back and production stops on affected lines until the pool refills (no soft-fallback, no placeholder-then-reconcile). Customer validation: confirm hard-fail is the desired operational posture given trucks cannot ship without valid Honda-issued AIM IDs. | **HIGH** | MPP Operations / IT |
+| **UJ-19** | 12 | Productivity DB replacement — MPP to enumerate the four PD reports + their data sources; couples to OI-30 and UJ-11. | **HIGH** | MPP Production Control |
+| **OI-24** | TBD | Legacy "Automation" home-tile contents not captured in screenshots — likely OPC / interface management UI. Discovery walk-through with MPP needed. | MEDIUM | MPP IT |
+| **OI-28** | 10 | Legacy Cell flag *"Require override for cast parts"* — likely couples to OI-04 vision-conflict / line-stop at cell-level granularity. Confirm purpose; if retained, add `RequiresCastOverride` LocationAttribute. | MEDIUM | MPP Engineering |
+| **OI-30** | 12 | Legacy "Reports" tile contents not enumerated. Walk-through needed; couples directly to UJ-19 closure. | MEDIUM | MPP Production Control |
+| **OI-34** | 9.4 (FDS-09-008 / FDS-09-012) | MPP-authored production schedules — how should the MES leverage them beyond shift-window timing? Current design imports them for shift-instance creation and event-derived availability math. Whether MPP wants additional uses (target quotas per shift, line scheduling drift detection, throughput planning, etc.) is unanswered: *"How would MPP like to leverage the provided production schedules in the MES?"* | MEDIUM | MPP Production Control |
+| **OI-31** | 16 | `Lots.IdentifierSequence` cutover seed values + Ben's rollout-shape decision (single-line vs full-cutover vs shadow). Memo: `Meeting_Notes/2026-04-24_OI-31_Single-Line_Deployment_Impact.md`. | MEDIUM | MPP IT / Ben (rollout) |
+| **OI-32** | 5.11 / 6.6a (proposed) | Material Allocation operator screen — Jacques challenged the premise; clarification queued for "close as not-reproduced." Not blocking until reopened. | MEDIUM | Blue Ridge / Ben |
+| **UJ-03** | 5.4 | Sub-LOT split trigger — auto-prompt 50/50 vs operator-triggered vs per-Item conditional. Recommended Option A (auto-prompt, current FDS-05-009 design). | MEDIUM | Ben |
+| **UJ-05** | 7.7 | Sort Cage serial migration — recommended update-in-place + `Lots.ContainerSerialHistory`; awaits MPP Quality + Honda compliance affirmation. Highest traceability-loss-risk decision in the system. | MEDIUM | MPP Quality / Honda |
+| **OI-25** | (out-of-MVP) | Legacy "Notifications" Configuration module (email / alert rules) — confirm out-of-MVP and not a regression. | LOW | MPP Operations |
+| **OI-27** | 3 | Legacy Material *"Supply part"* BIT flag — purpose unclear. Confirm whether it drives any workflow; if so, add `IsSupplyPart` to `Parts.Item`. | LOW | MPP Engineering |
+| **OI-29** | 2 | Legacy Workstation Category grouping orthogonal to Area / Line / Cell — UI navigation convenience? Our ISA-95 hierarchy may already cover; if not, add `WorkstationCategory` LocationAttribute. | LOW | MPP Operations |
