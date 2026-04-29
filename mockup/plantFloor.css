@@ -177,20 +177,24 @@ html, body {
 }
 
 /* ─── Main + routes ───────────────────────────────────────────────────── */
+/* NOTE: Only descendants of .pf-main carry route-section semantics.
+   The .pf-app shell ALSO has [data-route] (current route state), so we
+   must scope the hide-by-default rule to the section descendants. */
 .pf-main {
   position: relative;
   overflow: hidden;
+  height: 100%;
 }
-[data-route] { display: none; height: 100%; }
-.pf-app[data-route="home"]                [data-route="home"]                { display: block; }
-.pf-app[data-route="terminal/initials"]   [data-route="terminal/initials"]   { display: flex; }
-.pf-app[data-route="terminal/cell-context"] [data-route="terminal/cell-context"] { display: flex; }
-.pf-app[data-route="terminal/diecast"]    [data-route="terminal/diecast"]    { display: flex; }
-.pf-app[data-route="terminal/trim-out"]   [data-route="terminal/trim-out"]   { display: flex; }
-.pf-app[data-route="terminal/machining-in"] [data-route="terminal/machining-in"] { display: flex; }
-.pf-app[data-route="terminal/assembly"]   [data-route="terminal/assembly"]   { display: flex; }
-.pf-app[data-route="terminal/end-of-shift"] [data-route="terminal/end-of-shift"] { display: flex; }
-.pf-app[data-route="lot/detail"]          [data-route="lot/detail"]          { display: block; }
+.pf-main > [data-route] { display: none; height: 100%; }
+.pf-app[data-route="home"]                .pf-main > [data-route="home"]                { display: block; }
+.pf-app[data-route="terminal/initials"]   .pf-main > [data-route="terminal/initials"]   { display: flex; }
+.pf-app[data-route="terminal/cell-context"] .pf-main > [data-route="terminal/cell-context"] { display: flex; }
+.pf-app[data-route="terminal/diecast"]    .pf-main > [data-route="terminal/diecast"]    { display: flex; }
+.pf-app[data-route="terminal/trim-out"]   .pf-main > [data-route="terminal/trim-out"]   { display: flex; }
+.pf-app[data-route="terminal/machining-in"] .pf-main > [data-route="terminal/machining-in"] { display: flex; }
+.pf-app[data-route="terminal/assembly"]   .pf-main > [data-route="terminal/assembly"]   { display: flex; }
+.pf-app[data-route="terminal/end-of-shift"] .pf-main > [data-route="terminal/end-of-shift"] { display: flex; }
+.pf-app[data-route="lot/detail"]          .pf-main > [data-route="lot/detail"]          { display: block; }
 
 /* ─── Home Page layout ────────────────────────────────────────────────── */
 .pf-home {
