@@ -1,12 +1,12 @@
 # MPP MES — Open Issues Register
 
 **Document:** FDS-MPP-MES-OIR-001
-**Version:** 2.14 — Working Draft
-**Date:** 2026-04-27
+**Version:** 2.16 — Working Draft
+**Date:** 2026-04-29
 **Prepared By:** Blue Ridge Automation
 **Prepared For:** Madison Precision Products, Inc. (Madison, IN)
 
-This register consolidates all open items and design decisions that gate Perspective screen design and implementation. Part A holds the FDS-numbered open items (OI-01 through OI-30). Part B holds the 19 User Journey assumptions/decisions (UJ-01 through UJ-19). Cross-references between the two parts are noted per-item.
+This register consolidates all open items and design decisions that gate Perspective screen design and implementation. Part A holds the FDS-numbered open items (OI-01 through OI-35). Part B holds the 19 User Journey assumptions/decisions (UJ-01 through UJ-19). Cross-references between the two parts are noted per-item.
 
 ---
 
@@ -14,6 +14,8 @@ This register consolidates all open items and design decisions that gate Perspec
 
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
+| 2.16 | 2026-04-29 | Blue Ridge Automation | **OI-35 NEW / ⬜ Open / HIGH — Long-horizon scaling, retention, and archiving strategy.** Captures the 20-year-retention architectural decisions surfaced during the 2026-04-28 indexing & query-perf review. **Tagged "must decide before Arc 2 Phase 1 SQL build"** — partition functions, materialization columns, and closure-table presence all need to be in the CREATE migration; retrofitting them on a populated 100M+ row table is operationally painful. The decision space: per-table retention class (push-back candidates: `Audit.OperationLog` / `InterfaceLog` / `FailureLog` at 7-year vs 20-year), monthly range partitioning + sliding-window automation for ~14 high-volume event tables, clustered columnstore on partitions older than 90 days, materialized closure table for `Lots.LotGenealogy` (so Honda audits don't recursive-CTE-walk 100M+ rows at year 15), materialize `TotalInProcess` / `InventoryAvailable` columns onto `Lots.Lot` (replaces the read-time `v_LotDerivedQuantities` view at scale), switch `Lots.IdentifierSequence_Next` to SQL Server `SEQUENCE` object (eliminates row-level lock contention at LOT creation), split `Audit.OperationLog` into a 7-year retention general audit + a separate 20-year `Lots.LotEventLog` for traceability events. Owner: Blue Ridge architecture + MPP IT (retention policy negotiation). Last-responsible-moment posture confirmed by Jacques 2026-04-29 — the decision is deferred but the gate is hard. Couples to: indexing review meeting note (`Meeting_Notes/2026-04-28_DataModel_Indexing_Scaling_Review.md`), the data model spec § for Arc 2 deferred tables, and the existing "indexing pass" follow-up. Count shifts: Part A Open 10 → 11 (added OI-35 HIGH). Active Part A item count 34 → 35. No FDS / data model / SQL changes this revision — register entry only. |
+| 2.15 | 2026-04-28 | Blue Ridge Automation | **Canonical sync of OI-33 + OI-34 from the embedded FDS Open Items Register.** Both items were added to the FDS body's Open Items Register during the 2026-04-28 v0.11m continuity + clarity pass but had not yet been folded into this canonical OIR. **OI-33 ⬜ Open / HIGH** — AIM Shipper ID pool empty-pool **hard-fail** behavior (FDS-07-010a). When the local pool is exhausted, `Container_Complete` rolls back and production stops on affected lines until the pool refills (no soft-fallback, no placeholder-then-reconcile). Customer validation needed: confirm hard-fail is the desired operational posture given trucks cannot ship without valid Honda-issued AIM IDs. Owner: MPP Operations / IT. Couples to UJ-04 (already Resolved — pool design locked v2.12). **OI-34 ⬜ Open / MEDIUM** — MPP-authored production schedules — how should the MES leverage them beyond shift-window timing (FDS-09-008 / FDS-09-012)? Current design imports them for shift-instance creation and event-derived availability math. Whether MPP wants additional uses (target quotas per shift, line scheduling drift detection, throughput planning, etc.) is unanswered. Owner: MPP Production Control. Couples to UJ-19 (PD report enumeration) and OI-30 (Reports tile contents). Count shifts: Part A Resolved 22 → 22, In Review 1 → 1, Open 8 → 10 (added OI-33 + OI-34), Superseded 1 → 1. Active Part A item count 32 → 34. No FDS / data model / SQL changes — OIR sync only. |
 | 2.1 | 2026-04-06 | Blue Ridge Automation | Initial register consolidating FDS open items and User Journey assumptions |
 | 2.2 | 2026-04-08 | Blue Ridge Automation | FRS reference crosswalk added per-item; priorities normalized |
 | 2.3 | 2026-04-09 | Blue Ridge Automation | First round of MPP review decisions applied — OI-01, UJ-06, UJ-15 closed; 10 items moved to In Review |
@@ -33,21 +35,21 @@ This register consolidates all open items and design decisions that gate Perspec
 
 ## Summary
 
-**Part A counts (30 items):**
+**Part A counts (35 items — updated v2.16):**
 
 | Priority | ✅ Resolved | 🔶 In Review | ⬜ Open | Superseded | **Total** |
 |---|---|---|---|---|---|
-| HIGH | 3 (OI-01, OI-02, OI-05) | 1 (OI-07) | 2 (OI-13→resolved, OI-15→resolved, remaining: none HIGH still open) | 0 | **6** |
-| MEDIUM | 13 (OI-03, OI-04, OI-06, OI-08, OI-09, OI-11, OI-12, OI-16, OI-17, OI-18, OI-21, OI-22, OI-31) | 0 | 4 (OI-24, OI-28, OI-30, OI-32) | 0 | **17** |
-| LOW | 6 (OI-14, OI-19, OI-20, OI-23, OI-32b, plus OI-13 resolved HIGH moved up) | 0 | 4 (OI-25, OI-27, OI-29) | 0 | **10** |
+| HIGH | 3 (OI-01, OI-02, OI-05) | 1 (OI-07) | 2 (OI-33, OI-35) | 0 | **6** |
+| MEDIUM | 13 (OI-03, OI-04, OI-06, OI-08, OI-09, OI-11, OI-12, OI-16, OI-17, OI-18, OI-21, OI-22, OI-31) | 0 | 5 (OI-24, OI-28, OI-30, OI-32, OI-34) | 0 | **18** |
+| LOW | 6 (OI-13, OI-14, OI-15, OI-19, OI-20, OI-23, OI-32b) | 0 | 4 (OI-25, OI-27, OI-29) | 0 | **10** |
 | — | 0 | 0 | 0 | 1 (OI-10) | **1** |
-| **Total** | **22** | **1** | **8** | **1** | **32** |
+| **Total** | **22** | **1** | **11** | **1** | **35** |
 
-> **Note on the count table:** Jacques's 2026-04-24 batch resolved OI-13 (HIGH) + OI-15 (HIGH) but there are no other HIGH items still Open. Resolved column bumps significantly. Corrected row totals below:
+> **Authoritative row lists (after v2.16 sync):**
 >
 > - Resolved (22) = OI-01, -02, -03, -04, -05, -06, -08, -09, -11, -12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22, -23, -32b
 > - In Review (1) = OI-07 (mid-correction — see v2.9 entry)
-> - Open (8) = OI-24, -25, -27, -28, -29, -30, -31, -32
+> - Open (11) = OI-24, -25, -27, -28, -29, -30, -31, -32, -33, -34, -35
 > - Superseded (1) = OI-10
 
 **Part B counts (19 items) — updated v2.14:**
@@ -59,7 +61,7 @@ This register consolidates all open items and design decisions that gate Perspec
 | LOW | 1 (UJ-06) | 0 | 0 | **1** |
 | **Total** | **16** | **1** | **2** | **19** |
 
-**Grand total:** 51 items (32 Part A + 19 Part B). 38 resolved, 2 in review, 10 open, 1 superseded + 1 superseded-style (OI-10).
+**Grand total:** 54 items (35 Part A + 19 Part B). 38 resolved, 2 in review, 13 open, 1 superseded.
 
 > **Note on UJ descriptions:** Jacques flagged 2026-04-24 that UJ entries lack the options/impact/reference depth of the OI entries. A separate enrichment pass is queued before the next MPP review — not addressed in v2.10.
 
@@ -795,6 +797,124 @@ Under our design:
 **Decision (2026-04-24):** Closed by Jacques — "Don't worry about the language difference, our `Parts.ItemType` will suffice." No `MaterialClass` table. No `Parts.Item.CustomerCode` column. `Parts.ItemType` (Cast / Machined / Assembled / Received / …) is the authoritative grouping.
 
 **Integration queued:** Review report (`reference/NewInput/REVIEW_2026-04-24.md` §4 Gap 2) — add strike-through + closure note. No data model or FDS changes.
+
+---
+
+### OI-33 — AIM Shipper ID pool empty-pool hard-fail behavior — ⬜ Open (new, 2026-04-28)
+
+**Priority:** HIGH
+**Owner:** MPP Operations / IT
+**FDS §:** 7.4 (FDS-07-010a)
+**References:** UJ-04 (✅ Resolved 2026-04-27 — pool design locked, OIR v2.12); FDS-07-005 (Container_Complete atomic close); FDS-07-010 (pool topup); FDS-07-010a (empty-pool behavior); `Lots.AimShipperIdPool` + `Lots.AimPoolConfig` (Data Model v1.9h)
+
+**Description:** UJ-04 closed the AIM Shipper ID design as a pre-fetched local pool with synchronous FIFO claim at `Container_Complete`. The 2026-04-28 FDS continuity pass surfaced one customer-validation question still outstanding: **what happens when the pool is empty at close time?** The current FDS-07-010a posture is **hard-fail**: `Container_Complete` raises a business-rule error, the open transaction rolls back, the operator sees an explicit "AIM pool empty — contact IT" error, and the line stops on affected workstations until the topup script refills the pool. There is no soft-fallback, no placeholder-then-reconcile pattern, no offline-mode AIM ID generator.
+
+**Why this is a customer-validation question:** Trucks cannot ship without valid Honda-issued AIM IDs printed on container labels. Any soft-fallback (placeholder ID, locally minted ID with later swap, queued pending-AIM container state) creates a window in which a container exists physically but has no valid Honda identifier — and the reconciliation flow if Honda later refuses the ID is non-trivial. The hard-fail posture trades operational availability (line stops immediately on pool exhaustion) for traceability integrity (every closed container has a real Honda ID at close time, period).
+
+**Operational mitigations already in place:**
+- `Lots.AimPoolConfig` thresholds (`TargetBufferDepth=50`, `TopupThreshold=30`, `AlarmWarningDepth=20`, `AlarmCriticalDepth=10`) give a topup script and a two-tier alarm (supervisor wallboard at Warning, supervisor + IT alert at Critical) ample headroom — reaching `0` requires the topup script to be fully broken AND the Warning + Critical alarms to be ignored for the burn rate to consume the remaining buffer.
+- `AIM.GetNextNumber` is sync direct-call (no MES-side dependency); pool exhaustion only happens if AIM itself is unreachable (network / Honda-side outage) or the topup Gateway script is failing.
+- The Configuration Tool exposes the four thresholds — MPP can raise `TargetBufferDepth` if their burn rate justifies more headroom.
+
+**Options considered:**
+- **(a) Hard-fail (current FDS-07-010a posture)** — Container_Complete rejects on empty pool; line stops; operator sees error; recovery = topup script catches up, then operator re-attempts the close. Pro: traceability integrity preserved at close time; no reconciliation flow needed. Con: line stops on AIM/network outage even if the local pool was nearly full when the outage began.
+- **(b) Soft-fallback with placeholder-then-reconcile** — Container_Complete proceeds with a locally minted placeholder ID (e.g., `MESC-tmp-NNNNNN`); a background reconciliation script swaps the placeholder for a real AIM ID once the pool refills; the printed label is reprinted at swap time; if Honda later rejects the ID at receipt, a manual workflow handles the dispute. Pro: line never stops. Con: window where containers physically exist with non-Honda IDs; reprint labor; reconciliation flow + Honda-rejection edge case to design.
+- **(c) Pre-emptive line-pause at low-pool** — when pool depth drops below a configurable LineHaltThreshold (e.g., 5), block further `Container_Complete` calls **before** depth hits zero, with a softer error and a supervisor-override path. Pro: graceful slow-down vs. cliff-edge stop. Con: extra threshold to tune; supervisor override still has to be used responsibly.
+
+**Recommended direction:** Confirm Option (a) — hard-fail. It matches the existing FDS-07-010a text and is consistent with how Honda treats AIM IDs (every issued ID is permanently consumed, no expiry). The two-tier alarm + topup script + configurable buffer depth give MPP operational levers to never reach the cliff edge under normal conditions. Option (b) is rejected — placeholder reconciliation introduces a window of broken traceability that is exactly what the AIM-issued-ID model exists to prevent. Option (c) MAY be reconsidered post-deployment if MPP observes pool depth approaching the floor in production, but is unnecessary up front given the headroom configured.
+
+**What's needed to decide:** Phase 0 customer-validation answer from MPP Operations + IT: *"On AIM pool empty at container close time, do you want hard-fail (line stops; current design) or do you want a soft-fallback / pre-emptive halt? Acknowledge that hard-fail prioritizes traceability integrity over availability."*
+
+**Impact if unresolved:** No design change required to keep building toward MVP — the FDS-07-010a hard-fail posture is the implemented behavior. This is a customer-acceptance question, not a build-gating question. Resolution either (i) confirms the current design (no work) or (ii) triggers a redesign of `Container_Complete` + reconciliation Gateway scripts + label-reprint flow (significant scope addition).
+
+---
+
+### OI-34 — Production schedule leverage beyond shift-window timing — ⬜ Open (new, 2026-04-28)
+
+**Priority:** MEDIUM
+**Owner:** MPP Production Control
+**FDS §:** 9.4 (FDS-09-008 / FDS-09-012)
+**References:** FDS-09-008 (Shift instance creation from authored schedule); FDS-09-012 (event-derived availability math against shift windows); UJ-19 (Productivity DB replacement — couples here); OI-30 (Reports tile contents — couples here)
+
+**Description:** Our current design imports MPP's authored production schedules and uses them for two purposes: (1) creating `Oee.Shift` instance rows with the right start / end timestamps so OEE math has shift windows to bucket events into (FDS-09-008), and (2) deriving availability against those shift windows from the operator-driven event stream (FDS-09-012). The FDS continuity pass on 2026-04-28 surfaced that this is a **minimal use** of authored-schedule data — MPP may want the MES to leverage the schedules more substantively. The unanswered question recorded in the FDS embedded register: *"How would MPP like to leverage the provided production schedules in the MES?"*
+
+**Possible additional uses (not yet scoped):**
+- **Per-shift target quotas** — schedule carries a target quantity per Item per shift; the MES displays attainment vs. target on the workstation banner, the supervisor dashboard, and the shift-end summary screen (FDS-09-015). Schema impact: add `TargetQuantity INT NULL` and `ItemId BIGINT NULL FK` to `Oee.Shift` (or a new `Oee.ShiftPlan` child table if multiple Items per shift are common).
+- **Line scheduling drift detection** — compare actual shift-instance run time and actual quantity against the authored schedule; surface drift > X% as a supervisor alert. Schema impact: same as above + drift-threshold LocationAttribute on Line / WorkCenter.
+- **Throughput / forecast planning** — feed the MES's actual availability + performance numbers back to MPP Production Control as an input to their next planning cycle. Likely a Reports tile item, couples to OI-30.
+- **Tool / Cell scheduling** — authored schedule includes which Tool runs on which Cell at which time; the MES warns on Tool / Cell mismatch at Lot creation. Schema impact: link `Oee.ShiftPlan` to `Tools.Tool` and `Location.Location` (Cell). Note: this is FUTURE territory — current design has Tool assignment authoritative on `Tools.ToolAssignment`, not on a schedule.
+- **None — stop at the current minimal use** — authored schedules drive shift-window timing only; everything else stays operator-driven.
+
+**Why this is open:** MPP gave us authored schedules to consume but did not explicitly tell us *which* of the above (or others not listed) they want the MES to use. We made a reasonable starting choice (shift-window timing only — the smallest defensible scope) and parked the rest. This is a discovery question, not a design defect.
+
+**Couples to:**
+- **UJ-19** — Productivity DB replacement. The four PD reports MPP names may include schedule-attainment reports (per-shift target quotas) — answers to UJ-19 may resolve OI-34 directly.
+- **OI-30** — Reports tile enumeration. Schedule-derived reports are likely candidates for the Reports tile.
+- **FDS-09-015** — Shift-end summary screen (UJ-10 closed). Adding target attainment lines to that screen is the natural surface area if Per-shift target quotas is in scope.
+
+**What's needed to decide:** Phase 0 walkthrough question to MPP Production Control: *"Beyond using your authored schedules for shift-window timing, what else should the MES do with them? Examples: per-shift target quotas displayed at the workstation, drift detection alerts, schedule-attainment reports, etc. Or is the current minimal use sufficient?"* Couples best with the OI-30 + UJ-19 walkthrough — same SME, overlapping scope.
+
+**Impact if unresolved:** No design change required to keep building toward MVP — the current FDS-09-008 / FDS-09-012 minimal use is implemented. This is a scope-expansion question. Resolution either (i) confirms the current scope (no work) or (ii) triggers a Phase 9 (Oee) revisit + possible schema additions to `Oee.Shift` / new `Oee.ShiftPlan` child + Reports tile entries + workstation banner additions.
+
+---
+
+### OI-35 — Long-horizon scaling, retention, and archiving strategy — ⬜ Open / **MUST DECIDE BEFORE ARC 2 PHASE 1 SQL BUILD** (new, 2026-04-29)
+
+**Priority:** HIGH
+**Owner:** Blue Ridge architecture + MPP IT (retention policy negotiation)
+**FDS §:** 11 (Audit) — retention policy paragraph; cross-cutting impact on §5/§6/§9
+**References:** Indexing & query-perf review at `Meeting_Notes/2026-04-28_DataModel_Indexing_Scaling_Review.md`; FDS-11 audit retention paragraph; existing data model spec for `Lots.LotGenealogy` / `Lots.Lot` / `Workorder.ProductionEvent` / `Audit.OperationLog` / `Lots.IdentifierSequence`; `Lots.v_LotDerivedQuantities` view (OI-23, Resolved); the queued indexing pass on Arc 2 deferred tables.
+
+**Description:** The legacy MES retention requirement is **20 years** of historical data (Honda Tier 2 supplier compliance + product-life traceability). At MPP's observed throughput (~150K LOTs / year derived from the Flexware `IdentifierFormat` baseline of `Lot=1,710,932` after ~10–15 years of operation), and accounting for system-wide event amplification, a 20-year horizon implies these per-table volumes:
+
+| Table class | 20-year row estimate |
+|---|---|
+| `Lots.Lot` | 3–5M |
+| `Lots.LotGenealogy` | 10–15M |
+| `Lots.LotMovement` / `LotStatusHistory` / `LotAttributeChange` | 100–200M each |
+| `Lots.ContainerSerial` | 50–80M |
+| `Workorder.ProductionEvent` / `ConsumptionEvent` | **150–300M** each |
+| `Audit.OperationLog` | **300M–1B** |
+| `Audit.InterfaceLog` | **300–600M** |
+
+The audit + interface tables are structurally larger than the entire traceability dataset. A 20-year blanket retention policy without architectural mitigations is not tractable on a single SQL Server 2022 instance — query plans against unpartitioned 1B-row tables degrade beyond useful thresholds, recursive `LotGenealogy` walks for Honda audits hit timeouts, and OLTP buffer pool gets crowded out by historical data scans.
+
+**Why this is a "must decide before Arc 2 Phase 1 SQL" gate:** Several of the architectural mitigations — partition functions, materialization columns, closure-table presence — must be in the **CREATE migration** for the affected tables. Adding a partition scheme to a populated 100M-row table is operationally expensive (rebuild, log-volume blow-up, downtime window). Adding a materialized closure table after 5 years of LOT genealogy means backfilling 50M+ ancestor pairs from a recursive walk. The schema-shape decisions made in Arc 2 Phase 1 set the ceiling on what's possible without painful migration later.
+
+**Decision space (the conversation Jacques + Blue Ridge defer to last responsible moment):**
+
+1. **Per-table retention class.** Negotiate which tables genuinely need 20 years vs which can carry 7-year retention. Push-back candidates: `Audit.OperationLog`, `Audit.FailureLog`, `Audit.InterfaceLog`, `Oee.DowntimeEvent`, `Audit.ConfigLog`. Honda traceability data (`Lots.*` events, `ContainerSerial`, `ShippingLabel`, `LotGenealogy`) almost certainly stays at 20 years.
+2. **Partitioning scheme.** Native SQL Server 2022 range partitioning, monthly partitions, sliding-window automation. Applies to ~14 deferred high-volume event tables. Partition column is `CreatedAt` / `EventAt` / `LoggedAt` per table (already non-null on every event table by design — clean partition keys throughout).
+3. **Columnstore on aged partitions.** Convert partitions older than 90 days from rowstore to clustered columnstore. Typical 8–15× compression on event-shape data because `LotId` / `LocationId` / `AppUserId` columns repeat heavily.
+4. **`Lots.LotGenealogy` materialized closure table.** Pre-compute every ancestor-descendant pair at LOT creation time (`AncestorLotId`, `DescendantLotId`, `Depth`). Honda audit query becomes O(1) lookup vs O(depth) recursion against partitioned tables. Cost: extra INSERTs at LOT creation (~4 rows per LOT in MPP's flow). Trade ~20% slower OLTP writes for "Honda audits actually return."
+5. **Materialize `TotalInProcess` / `InventoryAvailable` columns onto `Lots.Lot`.** OI-23 chose the view-based path (`Lots.v_LotDerivedQuantities`); at scale the view aggregates over 200M+ event rows per query. The deferred-decision criteria from OI-23 are now imminent — if we materialize, do it in the same `Lot_Create` / event-write procs that already touch the Lot row. The view stays as a fallback for diagnostics.
+6. **`Lots.IdentifierSequence_Next` locking model.** Single-row hot table updated on every LOT creation. ~150K LOTs/year, ~500/day in bursts → row-level update lock contention. Two paths: (a) explicit `WITH (ROWLOCK, UPDLOCK)` with serializable transaction (current implicit pattern); (b) replace with SQL Server `SEQUENCE` object — eliminates the row, native concurrency, format string applied via wrapping function. `SEQUENCE` doesn't support our `EndingValue` rollover semantics out of the box, but rollover is a 30+ year horizon problem.
+7. **Split `Audit.OperationLog`.** Today every mutating proc across every schema writes here. Keep `OperationLog` for general 7-year audit, add a separate `Lots.LotEventLog` or similar for traceability-relevant subset (LOT events, container close events, ShippingLabel mints) at full 20-year retention. Cuts the largest table in the system in half.
+8. **Filtered indexes on hot subsets.** Lower-stakes per-table decision but should be made systematically: every "active subset" query (`WHERE LotStatusCodeId IN (active codes)`, `WHERE ResumedAt IS NULL`, `WHERE ConsumedAt IS NULL`, `WHERE PrintFailedAt IS NOT NULL AND BannerAcknowledgedAt IS NULL`) gets a filtered index that is 0.1–1% the size of the full table.
+
+**Options on overall posture (the meta-question Jacques is deferring):**
+
+- **(a) Defer to last responsible moment, build Arc 2 Phase 1 SQL with stub schemas.** Risk: at decision time we discover the partition / closure / materialization choices require restructuring tables we've already populated in dev. Re-runnable migrations help but don't fully insulate. **This is the current direction.**
+- **(b) Make partial / conservative decisions now (partition + filtered indexes only) and defer the higher-cost items (closure table, OperationLog split).** Lower risk, but partial commits constrain later moves.
+- **(c) Hold Arc 2 Phase 1 SQL until the full strategy is decided.** Highest correctness, highest schedule cost.
+
+**Recommended direction:** **Option (a) with explicit gating.** Defer the architectural decisions, but Arc 2 Phase 1 SQL build does not commence until OI-35 is resolved. Phase 0 facilitation workshop adds OI-35 as a topic alongside the existing 8 gating items. Resolution may be a single architectural design review session between Blue Ridge architecture and MPP IT — does not require full Phase 0 customer walkthrough.
+
+**What's needed to decide:**
+
+1. Negotiation with MPP IT on per-table retention policy — for the audit / interface log tables specifically. Single-meeting deliverable; does not gate other decisions.
+2. Internal Blue Ridge architecture review covering decisions 2–7 above. Output: data model spec § "Scaling Decisions" pinning partition columns, materialization columns, closure-table schema, and `IdentifierSequence_Next` locking choice. Drives Arc 2 Phase 1 migration content.
+3. Optional load test against synthetic 20-year data volumes to validate the chosen approach before production cutover. Higher-confidence-but-deferable.
+
+**Impact if unresolved:** **Arc 2 Phase 1 SQL build cannot commence.** All other Arc 2 work (frontend / Perspective screens / Configuration Tool extensions) remains unblocked.
+
+**Coupled items:**
+
+- **OI-23 (Resolved)** — chose view; OI-35 may flip to materialized columns. Not a re-open; OI-23's choice was correct for MVP, OI-35 supersedes it for production scale.
+- **Indexing pass on Arc 2 deferred tables** — already-queued separate follow-up. Lands as data model bump v1.9k or v1.10. OI-35 sets the **retention / partitioning / materialization** layer; the indexing pass sets the **per-table index list** layer. Both feed the Arc 2 Phase 1 migration; both must land before SQL writes.
+- **FDS-11 audit retention paragraph** — currently silent on the per-table retention class. OI-35 resolution drives an FDS-11 amendment.
+
+**Last-responsible-moment posture confirmed by Jacques 2026-04-29.** The decision is deferred but the gate is hard.
 
 ---
 

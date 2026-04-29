@@ -1,6 +1,6 @@
 # MPP MES — Data Model Reference
 
-**Version:** v1.9 working draft (rev 2026-04-28j — `Parts.ContainerConfig.ClosureMethod` value list extended with `ByVision`; UpperCamelCase casing applied; OI-02 caveat retired. See revision history)
+**Version:** v1.9 working draft (rev 2026-04-28k — `Lots.ShippingLabel.BannerAcknowledgedAt` added (FDS-07-006b banner-dismiss); `CoupledDownstreamCellLocationId` LocationAttributeDefinition seeded under `CNCMachine` (FDS-06-008 auto-move target). See revision history)
 **Schemas:** 8 | **Tables:** ~73
 **Target:** Microsoft SQL Server 2022 Standard Edition
 
@@ -10,6 +10,7 @@
 
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
+| 1.9k | 2026-04-28 | Blue Ridge Automation | **Two FDS-driven additions queued from 2026-04-28 working sessions.** (1) **`Lots.ShippingLabel.BannerAcknowledgedAt DATETIME2(3) NULL`** — supports the FDS-07-006b broadcast-with-session-filter Acknowledge action, where the per-terminal print-failure banner shown by FDS-07-006a's retry-exhausted state can be dismissed by the operator. Independent of `PrintFailedAt`: the row stays in failed state for the safety-sweep alarm even after acknowledgement; this column only suppresses the banner UI on the closing terminal. State derivation table updated: Failed = `PrintFailedAt IS NOT NULL AND BannerAcknowledgedAt IS NULL`; Failed-acknowledged = both non-NULL. SQL deferred to Arc 2 Phase 7 alongside the rest of the Container schema CREATE — column contract above is authoritative. (2) **`CoupledDownstreamCellLocationId` LocationAttributeDefinition seed under `CNCMachine`** — supports the FDS-06-008 Machining OUT auto-move-to-coupled-Assembly-Cell flow. New illustrative seed row added to the §2 LocationAttributeDefinition examples block under a new "For `Cell` → `CNCMachine` definition" subsection: `AttributeName=CoupledDownstreamCellLocationId`, `DataType=Integer` (parsed as a `Location.Location.Id` reference), `IsRequired=0` (NULL = legacy uncoupled path). When non-NULL, PLC-signalled machining completion writes the `ProductionEvent` and a `LotMovement` to the referenced Cell + updates `CurrentLocationId`; when NULL, completion writes the event only and the LOT stays at the Machining Cell awaiting operator-driven movement. Phase G seed delta on the next migration: +1 row for `CoupledDownstreamCellLocationId` on the `CNCMachine` definition. No other schema changes. |
 | 1.9j | 2026-04-28 | Blue Ridge Automation | **§3 ContainerConfig — `ClosureMethod` extended with `ByVision`.** Camera-validated container closure added per Jacques's 2026-04-28 review: a third trigger alongside the existing count and weight modes. Camera validates each part (pass/fail), PLC accumulates the validated count, asserts `ContainerFullFlag` when target met. Code values renamed to UpperCamelCase per project convention (`ByCount` / `ByWeight` / `ByVision`; previously documented as `BY_COUNT` / `BY_WEIGHT`). "Pending OI-02 closure" caveat retired (OI-02 ✅ Resolved 2026-04-24 per OIR v2.14). No schema change — `ClosureMethod` is `NVARCHAR(20) NULL`; the new value is purely an additional allowed string. FDS-03-017 + FDS-06-014 are authoritative for the per-method mechanics. |
 | 0.1 | 2026-04-02 | Blue Ridge Automation | Initial data model — 7 schemas, ~50 tables |
 | 0.2 | 2026-04-09 | Blue Ridge Automation | Eliminated `Terminal` table — terminals are now `Location` records (type=Terminal) with config as `LocationAttribute`. Renamed `TerminalId` FKs to `TerminalLocationId` across all event tables. Added `ShotCount` to `DowntimeEvent` for warm-up tracking (UJ-14). Added hardware interlock bypass flag discussion on `ContainerSerial` (UJ-16). Updated workorder schema scope to MVP-LITE (OI-07). |
@@ -179,6 +180,12 @@ Attribute schema per `LocationTypeDefinition`. Each definition carries its own s
 | IsLineside | BIT | No | — | Whether this is a lineside staging area |
 | MaxLotCapacity | INT | No | — | Maximum LOTs that can be stored here |
 | LinesideLimit | INT | No | pieces | Maximum total pieces allowed on this lineside location at one time (sum across **all Items**, all open LOTs at this Location). Scan-in mutation rejects when cumulative lineside quantity would exceed this. Added v1.8 (OI-12). Complements `Parts.Item.MaxParts` — `MaxParts` is Item-scoped (cap on one Item at one Location); `LinesideLimit` is Location-scoped (cap across everything at that Location). |
+
+*For `Cell` → `CNCMachine` definition (machining cells — coupled-downstream auto-move per FDS-06-008):*
+
+| AttributeName | DataType | Required | Uom | Description |
+|---|---|---|---|---|
+| CoupledDownstreamCellLocationId | Integer | No | — | **Added v1.9k.** `Location.Location.Id` of the Cell that machined LOTs auto-move to on Machining OUT. When non-NULL, PLC-signalled machining completion writes a `Workorder.ProductionEvent` and a `Lots.LotMovement` from this Machining Cell to the referenced downstream Cell (typically the paired Assembly Cell within the same WorkCenter), and updates the LOT's `CurrentLocationId` to the downstream Cell — no operator scan needed. NULL = legacy / uncoupled path: completion writes the `ProductionEvent` only; LOT stays at the Machining Cell awaiting an explicit operator-driven movement. Configured at deployment via the Configuration Tool's Location admin screens. (FDS-06-008) |
 
 ### Location
 
@@ -707,13 +714,14 @@ Junction: serial numbers in container tray positions.
 
 ### ShippingLabel
 
-Container shipping label print/void history. **v1.9i (UJ-18 Gateway-script-async print pattern):** print state lives on this row — no separate queue table. Operator close transaction is atomic and zero-latency (same v1.9h AIM pool flow); print dispatch is event-driven via Gateway message handler with 3 retries (2s gap), banner-on-failure at the closing terminal.
+Container shipping label print/void history. **v1.9i (UJ-18 Gateway-script-async print pattern):** print state lives on this row — no separate queue table. Operator close transaction is atomic and zero-latency (same v1.9h AIM pool flow); print dispatch is event-driven via Gateway message handler with 3 retries (2s gap), banner-on-failure at the closing terminal. **v1.9k:** `BannerAcknowledgedAt` added to record operator dismissal of the print-failure banner — supports the FDS-07-006b broadcast-with-session-filter Acknowledge action.
 
 State derivation:
 
 - **Pending** — `PrintedAt IS NULL AND PrintFailedAt IS NULL`
 - **Completed** — `PrintedAt IS NOT NULL`
-- **Failed** — `PrintFailedAt IS NOT NULL` (banner trigger)
+- **Failed** — `PrintFailedAt IS NOT NULL AND BannerAcknowledgedAt IS NULL` (banner showing)
+- **Failed-acknowledged** — `PrintFailedAt IS NOT NULL AND BannerAcknowledgedAt IS NOT NULL` (banner dismissed; row remains in failed state for the safety-sweep alarm)
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -731,6 +739,7 @@ State derivation:
 | LastPrintError | NVARCHAR(2000) | NULL | **Added v1.9i.** Captured exception text from the most recent failed attempt. |
 | PrintFailedAt | DATETIME2(3) | NULL | **Added v1.9i.** Non-NULL = retries exhausted (3 attempts × 2s gap). Drives the banner shown at `TerminalLocationId`. |
 | TerminalLocationId | BIGINT | FK → Location.Location.Id, NULL | **Added v1.9i.** The Terminal where the closing operator was — drives both the printer pick (resolved via `LocationAttribute` on parent Cell) and the banner routing (banner shows only at this Terminal). |
+| BannerAcknowledgedAt | DATETIME2(3) | NULL | **Added v1.9k.** Non-NULL when the operator at `TerminalLocationId` dismissed the print-failure banner via the Acknowledge action (FDS-07-006b). Independent of `PrintFailedAt` — the row stays in failed state for the safety-sweep alarm even after acknowledgement; this column only suppresses the banner UI. NULL while the banner is active. |
 
 ### PauseEvent
 
