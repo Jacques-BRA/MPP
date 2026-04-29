@@ -35,8 +35,12 @@
       <a href="#home" class="pf-app-title">MPP Plant Floor</a>
     </div>
 
-    <!-- Right: OP indicator + elevation toggle -->
+    <!-- Right: OP indicator + Config Tool link + elevation toggle -->
     <div class="pf-header-right">
+      <a href="index.html" target="_blank" class="pf-btn pf-btn-secondary pf-elevated-segment"
+         title="Configuration Tool — opens in a new tab" style="height: 36px; min-height: 36px; font-size: 12px;">
+        Config Tool ↗
+      </a>
       <span class="pf-op-indicator">
         <span class="pf-op-label">OP:</span>
         <span class="pf-op-value">CM</span>
@@ -265,6 +269,24 @@
               <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold</button>
             </div>
 
+            <!-- Sample Terminal Views (mockup demo strip) -->
+            <section style="margin-top: var(--pf-content-pad); padding-top: var(--pf-content-pad); border-top: 1px dashed var(--border);">
+              <h3 style="margin: 0 0 12px 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">
+                Sample Terminal Views <span style="font-style: italic; text-transform: none; letter-spacing: 0; color: var(--text-muted);">(mockup demo — every view is reviewable)</span>
+              </h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                <a href="#terminal/initials"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 1 · Initials Entry</a>
+                <a href="#terminal/cell-context"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 1 · Cell Context Selector</a>
+                <a href="#terminal/diecast"       class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 3 · Die Cast LOT Entry</a>
+                <a href="#terminal/trim-out"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Trim OUT (Flex Repeater)</a>
+                <a href="#terminal/machining-in"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 5 · Machining IN (FIFO)</a>
+                <a href="#terminal/assembly"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Serialized</a>
+                <a href="#terminal/sort-cage"     class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 7 · Sort Cage Workflow</a>
+                <a href="#terminal/end-of-shift"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 8 · End-of-Shift Entry</a>
+                <a href="#lot/detail"             class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 2 · LOT Detail (polymorphic)</a>
+              </div>
+            </section>
+
           </div>
 
           <!-- Tab: LOT Search (elevated-only) -->
@@ -295,12 +317,150 @@
           <div class="pf-tab-panel" data-panel="holds">
             <header class="pf-details-header">
               <h2>Hold Management</h2>
-              <div class="pf-location-meta"><span>Elevated · per FDS-08-007a</span></div>
+              <div class="pf-location-meta">
+                <span>FDS-08-007a</span>
+                <span>·</span>
+                <span>Multi-LOT / multi-Container batch place &amp; release · AD-elevated per FDS-04-007</span>
+              </div>
             </header>
-            <div class="pf-empty-state">
-              <h3>Multi-LOT / multi-Container batch hold place &amp; release</h3>
-              <p>Filterable lists of open LOTs and open Containers; batch-select; AD-elevation per FDS-04-007.</p>
+
+            <!-- Filter / search row -->
+            <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom:16px;">
+              <div class="pf-field" style="flex:1;">
+                <label class="pf-field-label">Filter</label>
+                <input class="pf-field-input" type="search" placeholder="LotName, AIM Shipper ID, Item, Location…" />
+              </div>
+              <div class="pf-field">
+                <label class="pf-field-label">Hold Type</label>
+                <select class="pf-field-select">
+                  <option>—</option>
+                  <option>Customer Complaint</option>
+                  <option>Quality Issue</option>
+                  <option>Engineering Hold</option>
+                  <option>Production Hold</option>
+                  <option>Container Hold</option>
+                </select>
+              </div>
+              <div class="pf-field">
+                <label class="pf-field-label">Reason (required on Place)</label>
+                <input class="pf-field-input" type="text" placeholder="e.g. Honda dimensional concern" />
+              </div>
             </div>
+
+            <!-- Two-column lists: open LOTs + open Containers -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+
+              <section class="pf-panel">
+                <div class="pf-panel-header">
+                  <h3>Open LOTs · 4</h3>
+                  <span class="pf-kpi-sub"><span id="hold-lot-selected">0</span> selected</span>
+                </div>
+
+                <div class="pf-queue">
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-lot-check" />
+                    <div>
+                      <span class="pf-queue-name">MESL1710935</span>
+                      <div class="pf-queue-detail">5G0-TRIM-4102 · Press 7 · 38 pcs · Good</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Good</span>
+                    <span class="pf-kpi-sub">Die Cast</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-lot-check" />
+                    <div>
+                      <span class="pf-queue-name">MESL1710942</span>
+                      <div class="pf-queue-detail">5G0-TRIM-4102 · Trim Cell 3 · 50 pcs · Good</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Good</span>
+                    <span class="pf-kpi-sub">Trim</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-lot-check" />
+                    <div>
+                      <span class="pf-queue-name">MESL1710948-B</span>
+                      <div class="pf-queue-detail">5G0-MACHINED-4102 · CNC 12 · 25 pcs · Good</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Good</span>
+                    <span class="pf-kpi-sub">Machining</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-lot-check" disabled />
+                    <div>
+                      <span class="pf-queue-name">MESL1710953-C</span>
+                      <div class="pf-queue-detail">5G0-MACHINED-4102 · CNC 14 · 16 pcs · already on hold</div>
+                    </div>
+                    <span class="pf-pill pf-pill-hold">Hold</span>
+                    <span class="pf-kpi-sub">Quality issue</span>
+                  </label>
+                </div>
+              </section>
+
+              <section class="pf-panel">
+                <div class="pf-panel-header">
+                  <h3>Open Containers · 3</h3>
+                  <span class="pf-kpi-sub"><span id="hold-ctr-selected">0</span> selected</span>
+                </div>
+
+                <div class="pf-queue">
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-ctr-check" />
+                    <div>
+                      <span class="pf-queue-name">CTR-5G0-0489</span>
+                      <div class="pf-queue-detail">SH-240429-0142 · Shipping Dock · 48 pcs · 5G0F</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Complete</span>
+                    <span class="pf-kpi-sub">Pre-shipped</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-ctr-check" />
+                    <div>
+                      <span class="pf-queue-name">CTR-5G0-0490</span>
+                      <div class="pf-queue-detail">SH-240429-0143 · Assembly · 32 of 48 pcs · 5G0F</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Open</span>
+                    <span class="pf-kpi-sub">In progress</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-ctr-check" />
+                    <div>
+                      <span class="pf-queue-name">CTR-6B2-0211</span>
+                      <div class="pf-queue-detail">SH-240429-0098 · Shipping Dock · 48 pcs · 6B2 Cam Holder</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Complete</span>
+                    <span class="pf-kpi-sub">Pre-shipped</span>
+                  </label>
+                </div>
+              </section>
+
+            </div>
+
+            <!-- Action row -->
+            <div class="pf-actions" style="margin-top: 16px;">
+              <button class="pf-btn pf-btn-elevated pf-btn-large" data-elevated-action="HoldPlace" type="button">
+                Place Hold on Selected
+              </button>
+              <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldRelease" type="button">
+                Release Selected Holds
+              </button>
+              <span style="flex:1"></span>
+              <span class="pf-kpi-sub">Pre-shipped Containers also fire AIM `PlaceOnHold` async per FDS-07-008.</span>
+            </div>
+
+            <script>
+              // Selection counters
+              function updateHoldCounts() {
+                const lots = document.querySelectorAll('.hold-lot-check:checked').length;
+                const ctrs = document.querySelectorAll('.hold-ctr-check:checked').length;
+                const lotEl = document.getElementById('hold-lot-selected');
+                const ctrEl = document.getElementById('hold-ctr-selected');
+                if (lotEl) lotEl.textContent = lots;
+                if (ctrEl) ctrEl.textContent = ctrs;
+              }
+              document.querySelectorAll('.hold-lot-check, .hold-ctr-check').forEach(c => {
+                c.addEventListener('change', updateHoldCounts);
+              });
+            </script>
           </div>
 
           <!-- Tab: Supervisor Dashboard (elevated-only) -->
@@ -316,6 +476,81 @@
           </div>
 
         </section>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: INITIALS ENTRY (Phase 1, Dedicated) ────── -->
+    <section data-route="terminal/initials" class="pf-terminal" style="align-items:center; justify-content:center;">
+      <div class="pf-panel" style="max-width: 480px; width: 100%; align-self:center;">
+        <div class="pf-panel-header">
+          <h3>Operator Presence</h3>
+          <span class="pf-pill pf-pill-good">Dedicated Terminal</span>
+        </div>
+        <p style="margin:0; color: var(--text-secondary);">
+          Scan or enter your initials to begin. Presence persists through the shift on this terminal,
+          subject to a 30-minute idle re-confirm.
+        </p>
+        <div class="pf-field">
+          <label class="pf-field-label">Initials</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="XX" autofocus
+                 style="font-size: 28px; height: 64px; text-align: center; letter-spacing: 0.2em; text-transform: uppercase;" />
+          <span class="pf-field-help">No password, no PIN. Initials map to <code>AppUser_GetByInitials</code>.</span>
+        </div>
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button" style="flex:1;">Set Presence</button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: CELL CONTEXT SELECTOR (Phase 1, Shared) ── -->
+    <section data-route="terminal/cell-context" class="pf-terminal" style="align-items:center; justify-content:center;">
+      <div class="pf-panel" style="max-width: 640px; width: 100%; align-self:center;">
+        <div class="pf-panel-header">
+          <h3>Select Active Cell</h3>
+          <span class="pf-pill pf-pill-good">Shared Terminal</span>
+        </div>
+        <p style="margin:0; color: var(--text-secondary);">
+          Scan a Cell barcode or pick from the list below (FDS-02-009).
+          The selected Cell becomes the active context for every action on this session
+          until you change it.
+        </p>
+
+        <div class="pf-field">
+          <label class="pf-field-label">Scan Cell Barcode</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan or enter Cell code…" />
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-field-label">Or pick from Die Cast Area</label>
+          <div class="pf-queue">
+            <label class="pf-queue-row" style="grid-template-columns: 1fr auto auto;">
+              <div>
+                <span class="pf-queue-name">Press 7</span>
+                <div class="pf-queue-detail">DC-042 mounted · 2 cavities active</div>
+              </div>
+              <span class="pf-pill pf-pill-good">Running</span>
+              <button class="pf-btn pf-btn-primary" type="button">Select</button>
+            </label>
+            <label class="pf-queue-row" style="grid-template-columns: 1fr auto auto;">
+              <div>
+                <span class="pf-queue-name">Press 8</span>
+                <div class="pf-queue-detail">DC-049 mounted · 4 cavities active</div>
+              </div>
+              <span class="pf-pill pf-pill-good">Running</span>
+              <button class="pf-btn pf-btn-secondary" type="button">Select</button>
+            </label>
+            <label class="pf-queue-row" style="grid-template-columns: 1fr auto auto;">
+              <div>
+                <span class="pf-queue-name">Press 9</span>
+                <div class="pf-queue-detail">No tool mounted</div>
+              </div>
+              <span class="pf-pill pf-pill-hold">Idle</span>
+              <button class="pf-btn pf-btn-secondary" type="button" disabled>Select</button>
+            </label>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -808,6 +1043,166 @@
     </section>
 
 
+    <!-- ─── TERMINAL VIEW: SORT CAGE WORKFLOW (Phase 7) ──────────── -->
+    <section data-route="terminal/sort-cage" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Sort Cage Workflow</h1>
+          <span class="pf-terminal-title-meta">Container CTR-5G0-0489 on hold · re-containerization · UJ-05 update-in-place</span>
+        </div>
+        <span class="pf-pill pf-pill-hold">Container on Hold</span>
+      </header>
+
+      <!-- Source Container summary -->
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>Source Container</h3>
+          <span class="pf-kpi-sub">Held since 13:15 · Customer Complaint · Diane Ortiz</span>
+        </div>
+        <div class="pf-field-row">
+          <div>
+            <span class="pf-kpi-label">Container</span>
+            <div class="pf-kpi-value pf-kpi-mono">CTR-5G0-0489</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">AIM Shipper ID</span>
+            <div class="pf-kpi-value pf-kpi-mono">SH-240429-0142</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Item</span>
+            <div class="pf-kpi-value pf-kpi-mono">5G0F</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Total Serials</span>
+            <div class="pf-kpi-value">48</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Per-Serial migration — Flex Repeater + Embedded View -->
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>Per-Serial Migration · 6 of 48 visible</h3>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="pf-btn pf-btn-secondary" type="button">Filter: Suspect Only</button>
+            <button class="pf-btn pf-btn-secondary" type="button">Select All</button>
+          </div>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Per UJ-05 default: update-in-place. Each row writes a <code>Lots.ContainerSerialHistory</code>
+          row capturing Old/New container + tray position; <code>ContainerSerial</code> updated in place.
+          Same Flex Repeater + Embedded View pattern as Trim OUT — N rows, one per serial to migrate.
+        </p>
+
+        <div class="pf-repeater">
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">1</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00147</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination Container · Tray · Position</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 1 (re-pack)</option>
+                <option>CTR-5G0-0502 · Tray 1 · Pos 1 (new)</option>
+                <option>SCRAP — disposition not migration</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Pass</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">2</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00148</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination Container · Tray · Position</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 2 (re-pack)</option>
+                <option>CTR-5G0-0502 · Tray 1 · Pos 1 (new)</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Pass</span>
+          </div>
+
+          <div class="pf-repeater-entity" style="border-left: 3px solid var(--pf-status-bad-fg);">
+            <span class="pf-repeater-index" style="background: var(--pf-status-bad-bg); color: var(--pf-status-bad-fg); border-color: var(--pf-status-bad-fg);">3</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00149</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 3 (re-pack)</option>
+                <option selected>SCRAP — fail at sort inspection</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-bad">Fail</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">4</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00150</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 3 (re-pack)</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Pass</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">5</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial (bypass)</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center; color: var(--pf-status-warn-fg);">5G0F-240406-00151</div>
+              <span class="pf-field-help">HardwareInterlockBypassed=1</span>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 4 (re-pack)</option>
+                <option>SCRAP — bypass not validated</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-hold">Bypass</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">6</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00152</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 5 (re-pack)</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Pass</span>
+          </div>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit Bulk Migration · 6 serials</button>
+          <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
+          <span style="flex:1"></span>
+          <span class="pf-kpi-sub">After re-pack: ShippingLabel_Void on CTR-5G0-0489 · new Container_Complete on CTR-5G0-0501 (claims fresh AIM ID).</span>
+        </div>
+      </section>
+    </section>
+
+
     <!-- ─── TERMINAL VIEW: END OF SHIFT (Phase 8) ────────────────── -->
     <section data-route="terminal/end-of-shift" class="pf-terminal">
       <header class="pf-terminal-header">
@@ -1276,17 +1671,31 @@
     });
   });
 
-  // ─── Tree expand / collapse ───────────────────────────────────────
+  // ─── Tree expand / collapse + driving Location Details ──────────
   document.querySelectorAll('.pf-tree-row').forEach(row => {
     row.addEventListener('click', e => {
       const node = row.parentElement;
-      // Only toggle expand on non-leaf rows (toggle widget area)
+      // Toggle expand on non-leaf rows
       if (!node.classList.contains('leaf')) {
         node.classList.toggle('expanded');
       }
       // Selection
       document.querySelectorAll('.pf-tree-node.selected').forEach(n => n.classList.remove('selected'));
       node.classList.add('selected');
+
+      // Update Location Details header to match selection
+      const label  = row.querySelector('.pf-tree-label')?.textContent?.trim() ?? '';
+      const meta   = row.querySelector('.pf-tree-meta')?.textContent?.trim() ?? '';
+      const titleEl = document.querySelector('[data-panel="details"] h2');
+      const metaEl  = document.querySelector('[data-panel="details"] .pf-location-meta');
+      if (titleEl && label) titleEl.textContent = label;
+      if (metaEl  && meta)  {
+        const tier = meta === 'Cell' ? 'Cell · DieCastMachine'
+                   : meta === 'WC'   ? 'WorkCenter'
+                   : meta === 'Term' ? 'Cell · Terminal'
+                   : meta === 'Area' ? 'Area' : meta;
+        metaEl.innerHTML = `<span>${tier}</span><span>·</span><span>Madison › ${label}</span>`;
+      }
     });
   });
 

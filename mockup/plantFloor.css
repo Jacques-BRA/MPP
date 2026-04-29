@@ -194,6 +194,7 @@ html, body {
 .pf-app[data-route="terminal/machining-in"] .pf-main > [data-route="terminal/machining-in"] { display: flex; }
 .pf-app[data-route="terminal/assembly"]   .pf-main > [data-route="terminal/assembly"]   { display: flex; }
 .pf-app[data-route="terminal/end-of-shift"] .pf-main > [data-route="terminal/end-of-shift"] { display: flex; }
+.pf-app[data-route="terminal/sort-cage"]  .pf-main > [data-route="terminal/sort-cage"]  { display: flex; }
 .pf-app[data-route="lot/detail"]          .pf-main > [data-route="lot/detail"]          { display: block; }
 
 /* ─── Home Page layout ────────────────────────────────────────────────── */
