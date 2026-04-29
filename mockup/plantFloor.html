@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MPP Plant Floor</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="plantFloor.css" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     APP SHELL
+     ══════════════════════════════════════════════════════════════════════ -->
+<div class="pf-app" data-mode="elevated" data-route="home">
+
+  <!-- ═══ HEADER ═══════════════════════════════════════════════════════ -->
+  <header class="pf-header">
+
+    <!-- Left: Breadcrumb (visible on terminal-route views) -->
+    <div class="pf-header-left">
+      <nav class="pf-breadcrumb" aria-label="Breadcrumb">
+        <a href="#home">Home</a>
+        <span class="sep">›</span>
+        <a href="#home">Die Cast</a>
+        <span class="sep">›</span>
+        <a href="#home">5G0 Front Cover</a>
+        <span class="sep">›</span>
+        <span class="current">Press 7</span>
+      </nav>
+    </div>
+
+    <!-- Center: App title (clicks home) -->
+    <div class="pf-header-center">
+      <a href="#home" class="pf-app-title">MPP Plant Floor</a>
+    </div>
+
+    <!-- Right: OP indicator + elevation toggle -->
+    <div class="pf-header-right">
+      <span class="pf-op-indicator">
+        <span class="pf-op-label">OP:</span>
+        <span class="pf-op-value">CM</span>
+        <span class="pf-elevated-segment">
+          <span class="pf-op-sep">·</span>
+          <span class="pf-elevated-label">ELEVATED:</span>
+          <span class="pf-elevated-value">Doe, J.</span>
+        </span>
+      </span>
+      <button class="pf-elevation-toggle" id="elevation-toggle" type="button">
+        <span class="pf-toggle-dot"></span>
+        <span>Elevated</span>
+        <span class="pf-toggle-label-mockup">(mockup)</span>
+      </button>
+    </div>
+
+  </header>
+
+  <!-- ═══ MAIN ═════════════════════════════════════════════════════════ -->
+  <main class="pf-main">
+
+    <!-- ─── HOME PAGE ──────────────────────────────────────────────── -->
+    <section data-route="home">
+      <div class="pf-home">
+
+        <!-- Left: Plant Hierarchy tree -->
+        <aside class="pf-tree-dock">
+          <header class="pf-tree-header">
+            <h3>Plant Hierarchy</h3>
+          </header>
+
+          <ul class="pf-tree" id="plant-tree">
+            <li class="pf-tree-node expanded">
+              <div class="pf-tree-row">
+                <span class="pf-tree-toggle"></span>
+                <span class="pf-tree-icon">🏭</span>
+                <span class="pf-tree-label">Madison Precision Products</span>
+              </div>
+              <ul class="pf-tree-children">
+
+                <!-- Die Cast Area -->
+                <li class="pf-tree-node expanded">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">🔥</span>
+                    <span class="pf-tree-label">Die Cast</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                  <ul class="pf-tree-children">
+                    <li class="pf-tree-node expanded">
+                      <div class="pf-tree-row">
+                        <span class="pf-tree-toggle"></span>
+                        <span class="pf-tree-icon">⚙️</span>
+                        <span class="pf-tree-label">5G0 Front Cover</span>
+                        <span class="pf-tree-meta">WC</span>
+                      </div>
+                      <ul class="pf-tree-children">
+                        <li class="pf-tree-node leaf selected">
+                          <div class="pf-tree-row">
+                            <span class="pf-tree-toggle"></span>
+                            <span class="pf-tree-icon">🛠️</span>
+                            <span class="pf-tree-label">Press 7</span>
+                            <span class="pf-tree-meta">Cell</span>
+                          </div>
+                        </li>
+                        <li class="pf-tree-node leaf">
+                          <div class="pf-tree-row">
+                            <span class="pf-tree-toggle"></span>
+                            <span class="pf-tree-icon">🛠️</span>
+                            <span class="pf-tree-label">Press 8</span>
+                            <span class="pf-tree-meta">Cell</span>
+                          </div>
+                        </li>
+                        <li class="pf-tree-node leaf">
+                          <div class="pf-tree-row">
+                            <span class="pf-tree-toggle"></span>
+                            <span class="pf-tree-icon">📺</span>
+                            <span class="pf-tree-label">DC Shared Terminal</span>
+                            <span class="pf-tree-meta">Term</span>
+                          </div>
+                        </li>
+                      </ul>
+                    </li>
+                    <li class="pf-tree-node">
+                      <div class="pf-tree-row">
+                        <span class="pf-tree-toggle"></span>
+                        <span class="pf-tree-icon">⚙️</span>
+                        <span class="pf-tree-label">6B2 Cam Holder</span>
+                        <span class="pf-tree-meta">WC</span>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+
+                <!-- Trim Shop Area -->
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">✂️</span>
+                    <span class="pf-tree-label">Trim Shop</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+
+                <!-- Machine Shop Area -->
+                <li class="pf-tree-node expanded">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">⚒️</span>
+                    <span class="pf-tree-label">Machine Shop</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                  <ul class="pf-tree-children">
+                    <li class="pf-tree-node">
+                      <div class="pf-tree-row">
+                        <span class="pf-tree-toggle"></span>
+                        <span class="pf-tree-icon">⚙️</span>
+                        <span class="pf-tree-label">5G0 Machining + Assembly</span>
+                        <span class="pf-tree-meta">WC</span>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+
+                <!-- Production Control / Receiving / Shipping -->
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">📋</span>
+                    <span class="pf-tree-label">Production Control</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">📦</span>
+                    <span class="pf-tree-label">Receiving</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">🚚</span>
+                    <span class="pf-tree-label">Shipping</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">🔍</span>
+                    <span class="pf-tree-label">Sort Cage</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+
+              </ul>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- Right: Tabbed details panel -->
+        <section class="pf-details">
+
+          <nav class="pf-tabs" role="tablist">
+            <button class="pf-tab active" data-tab="details" type="button">Location Details</button>
+            <button class="pf-tab pf-tab-elevated-only" data-tab="lots" type="button">LOT Search</button>
+            <button class="pf-tab pf-tab-elevated-only" data-tab="genealogy" type="button">Genealogy</button>
+            <button class="pf-tab pf-tab-elevated-only" data-tab="holds" type="button">Hold Management</button>
+            <button class="pf-tab pf-tab-elevated-only" data-tab="dashboard" type="button">Supervisor Dashboard</button>
+          </nav>
+
+          <!-- Tab: Location Details — adapts to selected Location tier -->
+          <div class="pf-tab-panel active" data-panel="details">
+
+            <header class="pf-details-header">
+              <h2>Press 7 (DC-042)</h2>
+              <div class="pf-location-meta">
+                <span>Cell · DieCastMachine</span>
+                <span>·</span>
+                <span>Madison › Die Cast › 5G0 Front Cover</span>
+              </div>
+            </header>
+
+            <!-- KPI cards -->
+            <section class="pf-kpis">
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Current LOT</span>
+                <span class="pf-kpi-value pf-kpi-mono">MESL1710935</span>
+                <span class="pf-kpi-sub">5G0-TRIM-4102 · Cavity A · 38 / 48 pcs</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Last Operator</span>
+                <span class="pf-kpi-value">CM</span>
+                <span class="pf-kpi-sub">Charles Mitchell · presence since 06:20</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Active Tool</span>
+                <span class="pf-kpi-value pf-kpi-mono">DC-042</span>
+                <span class="pf-kpi-sub">Cavity A active · Cavity B active</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Open Downtime</span>
+                <span class="pf-kpi-value pf-kpi-warn">EQ-DIE-STICK</span>
+                <span class="pf-kpi-sub">06:45 · 12 min · awaiting reason confirm</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Cycle Rate</span>
+                <span class="pf-kpi-value">42 / hr</span>
+                <span class="pf-kpi-sub">target 48 · 88%</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Shift Production</span>
+                <span class="pf-kpi-value">186</span>
+                <span class="pf-kpi-sub">good · 4 reject · 2.1% scrap</span>
+              </div>
+            </section>
+
+            <!-- Action row -->
+            <div class="pf-actions">
+              <a href="#terminal/diecast" class="pf-btn pf-btn-primary pf-btn-large">View Terminal</a>
+              <a href="#lot/detail" class="pf-btn pf-btn-secondary">Open Current LOT</a>
+              <button class="pf-btn pf-btn-elevated" data-elevated-action="EditTool" type="button">Edit Tool Assignment</button>
+              <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold</button>
+            </div>
+
+          </div>
+
+          <!-- Tab: LOT Search (elevated-only) -->
+          <div class="pf-tab-panel" data-panel="lots">
+            <header class="pf-details-header">
+              <h2>LOT Search</h2>
+              <div class="pf-location-meta"><span>Elevated · cross-Area lookup</span></div>
+            </header>
+            <div class="pf-empty-state">
+              <h3>Search by LotName, SerialNumber, or AIM Shipper ID</h3>
+              <p>Returns the LOT (or all LOTs in a serial's genealogy) regardless of current Location.</p>
+            </div>
+          </div>
+
+          <!-- Tab: Genealogy (elevated-only) -->
+          <div class="pf-tab-panel" data-panel="genealogy">
+            <header class="pf-details-header">
+              <h2>Genealogy Lookup</h2>
+              <div class="pf-location-meta"><span>Elevated · ancestor / descendant traversal</span></div>
+            </header>
+            <div class="pf-empty-state">
+              <h3>Honda audit query surface</h3>
+              <p>Enter any LotName or SerialNumber to walk the genealogy tree (closure-table-backed if Phase 0 OI-35 elects materialization).</p>
+            </div>
+          </div>
+
+          <!-- Tab: Hold Management (elevated-only) -->
+          <div class="pf-tab-panel" data-panel="holds">
+            <header class="pf-details-header">
+              <h2>Hold Management</h2>
+              <div class="pf-location-meta"><span>Elevated · per FDS-08-007a</span></div>
+            </header>
+            <div class="pf-empty-state">
+              <h3>Multi-LOT / multi-Container batch hold place &amp; release</h3>
+              <p>Filterable lists of open LOTs and open Containers; batch-select; AD-elevation per FDS-04-007.</p>
+            </div>
+          </div>
+
+          <!-- Tab: Supervisor Dashboard (elevated-only) -->
+          <div class="pf-tab-panel" data-panel="dashboard">
+            <header class="pf-details-header">
+              <h2>Supervisor Dashboard</h2>
+              <div class="pf-location-meta"><span>Elevated · cross-Area aggregates</span></div>
+            </header>
+            <div class="pf-empty-state">
+              <h3>Plant-wide telemetry tiles</h3>
+              <p>DowntimeOpenSummary · PausedLotsSummary · ShiftAvailability · AimPoolWallboard · PrintFailureStranded.</p>
+            </div>
+          </div>
+
+        </section>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: DIE CAST LOT ENTRY (Phase 3) ────────────── -->
+    <section data-route="terminal/diecast" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Die Cast LOT Entry</h1>
+          <span class="pf-terminal-title-meta">Press 7 (DC-042) · Shared Terminal</span>
+        </div>
+        <span class="pf-paused-indicator" title="Open paused LOTs at this Cell">
+          <span>⏸</span>
+          <span>Paused LOTs</span>
+          <span class="pf-paused-indicator-count">0</span>
+        </span>
+      </header>
+
+      <!-- Cell Context Selector (Shared terminal) -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Active Cell</span>
+        <span class="pf-cell-context-value">Press 7</span>
+        <button class="pf-btn pf-btn-secondary" type="button">Change (scan or pick)</button>
+      </div>
+
+      <div class="pf-empty-state">
+        <h3>Die Cast LOT Entry form will land here</h3>
+        <p>Initials field · Tool auto-populated from `Tools.ToolAssignment_ListActiveByCell` with elevated Edit · Cavity dropdown · Piece count · Submit calls `Lot_Create` + first `ProductionEvent_Record`.</p>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: TRIM OUT (Phase 4) ────────────────────── -->
+    <section data-route="terminal/trim-out" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Trim Station OUT</h1>
+          <span class="pf-terminal-title-meta">Trim Cell 3 · Lot MESL1710935</span>
+        </div>
+      </header>
+      <div class="pf-empty-state">
+        <h3>Flex Repeater destination Cell pickers will land here</h3>
+        <p>Branches on `OperationTemplate.RequiresSubLotSplit` — 1 entity (move whole) or N entities (split + per-child Cell route).</p>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: MACHINING IN (Phase 5) ────────────────── -->
+    <section data-route="terminal/machining-in" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Machining IN</h1>
+          <span class="pf-terminal-title-meta">CNC 12 · 5G0 Machining WC</span>
+        </div>
+      </header>
+      <div class="pf-empty-state">
+        <h3>FIFO Queue Selector + BOM Rename Modal will land here</h3>
+        <p>Operator picks next sub-LOT from queue (no scan-to-receive); BOM-driven rename prompt fires per FDS-05-033.</p>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: ASSEMBLY (Phase 6) ────────────────────── -->
+    <section data-route="terminal/assembly" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Assembly · Serialized Line</h1>
+          <span class="pf-terminal-title-meta">5G0F Assembly Line · MIP integrated</span>
+        </div>
+        <span class="pf-confirm-method" data-method="Vision">Vision · per FDS-10-013</span>
+      </header>
+      <div class="pf-empty-state">
+        <h3>Assembly serialized view will land here</h3>
+        <p>Confirmation Method Resolver · Tray/Container fill UX · Confirm Completion button (RequiresCompletionConfirm BIT) · Print Failure Banner.</p>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: END OF SHIFT (Phase 8) ────────────────── -->
+    <section data-route="terminal/end-of-shift" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>End-of-Shift Time Entry</h1>
+          <span class="pf-terminal-title-meta">FDS-09-013 · Press 7 · CM</span>
+        </div>
+      </header>
+      <div class="pf-empty-state">
+        <h3>End-of-shift submission will land here</h3>
+        <p>Dedicated terminal: single button. Shared terminal: form with initials + time category + lunch yes/no + breaks selected.</p>
+      </div>
+    </section>
+
+
+    <!-- ─── LOT DETAIL (polymorphic — Phase 2) ───────────────────── -->
+    <section data-route="lot/detail">
+      <div class="pf-terminal">
+        <header class="pf-terminal-header">
+          <div class="pf-terminal-title">
+            <h1>LOT Detail · MESL1710935</h1>
+            <span class="pf-terminal-title-meta">Polymorphic view — adapts to Lot.ToolId / .ToolCavityId presence</span>
+          </div>
+          <span class="pf-pill pf-pill-good">Good</span>
+        </header>
+        <div class="pf-empty-state">
+          <h3>Polymorphic LOT Detail will land here</h3>
+          <p>Header · Tool/Cavity rows (visible when populated) · Status · Piece count · Genealogy · History · Paused-at · Linked Container.</p>
+        </div>
+      </div>
+    </section>
+
+
+  </main>
+
+  <!-- ═══ CROSS-CUTTING EMBEDDED COMPONENTS ════════════════════════════ -->
+
+  <!-- Print Failure Banner (UJ-18 / FDS-07-006b) -->
+  <div class="pf-banner hidden" id="print-failure-banner">
+    <span class="pf-banner-icon">⚠</span>
+    <div class="pf-banner-content">
+      <span class="pf-banner-title">Print Failed · Container CTR-5G0-0489</span>
+      <span class="pf-banner-detail">Shipper ID SH-240429-0142 · 3 attempts · last error: zebra socket timeout</span>
+    </div>
+    <div class="pf-banner-actions">
+      <button class="pf-btn pf-btn-secondary" type="button">Retry</button>
+      <button class="pf-btn pf-btn-secondary" type="button">Reprint</button>
+      <button class="pf-btn pf-btn-secondary" type="button" id="banner-acknowledge">Acknowledge</button>
+    </div>
+  </div>
+
+  <!-- Elevation Modal (per-action AD — operator mode only) -->
+  <div class="pf-modal" id="elevation-modal">
+    <div class="pf-modal-card">
+      <header class="pf-modal-header">
+        <h3>Elevated Action — Sign In</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">
+          This action requires a supervisor or elevated user. Sign in with your AD credentials to proceed.
+        </p>
+        <div class="pf-field">
+          <label class="pf-field-label">AD Username</label>
+          <input class="pf-field-input" type="text" placeholder="firstname.lastname" />
+        </div>
+        <div class="pf-field">
+          <label class="pf-field-label">Password</label>
+          <input class="pf-field-input" type="password" />
+        </div>
+        <p class="pf-field-help">Your AD identity stamps the resulting event. The original operator presence stays for non-elevated events. No sticky session — next elevated action re-prompts.</p>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close>Authenticate</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- BOM-Driven Rename Modal (FDS-05-033 — Machining IN) -->
+  <div class="pf-modal" id="bom-rename-modal">
+    <div class="pf-modal-card">
+      <header class="pf-modal-header">
+        <h3>Receive sub-LOT — Rename to Machined Item?</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary);">
+          Source LOT carries the cast/trim Item. Active BOM at this Cell renames it to the machined Item on receive (FDS-05-033).
+        </p>
+        <div class="pf-field"><span class="pf-field-label">Source sub-LOT</span><div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">MESL1710942-A · 5G0-TRIM-4102 · 24 pcs</div></div>
+        <div class="pf-field"><span class="pf-field-label">Receive As</span><div class="pf-field-input pf-field-mono" style="display:flex; align-items:center; color:var(--accent);">5G0-MACHINED-4102 (new LotName: MESL1710955)</div></div>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close>Confirm Receive</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Idle Re-Confirm Modal (Dedicated terminal, 30-min idle) -->
+  <div class="pf-modal" id="idle-modal">
+    <div class="pf-modal-card">
+      <header class="pf-modal-header">
+        <h3>Still operating as CM?</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary);">
+          The terminal has been idle for 30 minutes. Confirm presence to continue, or change to a different operator.
+        </p>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>No — change</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close>Yes — continue as CM</button>
+      </footer>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ JAVASCRIPT ═══════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  const app = document.querySelector('.pf-app');
+
+  // ─── Hash routing ─────────────────────────────────────────────────
+  function applyRoute() {
+    let hash = (location.hash || '#home').replace(/^#/, '');
+    // Normalize: longest-match wins; keep up to 2 segments
+    app.dataset.route = hash;
+
+    // If we routed away from home, hide tree-dock on mobile
+    if (!hash.startsWith('home')) {
+      document.querySelector('.pf-tree-dock')?.classList.remove('shown');
+    }
+
+    // Scroll terminal views to top on entry
+    const visible = document.querySelector(`[data-route="${hash}"]`);
+    if (visible && visible.scrollTo) visible.scrollTo({ top: 0 });
+  }
+  window.addEventListener('hashchange', applyRoute);
+  applyRoute();
+
+  // ─── Elevation toggle ─────────────────────────────────────────────
+  document.getElementById('elevation-toggle').addEventListener('click', () => {
+    app.dataset.mode = app.dataset.mode === 'elevated' ? 'operator' : 'elevated';
+  });
+
+  // ─── Tab switching ────────────────────────────────────────────────
+  document.querySelectorAll('.pf-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.pf-tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('.pf-tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === target));
+    });
+  });
+
+  // ─── Tree expand / collapse ───────────────────────────────────────
+  document.querySelectorAll('.pf-tree-row').forEach(row => {
+    row.addEventListener('click', e => {
+      const node = row.parentElement;
+      // Only toggle expand on non-leaf rows (toggle widget area)
+      if (!node.classList.contains('leaf')) {
+        node.classList.toggle('expanded');
+      }
+      // Selection
+      document.querySelectorAll('.pf-tree-node.selected').forEach(n => n.classList.remove('selected'));
+      node.classList.add('selected');
+    });
+  });
+
+  // ─── Elevated action handler ──────────────────────────────────────
+  // In operator mode, clicking an elevated-required button shows the
+  // Elevation Modal. In elevated mode, the click would proceed normally
+  // (in real app); here we just no-op.
+  document.querySelectorAll('[data-elevated-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      if (app.dataset.mode !== 'elevated') {
+        e.preventDefault();
+        showModal('elevation-modal');
+      }
+    });
+  });
+
+  // ─── Modal show / hide ────────────────────────────────────────────
+  function showModal(id) {
+    document.getElementById(id)?.classList.add('shown');
+  }
+  function hideModal(id) {
+    document.getElementById(id)?.classList.remove('shown');
+  }
+  document.querySelectorAll('[data-modal-close]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.target.closest('.pf-modal')?.classList.remove('shown');
+    });
+  });
+  // Click outside modal-card closes
+  document.querySelectorAll('.pf-modal').forEach(modal => {
+    modal.addEventListener('click', e => {
+      if (e.target === modal) modal.classList.remove('shown');
+    });
+  });
+
+  // ─── Banner acknowledge ───────────────────────────────────────────
+  document.getElementById('banner-acknowledge')?.addEventListener('click', () => {
+    document.getElementById('print-failure-banner').classList.add('hidden');
+  });
+
+  // ─── Demo helpers (mockup-only) ───────────────────────────────────
+  // Press B to toggle the print-failure banner; Press I to fire the idle modal.
+  // Useful for design-review walkthroughs.
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'b' || e.key === 'B') {
+      document.getElementById('print-failure-banner').classList.toggle('hidden');
+    }
+    if (e.key === 'i' || e.key === 'I') {
+      showModal('idle-modal');
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      // Toggle BOM rename modal as a quick preview
+      document.getElementById('bom-rename-modal').classList.toggle('shown');
+    }
+  });
+
+  // Expose a few helpers for console-driven demo
+  window.pfDemo = {
+    showBanner: () => document.getElementById('print-failure-banner').classList.remove('hidden'),
+    hideBanner: () => document.getElementById('print-failure-banner').classList.add('hidden'),
+    elevation: (on) => { app.dataset.mode = on ? 'elevated' : 'operator'; },
+    showIdle: () => showModal('idle-modal'),
+  };
+})();
+</script>
+
+</body>
+</html>
