@@ -66,7 +66,6 @@ CREATE TABLE #Cc0 (
     CustomerCode       NVARCHAR(50),
     ClosureMethod      NVARCHAR(20),
     TargetWeight       DECIMAL(10,4),
-    MaxParts           INT,
     CreatedAt          DATETIME2(3),
     UpdatedAt          DATETIME2(3),
     DeprecatedAt       DATETIME2(3)
@@ -251,7 +250,6 @@ CREATE TABLE #Cc1 (
     CustomerCode       NVARCHAR(50),
     ClosureMethod      NVARCHAR(20),
     TargetWeight       DECIMAL(10,4),
-    MaxParts           INT,
     CreatedAt          DATETIME2(3),
     UpdatedAt          DATETIME2(3),
     DeprecatedAt       DATETIME2(3)

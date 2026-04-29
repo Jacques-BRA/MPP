@@ -22,6 +22,7 @@
 --   2026-04-14 - 1.0 - Initial version (OUTPUT params)
 --   2026-04-14 - 2.0 - Removed OUTPUT params for Named Query compatibility
 --   2026-04-23 - 2.1 - Phase G.3: CountryOfOrigin exposed (OI-19)
+--   2026-04-27 - 2.2 - OI-12 correction: MaxParts exposed (moved from ContainerConfig)
 -- =============================================
 CREATE OR ALTER PROCEDURE Parts.Item_GetByPartNumber
     @PartNumber NVARCHAR(50)
@@ -44,6 +45,7 @@ BEGIN
         i.WeightUomId,
         wu.Code               AS WeightUomCode,
         i.CountryOfOrigin,
+        i.MaxParts,
         i.CreatedAt,
         i.UpdatedAt,
         i.CreatedByUserId,
