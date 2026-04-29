@@ -1639,6 +1639,18 @@
 (function() {
   const app = document.querySelector('.pf-app');
 
+  // ─── Auto-inject Close button on every terminal view (demo ease) ──
+  document.querySelectorAll('.pf-terminal').forEach(terminal => {
+    if (terminal.querySelector('.pf-terminal-close')) return;
+    const close = document.createElement('a');
+    close.href = '#home';
+    close.className = 'pf-terminal-close';
+    close.setAttribute('title', 'Close — back to Home');
+    close.setAttribute('aria-label', 'Close terminal view');
+    close.innerHTML = '<span class="pf-terminal-close-icon">✕</span><span>Close</span>';
+    terminal.insertBefore(close, terminal.firstChild);
+  });
+
   // ─── Hash routing ─────────────────────────────────────────────────
   function applyRoute() {
     let hash = (location.hash || '#home').replace(/^#/, '');

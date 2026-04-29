@@ -513,7 +513,37 @@ html, body {
   padding: var(--pf-content-pad);
   gap: var(--pf-content-pad);
   overflow-y: auto;
+  position: relative; /* anchor for the absolute Close button */
 }
+
+/* Close button — auto-injected into every .pf-terminal for demo ease */
+.pf-terminal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  z-index: 5;
+  transition: all 0.12s;
+}
+.pf-terminal-close:hover {
+  background: var(--pf-status-bad-bg);
+  color: var(--pf-status-bad-fg);
+  border-color: var(--pf-status-bad-fg);
+}
+.pf-terminal-close-icon { font-size: 16px; line-height: 1; }
 .pf-terminal-header {
   display: flex;
   align-items: flex-end;
