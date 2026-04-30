@@ -4,7 +4,7 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.11n — Working Draft
+**Version:** 0.11o — Working Draft
 **Date:** 2026-04-28
 
 ---
@@ -1252,9 +1252,9 @@ Non-serialized assembly fills containers **one tray at a time**. The validation 
 |---|---|---|---|
 | **`ByCount`** | Operator confirms the tray's quantity matches `PartsPerTray`. | `PartsPerTray` | Operator submission via the workstation screen — no PLC signal required. |
 | **`ByWeight`** | Scale reports the tray weight has reached the per-tray target. | `TargetWeight` per tray (+ optional tolerance) | OPC tags `TargetWeightValue`, `TargetWeightMetFlag` via OmniServer assert when the per-tray target is met. |
-| **`ByVision`** | Camera validates each part in the tray (pass/fail per piece); the PLC accumulates validated parts and asserts the tray-full flag when `PartsPerTray` is reached. | `PartsPerTray` (vision counts validated parts; no weight target). | OPC tags fed by the PLC — `TrayCountValue` (running validated count for the open tray) and `TrayFullFlag` (asserts when the tray is full). Tag names TBD by integration team; reserved on the Machine Integration Panel. |
+| **`ByVision`** | Camera scans the **full tray as a single image** once it is presented for inspection — one validation event per tray, not per piece. On pass, the PLC asserts `TrayFullFlag`; on fail, the camera fault is surfaced to the operator who corrects the tray (re-place parts, remove invalid items) and re-presents it for re-scan. A four-tray container therefore yields exactly four passing tray-scan events when complete. | `PartsPerTray` (informs the camera's expected position count and the per-tray ConsumptionEvent). No weight target. | OPC tags fed by the PLC — `TrayPresent` (operator has positioned a full tray for scan), `TrayValidationResult` (Pass / Fail), `TrayFullFlag` (asserts on Pass). Tag names TBD by integration team; reserved on the Machine Integration Panel. |
 
-For `ByVision` and `ByWeight` the MES SHALL NOT fire tray close on the running count alone — the PLC's `TrayFullFlag` (or `TargetWeightMetFlag`) is authoritative.
+For `ByVision` and `ByWeight` the MES SHALL NOT fire tray close on the running count alone — the PLC's `TrayFullFlag` (or `TargetWeightMetFlag`) is authoritative. Specifically for `ByVision`: the camera produces **one validation event per tray**, and exactly one `Workorder.ConsumptionEvent` SHALL be written per BOM component per validated tray (not per piece).
 
 **Container accumulation:**
 

@@ -1334,7 +1334,7 @@
       <section class="pf-panel">
         <div class="pf-panel-header">
           <h3>Tray Fill — Tray 3</h3>
-          <span class="pf-kpi-sub">ByVision · camera validates per piece · TrayFullFlag at 12 pcs</span>
+          <span class="pf-kpi-sub">ByVision · camera scans the tray as a whole · 1 validation event per tray · TrayFullFlag at 12 pcs</span>
         </div>
 
         <!-- Mock tray grid -->
@@ -1355,8 +1355,13 @@
         </div>
 
         <p class="pf-kpi-sub" style="margin:0;">
-          Position 5 was placed during a HardwareInterlockEnable=false window — the corresponding
-          <code>ContainerSerial.HardwareInterlockBypassed = 1</code> per UJ-16. Audit row captures the bypass.
+          The camera scans the full 12-position tray as a single image once
+          <code>TrayFullFlag</code> asserts — one validation event per tray; positions
+          show the serial that was etched into each slot during the cycle. Position 5
+          was placed during a <code>HardwareInterlockEnable=false</code> window —
+          the corresponding <code>ContainerSerial.HardwareInterlockBypassed = 1</code>
+          per UJ-16; the audit row captures the bypass. A 4-tray container therefore
+          accumulates via 4 successful tray-scan events.
         </p>
       </section>
 
@@ -1783,36 +1788,40 @@
         <p class="pf-kpi-sub" style="margin:0;">
           Non-serialized parts have no per-piece serial number, so the Sort Cage uses
           the <strong>same camera scanner</strong> as the Assembly Non-Serialized line
-          to validate parts as they pass through. The camera classifies each part
-          Pass / Fail per the inspection criteria, the PLC accumulates the validated
-          count, and asserts <code>TrayFullFlag</code> at <code>PartsPerTray</code>
-          (per <code>Parts.ContainerConfig</code>). Container fill is the MES-side
-          accumulation of validated tray closes — same <code>ByVision</code> closure
-          path as Assembly. No <code>ContainerSerialHistory</code> writes (those are
-          serialized-only per UJ-05).
+          to validate container trays. The camera scans <strong>the entire tray as a
+          single image</strong> — one validation event per tray, not per piece. A
+          container with 4 trays therefore yields 4 total passing scans. The PLC
+          asserts <code>TrayFullFlag</code> at <code>PartsPerTray</code>; the camera
+          fires its scan; on pass, the tray closes and a single
+          <code>ConsumptionEvent</code> records the BOM consumption for that tray.
+          Container fill is the MES-side accumulation of validated tray closes — same
+          <code>ByVision</code> closure path as Assembly. Operator-rejected pieces
+          (visual inspection before the part enters the tray) are routed to scrap
+          before they ever reach the camera. No <code>ContainerSerialHistory</code>
+          writes (those are serialized-only per UJ-05).
         </p>
 
-        <!-- Live counters -->
+        <!-- Live counters — per-tray, not per-piece -->
         <div class="pf-kpis" style="grid-template-columns: repeat(4, 1fr); margin: 0;">
           <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
-            <span class="pf-kpi-label">Camera Pass</span>
-            <span class="pf-kpi-value pf-kpi-good">62</span>
-            <span class="pf-kpi-sub">routed to active destination</span>
+            <span class="pf-kpi-label">Trays Validated</span>
+            <span class="pf-kpi-value pf-kpi-good">2 / 4</span>
+            <span class="pf-kpi-sub">CTR-6B2-0220 · 48 of 96 pcs accumulated</span>
+          </div>
+          <div class="pf-kpi" style="border-color: var(--accent);">
+            <span class="pf-kpi-label">Active Tray Fill</span>
+            <span class="pf-kpi-value">14 / 24</span>
+            <span class="pf-kpi-sub">Awaiting full · scans on TrayFullFlag</span>
           </div>
           <div class="pf-kpi" style="border-color: var(--pf-status-bad-fg);">
-            <span class="pf-kpi-label">Camera Fail</span>
+            <span class="pf-kpi-label">Operator Scrap</span>
             <span class="pf-kpi-value pf-kpi-bad">8</span>
-            <span class="pf-kpi-sub">routed to scrap</span>
+            <span class="pf-kpi-sub">Visually rejected before tray placement</span>
           </div>
           <div class="pf-kpi">
             <span class="pf-kpi-label">Source Remaining</span>
             <span class="pf-kpi-value">26</span>
-            <span class="pf-kpi-sub">of 96 starting · 70 sorted</span>
-          </div>
-          <div class="pf-kpi" style="border-color: var(--accent);">
-            <span class="pf-kpi-label">Active Tray</span>
-            <span class="pf-kpi-value">14 / 24</span>
-            <span class="pf-kpi-sub">CTR-6B2-0220 · Tray 3 of 4 · 58%</span>
+            <span class="pf-kpi-sub">of 96 starting · 48 in passed trays + 14 in active + 8 scrapped</span>
           </div>
         </div>
 
