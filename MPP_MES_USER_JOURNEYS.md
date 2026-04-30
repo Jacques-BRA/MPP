@@ -49,11 +49,19 @@ As they create each machine, the system shows them the attribute definitions for
 
 Then they set up terminals. Each Ignition client station on the floor gets a `Terminal` record — its IP address, which location it's at, which Zebra printer it talks to, whether it has a barcode scanner. This is how the system knows that when operator Maria scans a LOT at terminal DC-05, that action happened at Die Cast Machine #5, and any label it prints goes to the Zebra on the table next to her.
 
+### Configuring Dies and Tooling
+
+Before the first shot runs, someone has to load the die catalog. MPP's production depends on a small number of aluminum die cast dies — each die is a tool that runs in a specific press tonnage range, has between one and four cavities, and has a die rank that determines which other dies it can be blended with at the Sort Cage. The engineer opens the Tools screen and creates a record for each die: part number, type, and the custom attributes for that type (Tonnage, RefCycleTimeSec, ConfirmationMethod). Under each die they configure its cavities — Cavity A, Cavity B, etc. Cavities are the actual production units; the Die Cast scene on the floor will ask Carlos which cavity he's logging each LOT against.
+
+Then they configure the Die Rank Compatibility matrix. Die ranks are categories (Rank 1, Rank 2, Rank 3, etc.) used to control which LOTs can be merged at the Sort Cage — only LOTs from compatible-rank dies can be combined without a quality escalation. The matrix is symmetric: if Rank 1 can merge with Rank 2, then Rank 2 can merge with Rank 1. The upper triangle is editable; the lower triangle is a read-only mirror. This config lives in `Tools.DieRankCompatibility` and is referenced when the Sort Cage operator attempts a merge.
+
+Die assignment to a press (which die is physically in which machine right now) is a runtime action, not a config-time action. The floor handles that via `Tools.ToolAssignment` — see the 6:20am Die Cast scene.
+
 ### Defining What We Make
 
-Next, the item master. The engineer creates items — each one a part number that MPP either manufactures or receives from a vendor. They classify each item: Raw Material, Component, Sub-Assembly, Finished Good, Pass-Through. They set the Macola ERP cross-reference number for each part so the two systems can talk when that integration goes live. They set the default sub-lot quantity — how many pieces go into each sub-LOT when a parent LOT is split after machining. They set the max lot size for reasonability checks.
+Next, the item master. The engineer creates items — each one a part number that MPP either manufactures or receives from a vendor. They classify each item: Raw Material, Component, Sub-Assembly, Finished Good, Pass-Through. They set the Macola ERP cross-reference number for each part so the two systems can talk when that integration goes live. They set the default sub-lot quantity — how many pieces go into each sub-LOT when a parent LOT is split at Trim OUT (FDS-05-009). They set `PartsPerBasket` — the maximum pieces per basket — for reasonability checks at LOT creation.
 
-For each finished good that ships to Honda, they create a container configuration. The 5G0 Front Cover, for example, ships in containers with 4 trays, 12 parts per tray, serialized, with dunnage code RD-5G0F. The RPY Cam Holder ships 6 trays, 24 per tray, not serialized. These configs drive the container lifecycle on the floor — the MES knows when a container is full.
+For each finished good that ships to Honda, they create a container configuration. The 5G0 Front Cover, for example, ships in containers with 4 trays, 12 parts per tray, closure method `ByCount` (serial validation), serialized, dunnage code RD-5G0F. The RPY Cam Holder ships 6 trays, 24 per tray, closure method `ByWeight`, not serialized. These configs drive the container lifecycle on the floor — the MES knows when a container is full.
 
 ### Defining How We Make It
 
@@ -89,7 +97,7 @@ Carlos doesn't rush to the terminal at every shot. He lets the baskets fill whil
 
 The MES opens the LOT creation screen. The **Cell** is auto-resolved to Machine #7 from the terminal's machine context. The **Tool** field pre-populates with **DC-042** — this came from `Tools.ToolAssignment_ListActiveByCell(@CellLocationId)` which looked up the currently-mounted tool on Machine #7. Carlos glances at the die, confirms the system is right, and proceeds. (If the physical die had been swapped without anyone updating the MES, Carlos would hit the **Edit** button — an AD elevation prompt fires, a supervisor logs in, the inline `Tools.ToolAssignment_Release` + `_Assign` correct the system of record in one transaction, and the Tool field updates. No production data is captured against the wrong die.)
 
-He picks **Cavity A** from the cavity dropdown (filtered to active cavities on DC-042), confirms piece count (48 pieces), and hits submit. The MES validates: is 48 ≤ `PartsPerBasket` for 5G0 (the repurposed `Item.MaxLotSize`)? Yes. Is 5G0 eligible on Machine #7? Yes. Is the tool-cell assignment current? Yes. Is Cavity A active? Yes.
+He picks **Cavity A** from the cavity dropdown (filtered to active cavities on DC-042), confirms piece count (48 pieces), and hits submit. The MES validates: is 48 ≤ `PartsPerBasket` for 5G0 (`Item.PartsPerBasket`)? Yes. Is 5G0 eligible on Machine #7? Yes. Is the tool-cell assignment current? Yes. Is Cavity A active? Yes.
 
 A LOT is created — `LotName` minted via `Lots.IdentifierSequence_Next @Code='Lot'` which returns `MESL1710935` (the counter continues from the Flexware cutover seed). `ToolId` points at DC-042. `ToolCavityId` points at Cavity A. Origin: Manufactured. Status: Good. Location: Machine #7. A first `Workorder.ProductionEvent` checkpoint row is written with cumulative `ShotCount` = total shots through cavity A so far today, cumulative `ScrapCount` = 3 (that porosity run earlier). Since this is the LOT's first event, there's no previous event to diff against yet — the next event will compute its delta via `LAG(ShotCount) OVER (PARTITION BY LotId ORDER BY EventAt)`.
 
@@ -129,7 +137,7 @@ This is where the PLC integration kicks in. The Machine Integration Panel (MIP) 
 
 One important mode: the PLC also exposes a `HardwareInterlockEnable` flag (per touchpoint agreement 1.1). When the automation sets this to false, the MES validation is bypassed — the MIP writes `PartSN="NoRead"` and the machine proceeds without MES confirmation. This is an alternative operating mode, not an error state, and the MES must handle `NoRead` serial numbers gracefully.
 
-Behind the scenes, the MES has just written a `ConsumptionEvent` — 1 piece consumed from sub-LOT A (5G0 casting) and 2 pieces consumed from the PNA pin LOT, producing serial number `5G0F-240406-00147`. A `SerializedPart` record is created, permanently linking that serial to sub-LOT A and the PNA LOT. Genealogy: this serial traces back through sub-LOT A → parent LOT `2026-04-06-0001` → Die Cast Machine #7, Die #42, Cavity B, Carlos, 6:20am Tuesday. Honda can ask about any serial number and get the full tree.
+Behind the scenes, the MES has just written a `ConsumptionEvent` — 1 piece consumed from sub-LOT A (5G0 casting) and 2 pieces consumed from the PNA pin LOT, producing serial number `5G0F-240406-00147`. A `SerializedPart` record is created, permanently linking that serial to sub-LOT A and the PNA LOT. Genealogy: this serial traces back through sub-LOT A → parent LOT `MESL1710935` → Die Cast Machine #7, Die DC-042, Cavity A, Carlos, 6:20am Tuesday. Honda can ask about any serial number and get the full tree.
 
 The finished part drops into a container tray. The MES tracks which tray position it went into via `ContainerSerial`. **Closure is tray-level** (FDS-06-014): each tray validates as it closes per the `Parts.ContainerConfig.ClosureMethod` configured for the Item — for the 5G0 serialized line that's per-piece serial validation accumulating up to `PartsPerTray`, and the PLC asserts `TrayFullFlag` once that's reached. Container fill is the **MES-side accumulation** of validated tray closes. When the running count reaches the configured container capacity (`TraysPerContainer × PartsPerTray` per `ContainerConfig`), the MES closes the container and calls AIM — Honda's EDI system — to get a shipping ID. `GetNextNumber` returns shipper ID `SH-240406-0089`. The Zebra prints a ZPL shipping label. The `ShippingLabel` table records the print. The container status goes from Open to Complete.
 
@@ -203,15 +211,15 @@ These are the places where the narrative filled in gaps that the FRS and data mo
 
 **Assumption made:** The machining operator manually initiates the split — they scan the parent LOT and tell the MES "split this into batches of 24."
 
-**Decision (2026-04-09):** On arrival at machining, the system auto-splits the LOT evenly into 2 sublots with a confirmation dialog. Sublots are treated identically to lot splits in the data model (`LotGenealogy` with relationship_type = Split). Operator can adjust quantities or cancel the auto-split. Needs review with Ben.
+**Decision (2026-04-09, corrected 2026-04-29 per FDS v0.11m):** At **Trim OUT**, the Trim operator triggers the sub-LOT split. The system presents a confirmation dialog — default N=2 sublots, evenly split — and the operator selects a destination Machining Cell for each child by scan or dropdown. Sublots are treated as LOT splits in the data model (`LotGenealogy` with `RelationshipType = Split`). Operator can adjust quantities or sublot count before confirming; total must equal parent piece count. Needs review with Ben on per-Item override quantities.
 
-**Clarification (2026-04-23, v0.8):** Sub-LOT split is the **Machining-only** sublot pattern (parent FK + split genealogy). **Cavity-parallel LOTs at Die Cast are NOT sublots** — a multi-cavity die produces N first-class peer LOTs, each with its own `ToolCavityId` set at creation. The 2026-04-20 meeting notes conflated the two concepts; OI-09 closes this by locking the cavity-parallel-as-peer model in Data Model v1.9. See FDS-05-022 (sublots, Machining) and FDS-05-034 (cavity-parallel LOTs, Die Cast).
+**Clarification (2026-04-23, v0.8):** Sub-LOT split is the **Trim OUT** sublot pattern (parent FK + split genealogy). **Cavity-parallel LOTs at Die Cast are NOT sublots** — a multi-cavity die produces N first-class peer LOTs, each with its own `ToolCavityId` set at creation. The 2026-04-20 meeting notes conflated the two concepts; OI-09 closes this by locking the cavity-parallel-as-peer model in Data Model v1.9. See FDS-05-022 (sublots, Machining) and FDS-05-034 (cavity-parallel LOTs, Die Cast).
 
-### 4. Container Lifecycle on Non-Serialized Lines — ⬜ Open
+### 4. Container Lifecycle on Non-Serialized Lines — ✅ Resolved
 
 **Assumption made:** The narrative focused heavily on the serialized assembly line (5G0) where the PLC handshake fills containers part-by-part. For non-serialized lines, the story is much less clear.
 
-**Decision (2026-04-09):** Assumption is containers are auto-created on LOT arrival. AIM shipper ID requested at the last route step for the part, prior to LOT closure. Needs discussion with Ben. *Maps to OI-02.*
+**Decision (2026-04-29, FDS-06-014):** Non-serialized lines use the same **tray-level** closure model as serialized lines, but with a different `ClosureMethod` configured per Item on `Parts.ContainerConfig`. Three peer methods: `ByCount` (operator confirms tray quantity at a terminal), `ByWeight` (OmniServer scale asserts `TargetWeightMetFlag`), `ByVision` (camera validates each part pass/fail, PLC asserts `TrayFullFlag`). Container fill is MES-side accumulation of closed trays — `TraysPerContainer × PartsPerTray` per `ContainerConfig`. AIM shipper ID is claimed atomically at container close from the `AimShipperIdPool`. *OI-02 closed.*
 
 ### 5. Sort Cage Serial Number Migration — ⬜ Open
 
@@ -263,11 +271,11 @@ These are the places where the narrative filled in gaps that the FRS and data mo
 
 **Decision (2026-04-09 → expanded 2026-04-24, OI-08 / FDS-02-009/010/011):** Terminal mode is derived from the parent Location's ISA-95 tier — there is no `TerminalMode` LocationAttribute. Cell-parented terminals operate in **Dedicated** mode (Cell context = parent Cell, fixed, no selector — Carlos's 6:20am Die Cast scene is the canonical example). WorkCenter- or Area-parented terminals operate in **Shared** mode (operator selects the active Cell at session start by **scan or dropdown**, MAY switch mid-session by either mechanism — both paths resolve to the same `LocationId` on subsequent events). Descendant Cells of the terminal's parent Location define the eligible context set on Shared terminals. Terminal IP / printer / scanner config is stored as `LocationAttribute` entries on the Terminal Location row.
 
-### 13. Weight vs. Count-Based Container Closure — ⬜ Open
+### 13. Weight vs. Count-Based Container Closure — ✅ Resolved
 
 **Assumption made:** The narrative describes container closure by part count (48 parts = 4 trays x 12 parts). But OPC tags show weight-based closure on some lines — `TargetWeightValue`, `TargetWeightMetFlag` via OmniServer scales (per Appendix C).
 
-**Decision (2026-04-09):** Flagged for discussion with Ben. Non-serialized lines should receive scale feedback (per OI-02), but the full dual-closure logic (count vs. weight, per-product config) needs design review. *Maps to OI-02.*
+**Decision (2026-04-29, FDS-06-014):** Resolved alongside #4. Three peer `ClosureMethod` values are configured per Item on `Parts.ContainerConfig` — `ByCount`, `ByWeight`, `ByVision`. Each is a first-class tray-level closure method. The validation gate is always the tray; the container-full signal is always the MES-side accumulation of closed trays. The OPC `TargetWeightMetFlag` is the PLC side of the `ByWeight` path. *OI-02 closed.*
 
 ### 14. Warm-Up Shots and Setup Tracking — ✅ Resolved
 
