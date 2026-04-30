@@ -277,10 +277,10 @@
                           <button class="arrow-btn">&#9660;</button>
                         </div>
                       </td>
-                      <td>NumberOfCavities</td>
-                      <td><div style="display:flex;align-items:center;gap:6px;"><input class="search-input" style="width:70px;" type="text" value="2" /><span style="font-size:9px;color:var(--text-muted);white-space:nowrap;">INT</span></div></td>
+                      <td>ConfirmationMethod</td>
+                      <td><div style="display:flex;align-items:center;gap:6px;"><input class="search-input" style="width:70px;" type="text" value="None" /><span style="font-size:9px;color:var(--text-muted);white-space:nowrap;">NVARCHAR</span></div></td>
                       <td>—</td>
-                      <td><input type="checkbox" checked style="accent-color:var(--accent);" /></td>
+                      <td><input type="checkbox" style="accent-color:var(--accent);" /></td>
                     </tr>
                     <tr>
                       <td>
@@ -439,7 +439,7 @@
                   <input class="search-input" style="width:80px;" type="text" value="24" />
                 </div>
                 <div class="field">
-                  <div class="field-label">Max Lot Size</div>
+                  <div class="field-label">Parts Per Basket</div>
                   <input class="search-input" style="width:80px;" type="text" value="100" />
                 </div>
               </div>
@@ -536,7 +536,7 @@
                           <td>4</td>
                           <td><div class="arrows"><button class="arrow-btn disabled">&#9650;</button><button class="arrow-btn disabled">&#9660;</button></div></td>
                           <td>Assembly Front</td>
-                          <td>Die Cast</td>
+                          <td>Prod Control</td>
                           <td><span style="font-size:11px;color:var(--text-muted);">Serial, Material Verify, Good, Bad</span></td>
                         </tr>
                         <tr>
@@ -1351,7 +1351,7 @@
                       </div>
                     </td>
                     <td>2026-01-01</td>
-                    <td><button class="btn btn-sm">Edit</button></td>
+                    <td><button class="btn btn-sm" onclick="openModal('modal-edit-shift')">Edit</button></td>
                   </tr>
                   <tr>
                     <td>Second Shift</td>
@@ -1369,7 +1369,7 @@
                       </div>
                     </td>
                     <td>2026-01-01</td>
-                    <td><button class="btn btn-sm">Edit</button></td>
+                    <td><button class="btn btn-sm" onclick="openModal('modal-edit-shift')">Edit</button></td>
                   </tr>
                   <tr>
                     <td>Weekend OT</td>
@@ -1387,7 +1387,7 @@
                       </div>
                     </td>
                     <td>2026-01-01</td>
-                    <td><button class="btn btn-sm">Edit</button></td>
+                    <td><button class="btn btn-sm" onclick="openModal('modal-edit-shift')">Edit</button></td>
                   </tr>
                 </tbody>
               </table>
@@ -1439,52 +1439,45 @@
                   <thead>
                     <tr>
                       <th>Display Name</th>
+                      <th>Initials</th>
                       <th>AD Account</th>
-                      <th>Clock #</th>
+                      <th>Class</th>
                       <th>Role</th>
-                      <th>Actions</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr class="selected">
                       <td>J. Potgieter</td>
+                      <td><strong>JP</strong></td>
                       <td style="font-family:monospace;font-size:11px;">jpotgieter@mpp.local</td>
-                      <td>1042</td>
+                      <td><span class="badge badge-type">AD</span></td>
                       <td><span class="badge badge-type">Engineering</span></td>
-                      <td style="white-space:nowrap;">
-                        <button class="btn btn-sm">Edit</button>
-                        <button class="btn btn-sm" style="margin-left:4px;">PIN</button>
-                      </td>
+                      <td><button class="btn btn-sm">Edit</button></td>
                     </tr>
                     <tr>
                       <td>Bootstrap Admin</td>
+                      <td><strong>BA</strong></td>
                       <td style="font-family:monospace;font-size:11px;">system.bootstrap</td>
-                      <td>0001</td>
+                      <td><span class="badge badge-type">AD</span></td>
                       <td><span class="badge badge-type">Admin</span></td>
-                      <td style="white-space:nowrap;">
-                        <button class="btn btn-sm">Edit</button>
-                        <button class="btn btn-sm" style="margin-left:4px;">PIN</button>
-                      </td>
+                      <td><button class="btn btn-sm">Edit</button></td>
                     </tr>
                     <tr>
                       <td>Diane Martinez</td>
+                      <td><strong>DM</strong></td>
                       <td style="font-family:monospace;font-size:11px;">dmartinez@mpp.local</td>
-                      <td>2015</td>
+                      <td><span class="badge badge-type">AD</span></td>
                       <td><span class="badge badge-warning">Quality</span></td>
-                      <td style="white-space:nowrap;">
-                        <button class="btn btn-sm">Edit</button>
-                        <button class="btn btn-sm" style="margin-left:4px;">PIN</button>
-                      </td>
+                      <td><button class="btn btn-sm">Edit</button></td>
                     </tr>
                     <tr>
                       <td>Carlos Reyes</td>
-                      <td style="font-family:monospace;font-size:11px;">creyes@mpp.local</td>
-                      <td>3047</td>
+                      <td><strong>CR</strong></td>
+                      <td style="color:var(--text-muted);">—</td>
                       <td><span class="badge badge-muted">Operator</span></td>
-                      <td style="white-space:nowrap;">
-                        <button class="btn btn-sm">Edit</button>
-                        <button class="btn btn-sm" style="margin-left:4px;">PIN</button>
-                      </td>
+                      <td><span class="badge badge-muted">Operator</span></td>
+                      <td><button class="btn btn-sm">Edit</button></td>
                     </tr>
                   </tbody>
                 </table>
@@ -2381,6 +2374,69 @@
         <div class="modal-footer">
           <button class="btn" onclick="closeModal('modal-add-item')">Cancel</button>
           <button class="btn btn-primary" onclick="closeModal('modal-add-item')">Create Item</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- modal: Edit Shift Schedule -->
+    <div class="modal-overlay" id="modal-edit-shift">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Edit Shift Schedule</span>
+          <button class="modal-close" onclick="closeModal('modal-edit-shift')">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="form-row" style="margin:0;">
+              <label>Name</label>
+              <input class="search-input" type="text" value="First Shift" style="width:100%;" />
+            </div>
+            <div class="form-row" style="margin:0;">
+              <label>Effective Date</label>
+              <input class="search-input" type="text" value="2026-01-01" style="width:100%;" />
+            </div>
+            <div class="form-row" style="margin:0;">
+              <label>Start Time</label>
+              <input class="search-input" type="text" value="06:00" style="width:100%;" />
+            </div>
+            <div class="form-row" style="margin:0;">
+              <label>End Time</label>
+              <input class="search-input" type="text" value="14:00" style="width:100%;" />
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Days</label>
+            <div style="display:flex;gap:6px;">
+              <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;"><input type="checkbox" checked />M</label>
+              <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;"><input type="checkbox" checked />T</label>
+              <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;"><input type="checkbox" checked />W</label>
+              <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;"><input type="checkbox" checked />T</label>
+              <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;"><input type="checkbox" checked />F</label>
+              <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;"><input type="checkbox" />S</label>
+              <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;"><input type="checkbox" />S</label>
+            </div>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0;" />
+          <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Break durations are used by the system to automatically write <code>DowntimeEvent</code> rows when operators submit end-of-shift time entry.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div class="form-row" style="margin:0;">
+              <label>Lunch (min)</label>
+              <input class="search-input" type="text" value="30" style="width:100%;" />
+            </div>
+            <div class="form-row" style="margin:0;">
+              <label>Morning Break (min)</label>
+              <input class="search-input" type="text" value="10" style="width:100%;" />
+            </div>
+            <div class="form-row" style="margin:0;">
+              <label>Afternoon Break (min)</label>
+              <input class="search-input" type="text" value="10" style="width:100%;" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-danger" style="margin-right:auto;">Remove</button>
+          <button class="btn" onclick="closeModal('modal-edit-shift')">Cancel</button>
+          <button class="btn btn-primary" onclick="closeModal('modal-edit-shift')">Save</button>
         </div>
       </div>
     </div>
