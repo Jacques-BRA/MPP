@@ -1801,63 +1801,89 @@
           writes (those are serialized-only per UJ-05).
         </p>
 
-        <!-- Live counters — per-tray, not per-piece -->
-        <div class="pf-kpis" style="grid-template-columns: repeat(4, 1fr); margin: 0;">
-          <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
-            <span class="pf-kpi-label">Trays Validated</span>
-            <span class="pf-kpi-value pf-kpi-good">2 / 4</span>
-            <span class="pf-kpi-sub">CTR-6B2-0220 · 48 of 96 pcs accumulated</span>
-          </div>
-          <div class="pf-kpi" style="border-color: var(--accent);">
-            <span class="pf-kpi-label">Active Tray Fill</span>
-            <span class="pf-kpi-value">14 / 24</span>
-            <span class="pf-kpi-sub">Awaiting full · scans on TrayFullFlag</span>
-          </div>
-          <div class="pf-kpi" style="border-color: var(--pf-status-bad-fg);">
-            <span class="pf-kpi-label">Operator Scrap</span>
-            <span class="pf-kpi-value pf-kpi-bad">8</span>
-            <span class="pf-kpi-sub">Visually rejected before tray placement</span>
-          </div>
-          <div class="pf-kpi">
-            <span class="pf-kpi-label">Source Remaining</span>
-            <span class="pf-kpi-value">26</span>
-            <span class="pf-kpi-sub">of 96 starting · 48 in passed trays + 14 in active + 8 scrapped</span>
-          </div>
-        </div>
+        <!-- Camera view (left) + stacked counters (right) -->
+        <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap: 12px;">
 
-        <!-- Active destination tray fill grid -->
-        <div style="background: var(--bg-row-alt); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <strong style="font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary);">Active Tray Fill · CTR-6B2-0220 · Tray 3</strong>
-            <span class="pf-kpi-sub">PartsPerTray = 24 · TrayFullFlag asserts at 24</span>
+          <!-- LEFT: Camera image area with Pass/Fail overlay -->
+          <div style="background: linear-gradient(180deg, #0a1322 0%, #0f1d33 60%, #1a2a44 100%);
+                      border: 2px solid var(--border);
+                      border-radius: var(--radius-lg);
+                      position: relative;
+                      min-height: 280px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      overflow: hidden;">
+
+            <!-- Top-left: live camera label -->
+            <div style="position:absolute; top:12px; left:14px; display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-flex; width:8px; height:8px; border-radius:50%; background:var(--pf-status-bad-fg); box-shadow: 0 0 6px var(--pf-status-bad-fg); animation: blink 1.5s infinite;"></span>
+              <span style="font-size:11px; color: var(--mpp-neutral-90); text-transform:uppercase; letter-spacing:0.1em; font-weight: 500;">Sort Cage Camera · Live</span>
+            </div>
+
+            <!-- Top-right: timestamp -->
+            <div style="position:absolute; top:12px; right:14px; font-size: 11px; color: var(--mpp-neutral-80); font-family: monospace;">
+              12:42:15.342
+            </div>
+
+            <!-- Viewfinder corner accents -->
+            <div style="position:absolute; top:32px; left:14px; width:24px; height:24px; border-top: 2px solid var(--mpp-neutral-70); border-left: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; top:32px; right:14px; width:24px; height:24px; border-top: 2px solid var(--mpp-neutral-70); border-right: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; bottom:38px; left:14px; width:24px; height:24px; border-bottom: 2px solid var(--mpp-neutral-70); border-left: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; bottom:38px; right:14px; width:24px; height:24px; border-bottom: 2px solid var(--mpp-neutral-70); border-right: 2px solid var(--mpp-neutral-70);"></div>
+
+            <!-- Pass / Fail overlay (mockup demo: shows Pass) -->
+            <div id="sort-camera-overlay" style="background: rgba(80, 200, 120, 0.18);
+                        border: 3px solid var(--pf-status-good-fg);
+                        border-radius: var(--radius-lg);
+                        padding: 22px 44px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 6px;
+                        backdrop-filter: blur(2px);">
+              <span style="font-size: 52px; line-height: 1; color: var(--pf-status-good-fg);">✓</span>
+              <span style="font-size: 26px; font-weight: 700; color: var(--pf-status-good-fg); letter-spacing: 0.1em;">PASS</span>
+              <span style="font-size: 12px; color: var(--mpp-neutral-90); text-align:center;">Tray 2 of 4 · CTR-6B2-0220</span>
+              <span style="font-size: 11px; color: var(--mpp-neutral-80); text-align:center; font-family: monospace;">scanned 12:42:15 · 1.2 s · all positions valid</span>
+            </div>
+
+            <!-- Bottom: status strip -->
+            <div style="position:absolute; bottom:12px; left:14px; right:14px;
+                        display:flex; justify-content:space-between; align-items:center;
+                        font-size: 11px; color: var(--mpp-neutral-80); font-family: monospace;">
+              <span>TrayPresent: <span style="color: var(--mpp-neutral-100);">FALSE</span></span>
+              <span>Awaiting next tray placement…</span>
+              <span>TrayFullFlag: <span style="color: var(--mpp-neutral-100);">FALSE</span></span>
+            </div>
+
+            <style>
+              @keyframes blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.4; }
+              }
+            </style>
           </div>
-          <div style="display:grid; grid-template-columns: repeat(12, 1fr); gap: 6px;">
-            <!-- 14 of 24 filled (mocked) -->
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
-            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+
+          <!-- RIGHT: Stacked counters -->
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
+              <span class="pf-kpi-label">Trays Validated</span>
+              <span class="pf-kpi-value pf-kpi-good">2 / 4</span>
+              <span class="pf-kpi-sub">CTR-6B2-0220 · 48 of 96 pcs accumulated</span>
+            </div>
+            <div class="pf-kpi" style="border-color: var(--pf-status-bad-fg);">
+              <span class="pf-kpi-label">Operator Scrap</span>
+              <span class="pf-kpi-value pf-kpi-bad">8</span>
+              <span class="pf-kpi-sub">Visually rejected before tray placement</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">Source Remaining</span>
+              <span class="pf-kpi-value">26</span>
+              <span class="pf-kpi-sub">in source container · awaiting sort</span>
+            </div>
           </div>
+
         </div>
 
         <!-- Destination management + actions -->
