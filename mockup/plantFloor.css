@@ -22,11 +22,11 @@
   --pf-touch-min:     44px;
   --pf-tree-w:        320px;
   --pf-tree-w-collapsed: 0px;
-  --pf-tab-h:         44px;
+  --pf-tab-h:         42px;
   --pf-banner-h:      56px;
   --pf-kpi-w:         240px;
   --pf-modal-w:       480px;
-  --pf-content-pad:   24px;
+  --pf-content-pad:   16px; /* tightened from 24px for 1080p scroll-free fit */
 
   /* Elevated-required button — uses neutral/secondary palette so it's
      visible-but-gated in operator mode. Becomes primary in elevated mode. */
@@ -372,18 +372,18 @@ html, body {
   text-transform: uppercase;
 }
 
-/* KPI grid */
+/* KPI grid — tightened for 1080p fit */
 .pf-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--pf-kpi-w), 1fr));
-  gap: 12px;
+  gap: 10px;
   margin-bottom: var(--pf-content-pad);
 }
 .pf-kpi {
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -594,15 +594,15 @@ html, body {
   letter-spacing: 0.02em;
 }
 
-/* Terminal content panels */
+/* Terminal content panels — tightened from 20px / 16px gap for 1080p fit */
 .pf-panel {
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 .pf-panel-header {
   display: flex;
@@ -696,14 +696,21 @@ html, body {
 .pf-repeater {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+}
+/* Modifier: scroll the inner repeater when the entity count is large
+   so the outer terminal view stays single-screen at 1080p. */
+.pf-repeater-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 .pf-repeater-entity {
   display: grid;
   grid-template-columns: auto 1fr 1fr auto;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
-  padding: 16px;
+  padding: 10px 14px;
   background: var(--bg-row-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
