@@ -1,6 +1,6 @@
 # MPP MES — Data Model Reference
 
-**Version:** v1.9 working draft (rev 2026-04-28j — `Parts.ContainerConfig.ClosureMethod` value list extended with `ByVision`; UpperCamelCase casing applied; OI-02 caveat retired. See revision history)
+**Version:** v1.9 working draft (rev 2026-04-29m — `Parts.OperationTemplate.RequiresSubLotSplit BIT NOT NULL DEFAULT 0` added; controls the Trim OUT outbound flow per FDS-05-009 / Phased Plan v1.0 Phase 4. v1.9l (earlier 2026-04-29) was the FDS v0.11m reconciliation pass. See revision history.)
 **Schemas:** 8 | **Tables:** ~73
 **Target:** Microsoft SQL Server 2022 Standard Edition
 
@@ -10,6 +10,9 @@
 
 | Version | Date | Author | Change Summary |
 |---|---|---|---|
+| 1.9m | 2026-04-29 | Blue Ridge Automation | **§2 OperationTemplate — `RequiresSubLotSplit BIT NOT NULL DEFAULT 0` added.** Control flag flowing from the 2026-04-29 Phased Plan v1.0 rebuild — Phase 4 Trim OUT branches on this flag (per FDS-05-009): when `1`, the closing proc splits the parent LOT into N children and calls `Lot_MoveTo` per child to selected destination Machining Cells; when `0` (default), the closing proc calls only `Lot_MoveTo` and the parent LOT moves whole. Engineering authors per Item per Cell via the Configuration Tool. Versioned with the rest of the OperationTemplate row per the existing clone-to-modify pattern. Not all OperationTemplate codes consume the flag — Die Cast, Receiving, Machining IN, and Assembly operations ignore it (they have no outbound-distribution branch). SQL ALTER lands in the Phase 4 Plant-Floor migration (`0017_arc2_phase4_movement_trim_receiving.sql`). No companion FDS change — FDS-05-009 already specifies the per-Item-per-Cell split decision; this column gives the FDS rule a queryable home in the data model. |
+| 1.9l | 2026-04-29 | Blue Ridge Automation | **FDS v0.11m reconciliation pass — DM aligned to FDS as source of truth.** Comprehensive sweep of stale wording across the doc following the FDS continuity + clarity passes in v0.11k/l/m. **§2 ContainerConfig:** `ClosureMethod` row reframed as **tray-level** trigger per FDS-06-014 — `ByCount` / `ByWeight` / `ByVision` all describe per-tray validation; container fill is MES-side accumulation (no PLC `ContainerFullFlag` tag). **§2 Casting → Trim subsection retitled `Trim → Machining`** per FDS-05-033 v0.11m boundary clarification — LOT keeps cast-part identity through Casting and Trim; Trim sprue/deburr is yield loss via `RejectEvent` on the same LOT; rename fires at first Machining Cell. BOM example rewritten (`5G0-TRIM` Component + `5G0-MACHINED` Sub-Assembly). Backward-trace narrative rewritten — single Machining-IN consumption hop. **§2 NEW VIEW `Parts.v_EffectiveItemLocation` (LocationId, ItemId, Source)** documented per FDS-02-012 — Direct ∪ BomDerived eligibility resolution; created in Arc 2 Phase 1 alongside `ItemLocation_CheckEligibility`. **§2 Item.DefaultSubLotQty** description corrected — split fires at Trim OUT (FDS-05-009), not Machining IN. **§2 ContainerSerial** UJ-16 `🔶 PENDING` callout converted to flowing prose — Resolved 2026-04-27 per OIR v2.14, Option A: `HardwareInterlockBypassed BIT` lands on `Lots.ContainerSerial`. **§4 WorkOrderType** SQL correction follow-up note replaced with past-tense one-liner — migration `0013_oi07_oi12_corrections.sql` landed 2026-04-28, 858/858 tests passing. **§4 WorkOrder** narrative tightened — dropped Arc 2 Phase 1 deployment-state admonition; column contract is the spec. **§4 ProductionEvent** narrative tightened — dropped v1.9 reshape framing and Arc 2 admonition; "Checkpoint-shape event table" describes the shape directly. **§4 deferred event tables (`WorkOrderOperation`, `ConsumptionEvent`, `RejectEvent`) and §6 `DowntimeEvent`:** `OperatorId` columns renamed to `AppUserId` for consistency with the SP template (`@AppUserId BIGINT`) and the v1.9 `ProductionEvent` reshape. Rule-of-law check: SP template at `sql/scripts/_TEMPLATE_stored_procedure.sql` uses `@AppUserId`; the deferred event tables are not yet CREATEd in any of the 13 shipped migrations, so this is purely a DM spec alignment with no SQL impact. **§6 DowntimeEvent** UJ-14 `🔶 PENDING` callout converted to flowing prose — Resolved 2026-04-27 per OIR v2.14. **§7 Tools cross-references rewritten:** `Workorder.WorkOrder.ToolId` parenthetical no longer references the deleted `Recipe` WorkOrderType (OI-07); `Workorder.ProductionEvent.DieIdentifier` cross-ref replaced with `Lots.Lot.ToolId` derivation rule (DieIdentifier column was DROPPED in v1.9 reshape); ItemTransform tombstone clause removed. **§1 Location:** `Terminal` LocationTypeDefinition seed-row description updated to "mode derived from parent tier"; "Terminals in the New Model" callout rewritten for FDS-02-009/010/011 (two-mode model + scan-or-dropdown context selection); `NumberOfCavities` removed as `DieCastMachine` LocationAttribute example (cavity data lives on `Tools.ToolCavity`); explanatory note added — cavities belong to the die, not the press. **§3 Lots `IdentifierSequence` reference** updated `.md` → `.docx` for the OIR cross-ref (matches FDS v0.11m convention). **Document-wide:** `⚠ Implementation deferred to Arc 2 Phase N` admonitions stripped (5 instances) — DM is the big-picture end-goal final solution; deployment state belongs in the phased plan. No schema changes to currently-shipped tables; all changes are spec-doc alignment to FDS v0.11m. |
+| 1.9k | 2026-04-28 | Blue Ridge Automation | **Two FDS-driven additions queued from 2026-04-28 working sessions.** (1) **`Lots.ShippingLabel.BannerAcknowledgedAt DATETIME2(3) NULL`** — supports the FDS-07-006b broadcast-with-session-filter Acknowledge action, where the per-terminal print-failure banner shown by FDS-07-006a's retry-exhausted state can be dismissed by the operator. Independent of `PrintFailedAt`: the row stays in failed state for the safety-sweep alarm even after acknowledgement; this column only suppresses the banner UI on the closing terminal. State derivation table updated: Failed = `PrintFailedAt IS NOT NULL AND BannerAcknowledgedAt IS NULL`; Failed-acknowledged = both non-NULL. SQL deferred to Arc 2 Phase 7 alongside the rest of the Container schema CREATE — column contract above is authoritative. (2) **`CoupledDownstreamCellLocationId` LocationAttributeDefinition seed under `CNCMachine`** — supports the FDS-06-008 Machining OUT auto-move-to-coupled-Assembly-Cell flow. New illustrative seed row added to the §2 LocationAttributeDefinition examples block under a new "For `Cell` → `CNCMachine` definition" subsection: `AttributeName=CoupledDownstreamCellLocationId`, `DataType=Integer` (parsed as a `Location.Location.Id` reference), `IsRequired=0` (NULL = legacy uncoupled path). When non-NULL, PLC-signalled machining completion writes the `ProductionEvent` and a `LotMovement` to the referenced Cell + updates `CurrentLocationId`; when NULL, completion writes the event only and the LOT stays at the Machining Cell awaiting operator-driven movement. Phase G seed delta on the next migration: +1 row for `CoupledDownstreamCellLocationId` on the `CNCMachine` definition. No other schema changes. |
 | 1.9j | 2026-04-28 | Blue Ridge Automation | **§3 ContainerConfig — `ClosureMethod` extended with `ByVision`.** Camera-validated container closure added per Jacques's 2026-04-28 review: a third trigger alongside the existing count and weight modes. Camera validates each part (pass/fail), PLC accumulates the validated count, asserts `ContainerFullFlag` when target met. Code values renamed to UpperCamelCase per project convention (`ByCount` / `ByWeight` / `ByVision`; previously documented as `BY_COUNT` / `BY_WEIGHT`). "Pending OI-02 closure" caveat retired (OI-02 ✅ Resolved 2026-04-24 per OIR v2.14). No schema change — `ClosureMethod` is `NVARCHAR(20) NULL`; the new value is purely an additional allowed string. FDS-03-017 + FDS-06-014 are authoritative for the per-method mechanics. |
 | 0.1 | 2026-04-02 | Blue Ridge Automation | Initial data model — 7 schemas, ~50 tables |
 | 0.2 | 2026-04-09 | Blue Ridge Automation | Eliminated `Terminal` table — terminals are now `Location` records (type=Terminal) with config as `LocationAttribute`. Renamed `TerminalId` FKs to `TerminalLocationId` across all event tables. Added `ShotCount` to `DowntimeEvent` for warm-up tracking (UJ-14). Added hardware interlock bypass flag discussion on `ContainerSerial` (UJ-16). Updated workorder schema scope to MVP-LITE (OI-07). |
@@ -71,7 +74,7 @@ The location model uses three classification tables to support polymorphic locat
 
 1. **`LocationType`** — the broad ISA-95 category (Enterprise, Site, Area, Work Center, Cell). Five rows total. Defines the hierarchy tier.
 2. **`LocationTypeDefinition`** — the specific *kind* of a location within a type. For the `Cell` type, definitions include `Terminal`, `DieCastMachine`, `CNCMachine`, `InventoryLocation`, `Scale`, etc. Every location has a definition.
-3. **`LocationAttributeDefinition`** — the attribute schema for a given kind. A `Terminal` definition has attributes like `IpAddress`, `DefaultPrinter`, `HasBarcodeScanner`. A `DieCastMachine` definition has `Tonnage`, `NumberOfCavities`, `RefCycleTimeSec`. Different definitions carry different attribute sets.
+3. **`LocationAttributeDefinition`** — the attribute schema for a given kind. A `Terminal` definition has attributes like `IpAddress`, `DefaultPrinter`, `HasBarcodeScanner`. A `DieCastMachine` definition has `Tonnage`, `RefCycleTimeSec`. Different definitions carry different attribute sets. (Cavity count is **not** a press attribute — cavities belong to the die; see `Tools.Tool` / `Tools.ToolCavity` in §7.)
 4. **`Location`** — an actual node in the plant model. FKs to `LocationTypeDefinition` (which determines both its type and its attribute schema) and to its parent location.
 5. **`LocationAttribute`** — attribute values for a specific location, constrained by its definition's attribute schema.
 
@@ -124,7 +127,7 @@ Polymorphic *kinds* within each `LocationType`. Every `Location` row references 
 | Area | SupportArea | Support areas (Production Control, Quality Control, Shipping, Receiving) |
 | WorkCenter | ProductionLine | Generic production line within an area |
 | WorkCenter | InspectionLine | Multi-part inspection lines (e.g., MS1FM-1028) |
-| Cell | Terminal | Shared operator HMI station |
+| Cell | Terminal | Operator HMI station — mode derived from parent tier (Cell-parent = Dedicated; WorkCenter- or Area-parent = Shared, per FDS-02-010) |
 | Cell | DieCastMachine | Die cast press |
 | Cell | CNCMachine | Machining center / CNC cell |
 | Cell | TrimPress | Trim shop press |
@@ -167,9 +170,10 @@ Attribute schema per `LocationTypeDefinition`. Each definition carries its own s
 | AttributeName | DataType | Required | Uom | Description |
 |---|---|---|---|---|
 | Tonnage | DECIMAL | No | tons | Die cast press tonnage |
-| NumberOfCavities | INT | No | — | Die cast cavity count |
 | RefCycleTimeSec | DECIMAL | No | seconds | Reference cycle time for OEE performance calculation |
 | OeeTarget | DECIMAL | No | — | Target OEE (0.00–1.00). FUTURE — designed for but not used in MVP. |
+
+> **Cavity count is not a press attribute.** Cavities belong to the die that's currently mounted on the press, not to the press itself. See `Tools.Tool` (`HasCavities=1` for Die-type Tools) and `Tools.ToolCavity` in §7. The press's cavity behavior changes with each die change; the data model captures that via `Tools.ToolAssignment` (which die is currently on which Cell) rather than as a fixed press attribute.
 
 *For `Cell` → `InventoryLocation` definition:*
 
@@ -179,6 +183,12 @@ Attribute schema per `LocationTypeDefinition`. Each definition carries its own s
 | IsLineside | BIT | No | — | Whether this is a lineside staging area |
 | MaxLotCapacity | INT | No | — | Maximum LOTs that can be stored here |
 | LinesideLimit | INT | No | pieces | Maximum total pieces allowed on this lineside location at one time (sum across **all Items**, all open LOTs at this Location). Scan-in mutation rejects when cumulative lineside quantity would exceed this. Added v1.8 (OI-12). Complements `Parts.Item.MaxParts` — `MaxParts` is Item-scoped (cap on one Item at one Location); `LinesideLimit` is Location-scoped (cap across everything at that Location). |
+
+*For `Cell` → `CNCMachine` definition (machining cells — coupled-downstream auto-move per FDS-06-008):*
+
+| AttributeName | DataType | Required | Uom | Description |
+|---|---|---|---|---|
+| CoupledDownstreamCellLocationId | Integer | No | — | **Added v1.9k.** `Location.Location.Id` of the Cell that machined LOTs auto-move to on Machining OUT. When non-NULL, PLC-signalled machining completion writes a `Workorder.ProductionEvent` and a `Lots.LotMovement` from this Machining Cell to the referenced downstream Cell (typically the paired Assembly Cell within the same WorkCenter), and updates the LOT's `CurrentLocationId` to the downstream Cell — no operator scan needed. NULL = legacy / uncoupled path: completion writes the `ProductionEvent` only; LOT stays at the Machining Cell awaiting an explicit operator-driven movement. Configured at deployment via the Configuration Tool's Location admin screens. (FDS-06-008) |
 
 ### Location
 
@@ -216,13 +226,13 @@ Actual attribute values per location, constrained by the location's definition.
 
 ### Terminals in the New Model
 
-> ✅ **RESOLVED — OI-08 / UJ-12:** Terminals are shared, not 1:1 with machines. Operators scan a machine barcode/QR code as the first step of any interaction.
+> ✅ **RESOLVED — OI-08 / UJ-12 / FDS-02-009/010/011:** Terminal mode is derived from the parent Location's ISA-95 tier — there is no `TerminalMode` LocationAttribute. Cell-parented terminals operate in **Dedicated** mode (Cell context = parent Cell, fixed, no selector). WorkCenter- or Area-parented terminals operate in **Shared** mode (operator selects the active Cell at session start by scan **or** dropdown, MAY switch mid-session by either mechanism). Descendant Cells of the terminal's parent Location define the eligible context set on Shared terminals.
 
 In the polymorphic model, `Terminal` is a `LocationTypeDefinition` under the `Cell` type — it's one of many kinds of Cells. A `DieCastMachine` is another kind of Cell. Both are Cell-tier locations but carry entirely different attribute schemas.
 
 Event tables carry two location references when both operator position and machine context matter:
 - `TerminalLocationId` — FK → `Location.Id` where the definition is `Terminal` (where the operator is standing)
-- `LocationId` — FK → `Location.Id` where the definition is a machine kind (which machine they scanned)
+- `LocationId` — FK → `Location.Id` where the definition is a machine kind (the active Cell context — either fixed by parent on Dedicated terminals or selected by scan/dropdown on Shared terminals)
 
 ### AppUser
 
@@ -255,6 +265,8 @@ Roles managed in Ignition (mapped to AD groups for interactive users).
 
 Item master, bills of material, routes, operation templates, container configurations.
 
+**Views (v1.9l):** `Parts.v_EffectiveItemLocation (LocationId, ItemId, Source)` — fronts the FDS-02-012 eligibility check at scan-in. Computes the union of two paths: **Direct** = a `Parts.ItemLocation` row exists for the LOT's `ItemId` at the scanned Cell or any ancestor tier (per FDS-03-014 hierarchy cascade — Cell → WorkCenter → Area → Site); **BomDerived** = the LOT's `ItemId` appears as a child line on the active `Parts.Bom` of any Item whose Direct eligibility resolves at this Cell. A LOT is eligible if **either** path matches. Active BOM membership requires `Parts.Bom.PublishedAt IS NOT NULL AND Parts.Bom.DeprecatedAt IS NULL`. The `Source` column distinguishes `Direct` vs `BomDerived` for diagnostic queries; the eligibility check itself only cares whether *any* row exists. Consumed by the `Parts.ItemLocation_CheckEligibility` proc that fronts every scan-in mutation. Avoids the configuration explosion of enumerating every pass-through component (e.g., a 20-line BOM × N assembly Cells = 20N rows). Created in the Arc 2 Phase 1 migration alongside `Parts.ItemLocation_CheckEligibility`. See FDS-02-012 for the eligibility resolution rule.
+
 ### ItemType
 
 | Column | Type | Constraints | Description |
@@ -280,7 +292,7 @@ Item master, bills of material, routes, operation templates, container configura
 | PartNumber | NVARCHAR(50) | NOT NULL, UNIQUE | MPP part number |
 | Description | NVARCHAR(500) | NULL | |
 | MacolaPartNumber | NVARCHAR(50) | NULL | ERP cross-reference |
-| DefaultSubLotQty | INT | NULL | Default pieces per sub-LOT split (Machining — unchanged) |
+| DefaultSubLotQty | INT | NULL | Default pieces per sub-LOT split. Used at **Trim OUT** when the parent LOT distributes across N Machining Cells (per FDS-05-009). |
 | MaxLotSize | INT | NULL | **Repurposed v1.9 as `PartsPerBasket`.** One LOT = one basket = one LTT label at Die Cast / Trim / intermediate Machining, so "max parts per LOT" IS basket capacity. Config Tool Item screen labels this field `PartsPerBasket`. Distinct from `MaxParts` (see next row). Formal column rename deferred. |
 | MaxParts | INT | NULL | **Added v1.9c (OI-12 correction).** Hard cap on pieces of this Item allowed at any single Location (e.g., "no more than 500 5G0 parts at any one Cell"). Scan-in mutation (LotMovement to a Cell) sums existing pieces of this Item already present at the destination Location across all open LOTs + incoming quantity; rejects if result > `MaxParts`. Complements `LinesideLimit` (LocationAttribute on Cell — per-Location aggregate cap across **all** Items). Stops operators from over-scanning to avoid re-scan friction. |
 | UomId | BIGINT | FK → Uom.Id, NOT NULL | Counting UOM |
@@ -362,6 +374,7 @@ Defines what data to collect at a type of operation. Reusable across products. *
 | Name | NVARCHAR(100) | NOT NULL | |
 | AreaLocationId | BIGINT | FK → Location.Id, NOT NULL | Area (ISA-95 Area, organizational grouping) |
 | Description | NVARCHAR(500) | NULL | |
+| RequiresSubLotSplit | BIT | NOT NULL, DEFAULT 0 | **Added v1.9m.** Control flag for outbound flows that distribute a LOT across multiple downstream Cells (currently used at Trim OUT per FDS-05-009). When `1`, the operator-facing screen for this operation presents a multi-destination split UX (one sub-LOT per destination Cell, N sub-LOTs total); the closing proc calls `Lot_Split` and `Lot_MoveTo` per child. When `0` (default), the screen presents a single-destination move UX (no split — the parent LOT moves whole); the closing proc calls only `Lot_MoveTo`. Engineering authors per Item per Cell via the Configuration Tool. Versioned with the rest of the row per the clone-to-modify pattern. Not all `OperationTemplate` codes consume this flag — operations that have no outbound-distribution branch (Die Cast, Receiving, Machining IN, Assembly) ignore the column. |
 | CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
 | DeprecatedAt | DATETIME2(3) | NULL | |
 
@@ -420,7 +433,7 @@ Honda-specified packing rules per product.
 | TraysPerContainer | INT | NOT NULL | |
 | PartsPerTray | INT | NOT NULL | |
 | IsSerialized | BIT | NOT NULL, DEFAULT 0 | |
-| ClosureMethod | NVARCHAR(20) | NULL | One of `ByCount`, `ByWeight`, or `ByVision` (NULL when not yet configured). Selects the closure trigger per FDS-06-014. `ByCount` = operator-entered count; `ByWeight` = scale feedback via OmniServer (target on `TargetWeight`); `ByVision` = camera validates each part, PLC accumulates the count and asserts `ContainerFullFlag` at target. |
+| ClosureMethod | NVARCHAR(20) | NULL | One of `ByCount`, `ByWeight`, or `ByVision` (NULL when not yet configured). Selects the **tray-level** closure trigger per FDS-06-014. `ByCount` = operator-entered count per tray; `ByWeight` = scale feedback via OmniServer (target on `TargetWeight`, PLC asserts `TrayFullFlag` at threshold); `ByVision` = camera validates each part (pass/fail per piece), PLC accumulates the validated count and asserts `TrayFullFlag` at `PartsPerTray`. Container fill is derived in MES from accumulated tray closes — no separate `ContainerFullFlag` PLC tag is required. |
 | TargetWeight | DECIMAL(10,4) | NULL | Target weight for `ByWeight` closure. Required when `ClosureMethod = 'ByWeight'`; ignored otherwise. |
 | DunnageCode | NVARCHAR(50) | NULL | Returnable dunnage identifier |
 | CustomerCode | NVARCHAR(50) | NULL | Honda customer code |
@@ -428,20 +441,21 @@ Honda-specified packing rules per product.
 | UpdatedAt | DATETIME2(3) | NULL | |
 | DeprecatedAt | DATETIME2(3) | NULL | |
 
-### ✅ Resolved (v1.8 rev): Casting → Trim Part Identity Change → 1-line BOM
+### ✅ Resolved (v1.8 rev / FDS-05-033 v0.11m): Trim → Machining Part Identity Change → 1-line BOM
 
-> **OI-11 resolution (2026-04-22):** An earlier v1.8 draft added a dedicated `Parts.ItemTransform` table to bridge the Casting → Trim part-identity change. On review it was redundant — every column it carried (`SourceItemId` / `DestinationItemId` / `SourceLotId` / `DestinationLotId` / `LocationId` / `Quantity` / `OperatorId` / `TerminalLocationId` / `RecordedAt`) is already on `Workorder.ConsumptionEvent`. The physical flow (one cast piece becomes one trim piece) is just a **degenerate 1-line BOM consumption** — the same pattern assembly uses, with a BOM of `1 × 5G0-CAST-4102` on the trim part.
+> **OI-11 resolution (2026-04-22) + FDS v0.11m boundary clarification (2026-04-28):** The part-identity rename was originally framed as **Casting → Trim**; the v0.11m FDS continuity pass clarified that the rename actually fires one step downstream at **Trim → Machining**. Within Casting and Trim the LOT retains a single cast-part identity — Trim's sprue removal / deburr / wash work is yield loss recorded via `Workorder.RejectEvent` on the same LOT, not a rename. The earlier v1.8 draft of a dedicated `Parts.ItemTransform` table is still rejected on the same OI-11 grounds — every column it carried (`SourceItemId` / `DestinationItemId` / `SourceLotId` / `DestinationLotId` / `LocationId` / `Quantity` / `AppUserId` / `TerminalLocationId` / `RecordedAt`) is already on `Workorder.ConsumptionEvent`. The physical flow (one trim piece becomes one machined piece) is a **degenerate 1-line BOM consumption** — the same pattern assembly uses, with a BOM of `1 × 5G0-TRIM-4102` on the machined part.
 >
 > **Modelled as:**
 >
-> - `Parts.Item` has two rows for the same physical part: `5G0-CAST-4102` (Component) and `5G0-TRIM-4102` (Sub-Assembly or Component depending on downstream use).
-> - `Parts.Bom` for the trim part has a single `BomLine` with `ChildItemId = 5G0-CAST` and `QtyPer = 1`.
-> - At the first Trim Shop Cell, scanning a cast LOT in prompts: *"This LOT is 5G0-CAST-4102. Receive as 5G0-TRIM-4102?"* — the prompt is driven by BOM lookup (which finished items have the scanned Item as a component).
-> - On confirm, a new destination LOT of the trim part is created; `Workorder.ConsumptionEvent` records the flow (source cast LOT → produced trim LOT); `Lots.LotGenealogy` records the parent/child with `RelationshipType = Consumption`.
-> - Yield loss at Trim (if any) is captured normally via `Workorder.RejectEvent` on the source side.
-> - Backward trace: walk `LotGenealogy` from shipped trim LOT back to cast LOT → machine / die / cavity / operator / timestamp. No join through an extra table.
+> - `Parts.Item` has two rows for the same physical part: `5G0-TRIM-4102` (Component — covers both Casting and Trim work) and `5G0-MACHINED-4102` (Sub-Assembly or Component depending on downstream use). Trim does **not** introduce a new Item; the cast/trim LOT carries the same `ItemId` from Die Cast through Trim OUT.
+> - `Parts.Bom` for the machined part has a single `BomLine` with `ChildItemId = 5G0-TRIM` and `QtyPer = 1`.
+> - At the first Machining Cell, the operator picks the next sub-LOT from the Cell's FIFO queue (per FDS-06-007 — no scan-to-receive). The MES applies the BOM-driven rename: *"This LOT is 5G0-TRIM-4102. Receive as 5G0-MACHINED-4102?"* — the prompt is driven by BOM lookup (which finished items have the scanned Item as a component).
+> - On confirm, a new destination LOT of the machined part is created; `Workorder.ConsumptionEvent` records the flow (source trim LOT → produced machined LOT); `Lots.LotGenealogy` records the parent/child with `RelationshipType = Consumption`.
+> - Yield loss at Trim (sprue removal, deburr, wash) is captured via `Workorder.RejectEvent` on the cast/trim LOT — no rename, no consumption event; trim work is rework against the same LOT.
+> - Yield loss at Machining (after the rename) is captured via `Workorder.RejectEvent` on the machined LOT.
+> - Backward trace: a shipped machined LOT walks `LotGenealogy` back to the trim/cast LOT in **one read** (single Machining-IN consumption hop). The trim/cast LOT carries the original Die Cast `ProductionEvent` rows directly (cast machine / die / cavity / operator / timestamp reachable without a second hop) — Casting and Trim share the same `LotId`.
 >
-> **No new schema.** The `Parts.ItemTransform` table was removed from the v1.8 draft before any SQL landed. The operator-facing flow (UI prompt + confirmation), the backward trace, and the FDS §5.7 Genealogy queries all work unchanged.
+> **No new schema.** The `Parts.ItemTransform` table was removed from the v1.8 draft before any SQL landed. The operator-facing flow (FIFO pick + BOM-driven rename prompt + confirmation), the backward trace, and the FDS §5.7 Genealogy queries all work unchanged.
 
 ### ✅ Resolved (v1.7): Tool Life Tracking → §7 Tools Schema
 
@@ -620,7 +634,7 @@ Added v1.9 (OI-31). Replaces Flexware's `IdentifierFormat` table and drives all 
 | Lot | `MESL{0:D7}` | 1,710,932 (drift expected; re-sample at cutover) |
 | SerializedItem | `MESI{0:D7}` | 2,492 (drift expected; re-sample at cutover) |
 
-**Open questions (OI-31):** format carry-forward (keep `MESL`/`MESI`, or mint new?), reset policy, rollover policy at 9,999,999. Counter inventory is the two rows shown above — the Flexware `IdentifierFormat` export is the authoritative list. See `MPP_MES_Open_Issues_Register.md` OI-31.
+**Open questions (OI-31):** format carry-forward (keep `MESL`/`MESI`, or mint new?), reset policy, rollover policy at 9,999,999. Counter inventory is the two rows shown above — the Flexware `IdentifierFormat` export is the authoritative list. See `MPP_MES_Open_Issues_Register.docx` OI-31.
 
 ### LotLabel
 
@@ -697,23 +711,18 @@ Junction: serial numbers in container tray positions.
 | SerializedPartId | BIGINT | FK → SerializedPart.Id, NOT NULL | |
 | TrayPosition | INT | NULL | Position within tray |
 
-> 🔶 **PENDING INTERNAL REVIEW — UJ-16:** When `HardwareInterlockEnable=false`, parts enter containers without MES serial validation. A flag is needed to record that interlock was bypassed and serial validation was skipped. Two options under discussion:
->
-> **(a)** Add `HardwareInterlockBypassed BIT DEFAULT 0` to `ContainerSerial` — marks the specific serial-to-container assignment that skipped validation.
->
-> **(b)** Add `HardwareInterlockBypassed BIT DEFAULT 0` to `ProductionEvent` — marks the broader production event as having occurred without interlock.
->
-> The circumstances under which MPP bypasses the interlock are not yet understood. Both options are presented for discussion with Ben. The flag may belong on both tables if bypass affects traceability at both levels.
+**HardwareInterlockBypassed flag (UJ-16, ✅ Resolved 2026-04-27 per OIR v2.14, Option A).** When `HardwareInterlockEnable=false`, parts enter containers without MES serial validation. A `HardwareInterlockBypassed BIT NOT NULL DEFAULT 0` column SHALL be added to `ContainerSerial` to mark the specific serial-to-container assignment as having skipped validation. The flag lives on `ContainerSerial` (not `ProductionEvent`) because the bypass is observed at the per-piece serial-assignment level — broader event-level tracking via `ProductionEvent` would lose the per-piece granularity. Schema add deferred to Arc 2 Phase 7 alongside the rest of the Container schema CREATE.
 
 ### ShippingLabel
 
-Container shipping label print/void history. **v1.9i (UJ-18 Gateway-script-async print pattern):** print state lives on this row — no separate queue table. Operator close transaction is atomic and zero-latency (same v1.9h AIM pool flow); print dispatch is event-driven via Gateway message handler with 3 retries (2s gap), banner-on-failure at the closing terminal.
+Container shipping label print/void history. **v1.9i (UJ-18 Gateway-script-async print pattern):** print state lives on this row — no separate queue table. Operator close transaction is atomic and zero-latency (same v1.9h AIM pool flow); print dispatch is event-driven via Gateway message handler with 3 retries (2s gap), banner-on-failure at the closing terminal. **v1.9k:** `BannerAcknowledgedAt` added to record operator dismissal of the print-failure banner — supports the FDS-07-006b broadcast-with-session-filter Acknowledge action.
 
 State derivation:
 
 - **Pending** — `PrintedAt IS NULL AND PrintFailedAt IS NULL`
 - **Completed** — `PrintedAt IS NOT NULL`
-- **Failed** — `PrintFailedAt IS NOT NULL` (banner trigger)
+- **Failed** — `PrintFailedAt IS NOT NULL AND BannerAcknowledgedAt IS NULL` (banner showing)
+- **Failed-acknowledged** — `PrintFailedAt IS NOT NULL AND BannerAcknowledgedAt IS NOT NULL` (banner dismissed; row remains in failed state for the safety-sweep alarm)
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -731,6 +740,7 @@ State derivation:
 | LastPrintError | NVARCHAR(2000) | NULL | **Added v1.9i.** Captured exception text from the most recent failed attempt. |
 | PrintFailedAt | DATETIME2(3) | NULL | **Added v1.9i.** Non-NULL = retries exhausted (3 attempts × 2s gap). Drives the banner shown at `TerminalLocationId`. |
 | TerminalLocationId | BIGINT | FK → Location.Location.Id, NULL | **Added v1.9i.** The Terminal where the closing operator was — drives both the printer pick (resolved via `LocationAttribute` on parent Cell) and the banner routing (banner shows only at this Terminal). |
+| BannerAcknowledgedAt | DATETIME2(3) | NULL | **Added v1.9k.** Non-NULL when the operator at `TerminalLocationId` dismissed the print-failure banner via the Acknowledge action (FDS-07-006b). Independent of `PrintFailedAt` — the row stays in failed state for the safety-sweep alarm even after acknowledgement; this column only suppresses the banner UI. NULL while the banner is active. |
 
 ### PauseEvent
 
@@ -758,9 +768,7 @@ State derivation:
 - `IX_PauseEvent_OpenByLocation` on `(LocationId) WHERE ResumedAt IS NULL` — supports the wallboard counter / paused-LOT detail-list lookup.
 - `IX_PauseEvent_Lot` on `(LotId, PausedAt DESC)` — supports per-LOT pause history (Lot Details view).
 
-**Audit:** `Audit.LogEntityType` gains a `PauseEvent` row (added at Arc 2 Phase 1 alongside the rest of the Lots schema CREATE). Place / Resume operations write to `Audit.OperationLog`.
-
-> **⚠ Implementation deferred to Arc 2 Phase 1.** The Lots schema does not yet exist in the Phase 1–8 codebase — `Lots.Lot` and `Lots.PauseEvent` both CREATE in the Arc 2 Phase 1 migration. The column contract above is authoritative.
+**Audit:** `Audit.LogEntityType` carries a `PauseEvent` row. Place / Resume operations write to `Audit.OperationLog`.
 
 ### AimShipperIdPool
 
@@ -785,9 +793,7 @@ State derivation:
 - `IX_AimShipperIdPool_Available (FetchedAt) WHERE ConsumedAt IS NULL` — drives the FIFO `_Claim` query (`UPDATE TOP (1) WITH (UPDLOCK, READPAST, ROWLOCK)`) and the `_GetDepth` count.
 - `IX_AimShipperIdPool_Container ON (ConsumedByContainerId) WHERE ConsumedByContainerId IS NOT NULL` — supports `_GetByContainer` traceability.
 
-**Audit:** `Audit.LogEntityType` gains an `AimShipperIdPool` row at Arc 2 Phase 7. `_Claim` writes an `OperationLog` `Consumed` row (linked back to the closing container's audit chain). Each `_Topup` is *itself* preceded by an `Audit.InterfaceLog` row (the AIM call) — `FetchedInterfaceLogId` carries the FK so provenance is end-to-end queryable.
-
-> **⚠ Implementation deferred to Arc 2 Phase 7.** The Container schema does not yet exist in the Phase 1–8 codebase — `Lots.Container`, `Lots.AimShipperIdPool`, and `Lots.AimPoolConfig` all CREATE in the Arc 2 Phase 7 migration. The column contract above is authoritative.
+**Audit:** `Audit.LogEntityType` carries an `AimShipperIdPool` row. `_Claim` writes an `OperationLog` `Consumed` row (linked back to the closing container's audit chain). Each `_Topup` is *itself* preceded by an `Audit.InterfaceLog` row (the AIM call) — `FetchedInterfaceLogId` carries the FK so provenance is end-to-end queryable.
 
 ### AimPoolConfig
 
@@ -809,9 +815,7 @@ State derivation:
 |---|---|---|---|---|
 | 1 | 50 | 30 | 20 | 10 |
 
-**Audit:** `Audit.LogEntityType` gains an `AimPoolConfig` row at Arc 2 Phase 7. `_Update` writes a `ConfigLog` row.
-
-> **⚠ Implementation deferred to Arc 2 Phase 7.**
+**Audit:** `Audit.LogEntityType` carries an `AimPoolConfig` row. `_Update` writes a `ConfigLog` row.
 
 ---
 
@@ -886,13 +890,11 @@ Read-only code table. Added in v1.7 (Phase B); seed corrected in v1.9b (2026-04-
 | Demand | Planned preventative maintenance. |
 | Maintenance | Emergency maintenance. |
 
-> **SQL correction follow-up queued:** Phase G migration `0010_phase9_tools_and_workorder.sql` shipped with 3 seed rows (`Demand`/`Maintenance`/`Recipe`). A follow-up versioned migration is needed to rename Id=1 `Demand`→`Production`, DELETE Ids 2 and 3, and update `sql/tests/0019_Parts_ConsumptionMetadata_And_ScrapSource/010_Phase_E_additives.sql` (currently asserts 3 rows). Not executed this turn.
+> **SQL correction landed:** Migration `0013_oi07_oi12_corrections.sql` (2026-04-28) collapsed the seed to a single `Production` row and updated `sql/tests/0019_Parts_ConsumptionMetadata_And_ScrapSource/010_Phase_E_additives.sql` accordingly. 858/858 tests passing.
 
 ### WorkOrder
 
-Auto-generated internal work order. Operators never see this. v1.7 adds `WorkOrderTypeId` (discriminator) and `ToolId` (FUTURE Maintenance-only, nullable). v1.9b (2026-04-24) — `WorkOrderTypeId` now defaults to the single-seeded `Production` row; `ToolId` FK remains as a schema hook for future Maintenance WOs without being populated in MVP.
-
-> **⚠ Implementation deferred to Arc 2 Phase 1** (discovered 2026-04-22 during Phase G scoping). The `Workorder.WorkOrder` table itself does not yet exist — Phases 1–8 built only the `WorkOrderStatus` + `OperationStatus` code tables. The v1.7 Phase B spec wrote these as *ALTER ADD COLUMN*, but there's no table to ALTER. Arc 2 Phase 1 CREATEs `Workorder.WorkOrder` with `WorkOrderTypeId` (FK → `Workorder.WorkOrderType`, created in Phase G) and `ToolId` (FK → `Tools.Tool`, created in Phase G) baked in from day one. The column contract described below is authoritative — it's just the DDL verb that changes from ALTER to CREATE.
+Auto-generated internal work order. Operators never see this. The table carries `WorkOrderTypeId` (discriminator FK → `WorkOrderType`, defaults to the single-seeded `Production` row) and `ToolId` (nullable FK → `Tools.Tool`, schema hook for FUTURE Maintenance WOs — unpopulated in MVP).
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -920,15 +922,13 @@ Individual operation execution — the actual step that happened.
 | SequenceNumber | INT | NOT NULL | |
 | StartedAt | DATETIME2(3) | NULL | |
 | CompletedAt | DATETIME2(3) | NULL | |
-| OperatorId | BIGINT | FK → AppUser.Id, NULL | |
+| AppUserId | BIGINT | FK → AppUser.Id, NULL | Operator who ran the operation |
 
 ### ProductionEvent
 
-**Checkpoint-shape event table (v1.9).** Per FRS §2.1.2 operator-driven capture: operators are not at the terminal for every shot — they log at checkpoints (checkout from die cast, check-in to trim, complete + move, quality-operation transitions). Each checkpoint fires one row carrying the **cumulative** counters as-of-that-moment; deltas are derived by the reader via `LAG()` window function over `(LotId, EventAt)`. A missed event doesn't compound errors — the next event carries truth.
+**Checkpoint-shape event table.** Per FRS §2.1.2 operator-driven capture: operators are not at the terminal for every shot — they log at checkpoints (checkout from die cast, check-in to trim, complete + move, quality-operation transitions). Each checkpoint fires one row carrying the **cumulative** counters as-of-that-moment; deltas are derived by the reader via `LAG()` window function over `(LotId, EventAt)`. A missed event doesn't compound errors — the next event carries truth.
 
-> **⚠ Implementation deferred to Arc 2 Phase 1.** The `Workorder.ProductionEvent` table does not exist in the Phase 1–8 codebase. Arc 2 Phase 1 CREATEs it with the full column list below. The column contract is authoritative.
-
-**What's deliberately NOT on this table (Data Model v1.9 reshape):**
+**What's deliberately NOT on this table:**
 - **No `LocationId`** — derivable from `LotMovement` at `EventAt` timestamp. Redundant.
 - **No `ItemId`** — derivable from `Lot.ItemId`.
 - **No `DieIdentifier` / `CavityNumber`** — `Lot.ToolId` / `Lot.ToolCavityId` are system of record; ProductionEvent does not carry.
@@ -1004,7 +1004,7 @@ Records which source LOTs were consumed to produce output.
 | ProducedItemId | BIGINT | FK → Item.Id, NOT NULL | |
 | PieceCount | INT | NOT NULL | |
 | LocationId | BIGINT | FK → Location.Id, NOT NULL | |
-| OperatorId | BIGINT | FK → AppUser.Id, NOT NULL | |
+| AppUserId | BIGINT | FK → AppUser.Id, NOT NULL | Operator who scanned the consumption |
 | TerminalLocationId | BIGINT | FK → Location.Id (Terminal), NULL | Terminal where action was performed |
 | TrayId | BIGINT | FK → ContainerTray.Id, NULL | |
 | ProducedSerialNumber | NVARCHAR(50) | NULL | |
@@ -1023,7 +1023,7 @@ Detailed reject/scrap records.
 | Quantity | INT | NOT NULL | |
 | ChargeToArea | NVARCHAR(100) | NULL | Area responsible for the reject |
 | Remarks | NVARCHAR(500) | NULL | |
-| OperatorId | BIGINT | FK → AppUser.Id, NOT NULL | |
+| AppUserId | BIGINT | FK → AppUser.Id, NOT NULL | Operator who recorded the reject |
 | RecordedAt | DATETIME2(3) | NOT NULL | |
 
 ---
@@ -1290,12 +1290,12 @@ Append-only. Never overwrite started_at.
 | StartedAt | DATETIME2(3) | NOT NULL | |
 | EndedAt | DATETIME2(3) | NULL | NULL while event is open |
 | DowntimeSourceCodeId | BIGINT | FK → DowntimeSourceCode.Id, NOT NULL | How this event was recorded |
-| OperatorId | BIGINT | FK → AppUser.Id, NULL | |
+| AppUserId | BIGINT | FK → AppUser.Id, NULL | Operator who recorded / acknowledged the event (NULL for PLC-driven events without operator action) |
 | ShotCount | INT | NULL | Die cast warm-up/setup shot count (when reason_type = Setup) |
 | Remarks | NVARCHAR(500) | NULL | |
 | CreatedAt | DATETIME2(3) | NOT NULL, DEFAULT GETDATE() | |
 
-> 🔶 **PENDING INTERNAL REVIEW — UJ-14:** Warm-up shots are tracked as a downtime sub-category (`DowntimeReasonType` = Setup) with the `ShotCount` column on the `DowntimeEvent` record itself. This keeps warm-up time and shot count in a single record. The Die Cast production screen records good/bad shot counts on the `ProductionEvent`; warm-up shot counts go here. Needs review with Ben.
+**Warm-up shot tracking (UJ-14, ✅ Resolved 2026-04-27 per OIR v2.14).** Warm-up shots are tracked as a downtime sub-category (`DowntimeReasonType` = Setup) with the `ShotCount` column on the `DowntimeEvent` record itself. This keeps warm-up time and shot count in a single record. The Die Cast production screen records good/bad shot counts on the `ProductionEvent`; warm-up shot counts go here.
 
 ### OeeSnapshot
 
@@ -1564,10 +1564,10 @@ Junction. Ships **empty** — MPP Quality owes the compatibility matrix.
 
 ### Cross-references
 
-- **Workorder.WorkOrder.ToolId** (§4) — nullable FK into `Tools.Tool`. Populated only for `WorkOrderType = Maintenance` (enforced at proc layer; Recipe WOs legitimately have NULL `ToolId`).
-- **Workorder.ProductionEvent.DieIdentifier** (§4) — historical NVARCHAR snapshot of the die at event time. Not an FK. A parallel `ToolId BIGINT FK` may be added in a later phase for analytics joins; the NVARCHAR stays as the as-captured value (survives tool rename/replacement).
+- **Workorder.WorkOrder.ToolId** (§4) — nullable FK into `Tools.Tool`. Schema hook for **FUTURE** Maintenance WOs targeting a Tool. The only `WorkOrderType` seeded in MVP is `Production`, which legitimately has NULL `ToolId`; the proc layer will enforce non-NULL on Maintenance WOs once that flow activates.
+- **Workorder.ProductionEvent → Lots.Lot.ToolId / Lots.Lot.ToolCavityId** (§4 + §3) — Tool and Cavity at event time are derived via `ProductionEvent.LotId → Lots.Lot.ToolId` / `.ToolCavityId`. The pre-v1.9 `ProductionEvent.DieIdentifier` (NVARCHAR snapshot) and `CavityNumber` columns were dropped in the v1.9 reshape — `Lots.Lot` is the system of record for die-cast LOTs and never mutates the Tool / Cavity FK after creation, so the snapshot was redundant.
 - **Audit.LogEntityType** (§8) — 8 new seed rows in Phase G for Tool, ToolAttributeDefinition, ToolAttribute, ToolCavity, ToolAssignment, DieRank, DieRankCompatibility, and `Workorder.WorkOrderType`. Every `Tools.*` mutation proc logs to `Audit.ConfigLog` on success and `Audit.FailureLog` on rejection.
-- **Audit.LogEntityType** (§8) — v1.8 adds 1 further seed row in Phase G: `ScrapSource` (Workorder.ScrapSource, OI-20). A second row for `ItemTransform` was removed after OI-11 resolved via 1-line BOM (no new table).
+- **Audit.LogEntityType** (§8) — v1.8 adds 1 further seed row in Phase G: `ScrapSource` (Workorder.ScrapSource, OI-20).
 
 ---
 

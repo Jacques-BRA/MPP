@@ -1,0 +1,3157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MPP Plant Floor</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="plantFloor.css" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     APP SHELL
+     ══════════════════════════════════════════════════════════════════════ -->
+<div class="pf-app" data-mode="elevated" data-route="home">
+
+  <!-- ═══ HEADER ═══════════════════════════════════════════════════════ -->
+  <header class="pf-header">
+
+    <!-- Left: Breadcrumb (visible on terminal-route views) -->
+    <div class="pf-header-left">
+      <nav class="pf-breadcrumb" aria-label="Breadcrumb">
+        <a href="#home">Home</a>
+        <span class="sep">›</span>
+        <a href="#home">Die Cast</a>
+        <span class="sep">›</span>
+        <a href="#home">5G0 Front Cover</a>
+        <span class="sep">›</span>
+        <span class="current">Press 7</span>
+      </nav>
+    </div>
+
+    <!-- Center: App title (clicks home) -->
+    <div class="pf-header-center">
+      <a href="#home" class="pf-app-title">MPP Plant Floor</a>
+    </div>
+
+    <!-- Right: OP indicator + Config Tool link + elevation toggle -->
+    <div class="pf-header-right">
+      <a href="index.html" target="_blank" class="pf-btn pf-btn-secondary pf-elevated-segment"
+         title="Configuration Tool — opens in a new tab" style="height: 36px; min-height: 36px; font-size: 12px;">
+        Config Tool ↗
+      </a>
+      <span class="pf-op-indicator">
+        <span class="pf-op-label">OP:</span>
+        <span class="pf-op-value">CM</span>
+        <span class="pf-elevated-segment">
+          <span class="pf-op-sep">·</span>
+          <span class="pf-elevated-label">ELEVATED:</span>
+          <span class="pf-elevated-value">Doe, J.</span>
+        </span>
+      </span>
+      <button class="pf-elevation-toggle" id="elevation-toggle" type="button">
+        <span class="pf-toggle-dot"></span>
+        <span>Elevated</span>
+        <span class="pf-toggle-label-mockup">(mockup)</span>
+      </button>
+    </div>
+
+  </header>
+
+  <!-- ═══ MAIN ═════════════════════════════════════════════════════════ -->
+  <main class="pf-main">
+
+    <!-- ─── HOME PAGE ──────────────────────────────────────────────── -->
+    <section data-route="home">
+      <div class="pf-home">
+
+        <!-- Left: Plant Hierarchy tree -->
+        <aside class="pf-tree-dock">
+          <header class="pf-tree-header">
+            <h3>Plant Hierarchy</h3>
+          </header>
+
+          <ul class="pf-tree" id="plant-tree">
+            <li class="pf-tree-node expanded">
+              <div class="pf-tree-row">
+                <span class="pf-tree-toggle"></span>
+                <span class="pf-tree-icon">🏭</span>
+                <span class="pf-tree-label">Madison Precision Products</span>
+              </div>
+              <ul class="pf-tree-children">
+
+                <!-- Die Cast Area -->
+                <li class="pf-tree-node expanded">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">🔥</span>
+                    <span class="pf-tree-label">Die Cast</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                  <ul class="pf-tree-children">
+                    <li class="pf-tree-node expanded">
+                      <div class="pf-tree-row">
+                        <span class="pf-tree-toggle"></span>
+                        <span class="pf-tree-icon">⚙️</span>
+                        <span class="pf-tree-label">5G0 Front Cover</span>
+                        <span class="pf-tree-meta">WC</span>
+                      </div>
+                      <ul class="pf-tree-children">
+                        <li class="pf-tree-node leaf selected">
+                          <div class="pf-tree-row">
+                            <span class="pf-tree-toggle"></span>
+                            <span class="pf-tree-icon">🛠️</span>
+                            <span class="pf-tree-label">Press 7</span>
+                            <span class="pf-tree-meta">Cell</span>
+                          </div>
+                        </li>
+                        <li class="pf-tree-node leaf">
+                          <div class="pf-tree-row">
+                            <span class="pf-tree-toggle"></span>
+                            <span class="pf-tree-icon">🛠️</span>
+                            <span class="pf-tree-label">Press 8</span>
+                            <span class="pf-tree-meta">Cell</span>
+                          </div>
+                        </li>
+                        <li class="pf-tree-node leaf">
+                          <div class="pf-tree-row">
+                            <span class="pf-tree-toggle"></span>
+                            <span class="pf-tree-icon">📺</span>
+                            <span class="pf-tree-label">DC Shared Terminal</span>
+                            <span class="pf-tree-meta">Term</span>
+                          </div>
+                        </li>
+                      </ul>
+                    </li>
+                    <li class="pf-tree-node">
+                      <div class="pf-tree-row">
+                        <span class="pf-tree-toggle"></span>
+                        <span class="pf-tree-icon">⚙️</span>
+                        <span class="pf-tree-label">6B2 Cam Holder</span>
+                        <span class="pf-tree-meta">WC</span>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+
+                <!-- Trim Shop Area -->
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">✂️</span>
+                    <span class="pf-tree-label">Trim Shop</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+
+                <!-- Machine Shop Area -->
+                <li class="pf-tree-node expanded">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">⚒️</span>
+                    <span class="pf-tree-label">Machine Shop</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                  <ul class="pf-tree-children">
+                    <li class="pf-tree-node">
+                      <div class="pf-tree-row">
+                        <span class="pf-tree-toggle"></span>
+                        <span class="pf-tree-icon">⚙️</span>
+                        <span class="pf-tree-label">5G0 Machining + Assembly</span>
+                        <span class="pf-tree-meta">WC</span>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+
+                <!-- Production Control / Receiving / Shipping -->
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">📋</span>
+                    <span class="pf-tree-label">Production Control</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">📦</span>
+                    <span class="pf-tree-label">Receiving</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">🚚</span>
+                    <span class="pf-tree-label">Shipping</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+                <li class="pf-tree-node">
+                  <div class="pf-tree-row">
+                    <span class="pf-tree-toggle"></span>
+                    <span class="pf-tree-icon">🔍</span>
+                    <span class="pf-tree-label">Sort Cage</span>
+                    <span class="pf-tree-meta">Area</span>
+                  </div>
+                </li>
+
+              </ul>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- Right: Tabbed details panel -->
+        <section class="pf-details">
+
+          <nav class="pf-tabs" role="tablist">
+            <button class="pf-tab active" data-tab="details" type="button">Location Details</button>
+            <button class="pf-tab pf-tab-elevated-only" data-tab="lots" type="button">LOT Search</button>
+            <button class="pf-tab pf-tab-elevated-only" data-tab="genealogy" type="button">Genealogy</button>
+            <button class="pf-tab pf-tab-elevated-only" data-tab="holds" type="button">Hold Management</button>
+            <button class="pf-tab pf-tab-elevated-only" data-tab="dashboard" type="button">Supervisor Dashboard</button>
+          </nav>
+
+          <!-- Tab: Location Details — adapts to selected Location tier -->
+          <div class="pf-tab-panel active" data-panel="details">
+
+            <header class="pf-details-header">
+              <h2>Press 7 (DC-042)</h2>
+              <div class="pf-location-meta">
+                <span>Cell · DieCastMachine</span>
+                <span>·</span>
+                <span>Madison › Die Cast › 5G0 Front Cover</span>
+              </div>
+            </header>
+
+            <!-- KPI cards -->
+            <section class="pf-kpis">
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Current LOT</span>
+                <span class="pf-kpi-value pf-kpi-mono">MESL1710935</span>
+                <span class="pf-kpi-sub">5G0-TRIM-4102 · Cavity A · 38 / 48 pcs</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Last Operator</span>
+                <span class="pf-kpi-value">CM</span>
+                <span class="pf-kpi-sub">Charles Mitchell · presence since 06:20</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Active Tool</span>
+                <span class="pf-kpi-value pf-kpi-mono">DC-042</span>
+                <span class="pf-kpi-sub">Cavity A active · Cavity B active</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Open Downtime</span>
+                <span class="pf-kpi-value pf-kpi-warn">EQ-DIE-STICK</span>
+                <span class="pf-kpi-sub">06:45 · 12 min · awaiting reason confirm</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Cycle Rate</span>
+                <span class="pf-kpi-value">42 / hr</span>
+                <span class="pf-kpi-sub">target 48 · 88%</span>
+              </div>
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Shift Production</span>
+                <span class="pf-kpi-value">186</span>
+                <span class="pf-kpi-sub">good · 4 reject · 2.1% scrap</span>
+              </div>
+            </section>
+
+            <!-- Action row -->
+            <div class="pf-actions">
+              <a href="#terminal/diecast" class="pf-btn pf-btn-primary pf-btn-large">View Terminal</a>
+              <a href="#lot/detail" class="pf-btn pf-btn-secondary">Open Current LOT</a>
+              <button class="pf-btn pf-btn-elevated" data-elevated-action="EditTool" type="button">Edit Tool Assignment</button>
+              <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold</button>
+            </div>
+
+            <!-- Sample Terminal Views (mockup demo strip) -->
+            <section style="margin-top: var(--pf-content-pad); padding-top: var(--pf-content-pad); border-top: 1px dashed var(--border);">
+              <h3 style="margin: 0 0 12px 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">
+                Sample Terminal Views <span style="font-style: italic; text-transform: none; letter-spacing: 0; color: var(--text-muted);">(mockup demo — every view is reviewable)</span>
+              </h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                <a href="#terminal/initials"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 1 · Initials Entry</a>
+                <a href="#terminal/cell-context"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 1 · Cell Context Selector</a>
+                <a href="#terminal/diecast"       class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 3 · Die Cast LOT Entry</a>
+                <a href="#terminal/receiving"     class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Receiving Dock</a>
+                <a href="#terminal/trim-in"       class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Trim Station IN</a>
+                <a href="#terminal/trim-out"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Trim OUT (Flex Repeater)</a>
+                <a href="#terminal/machining-in"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 5 · Machining IN (FIFO)</a>
+                <a href="#terminal/assembly"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Serialized</a>
+                <a href="#terminal/assembly-ns"   class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Non-Serialized</a>
+                <a href="#terminal/sort-cage"     class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 7 · Sort Cage (toggle Serialized / Non-Serialized)</a>
+                <a href="#terminal/shipping"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 7 · Shipping Dock</a>
+                <a href="#terminal/end-of-shift"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 8 · End-of-Shift Entry</a>
+                <a href="#lot/detail"             class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 2 · LOT Detail (polymorphic)</a>
+              </div>
+            </section>
+
+          </div>
+
+          <!-- Tab: LOT Search (elevated-only) -->
+          <div class="pf-tab-panel" data-panel="lots">
+            <header class="pf-details-header">
+              <h2>LOT Search</h2>
+              <div class="pf-location-meta">
+                <span>Elevated · cross-Area lookup</span>
+                <span>·</span>
+                <span>Search by LotName, SerialNumber, AIM Shipper ID, Vendor LOT, or Part Number</span>
+              </div>
+            </header>
+
+            <!-- Search bar -->
+            <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom: 16px;">
+              <div class="pf-field" style="flex:1;">
+                <label class="pf-field-label">Query</label>
+                <input class="pf-field-input pf-field-mono" type="search" placeholder="MESL1710935 · 5G0F-240429-00147 · SH-240429-0142 · VND-88721 · 5G0-TRIM-4102…" value="MESL17109" />
+              </div>
+              <div class="pf-field" style="min-width: 160px;">
+                <label class="pf-field-label">Status filter</label>
+                <select class="pf-field-select">
+                  <option>Any</option>
+                  <option>Good</option>
+                  <option>Hold</option>
+                  <option>Closed</option>
+                  <option>Scrap</option>
+                </select>
+              </div>
+              <div class="pf-field" style="min-width: 160px;">
+                <label class="pf-field-label">Origin</label>
+                <select class="pf-field-select">
+                  <option>Any</option>
+                  <option>Manufactured</option>
+                  <option>Received</option>
+                  <option>ReceivedOffsite</option>
+                </select>
+              </div>
+              <button class="pf-btn pf-btn-primary" type="button">Search</button>
+            </div>
+
+            <!-- Results -->
+            <section class="pf-panel">
+              <div class="pf-panel-header">
+                <h3>5 results · sorted by recency</h3>
+                <span class="pf-kpi-sub">Showing 5 of 12 — refine query for fewer results</span>
+              </div>
+
+              <div class="pf-queue">
+                <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto auto; text-decoration:none; color:inherit;">
+                  <span class="pf-queue-position">Manufactured</span>
+                  <div>
+                    <span class="pf-queue-name">MESL1710955</span>
+                    <div class="pf-queue-detail">5G0-MACHINED-4102 · 24 pcs · CNC 12 → coupled to Assembly</div>
+                  </div>
+                  <span class="pf-pill pf-pill-good">Good</span>
+                  <span class="pf-kpi-sub">created 09:52</span>
+                  <button class="pf-btn pf-btn-secondary" type="button">Open</button>
+                </a>
+
+                <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto auto; text-decoration:none; color:inherit;">
+                  <span class="pf-queue-position">Manufactured</span>
+                  <div>
+                    <span class="pf-queue-name">MESL1710953-C</span>
+                    <div class="pf-queue-detail">5G0-MACHINED-4102 · 16 pcs · CNC 14 · on hold (Quality)</div>
+                  </div>
+                  <span class="pf-pill pf-pill-hold">Hold</span>
+                  <span class="pf-kpi-sub">created 10:18</span>
+                  <button class="pf-btn pf-btn-secondary" type="button">Open</button>
+                </a>
+
+                <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto auto; text-decoration:none; color:inherit;">
+                  <span class="pf-queue-position">Manufactured</span>
+                  <div>
+                    <span class="pf-queue-name">MESL1710948-B</span>
+                    <div class="pf-queue-detail">5G0-MACHINED-4102 · 25 pcs · CNC 13</div>
+                  </div>
+                  <span class="pf-pill pf-pill-good">Good</span>
+                  <span class="pf-kpi-sub">created 10:02</span>
+                  <button class="pf-btn pf-btn-secondary" type="button">Open</button>
+                </a>
+
+                <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto auto; text-decoration:none; color:inherit;">
+                  <span class="pf-queue-position">Manufactured</span>
+                  <div>
+                    <span class="pf-queue-name">MESL1710942</span>
+                    <div class="pf-queue-detail">5G0-TRIM-4102 (parent) · 0 pcs · Closed (split at Trim OUT into 2 children)</div>
+                  </div>
+                  <span class="pf-pill" style="background: var(--bg-row-alt); color: var(--text-muted);">Closed</span>
+                  <span class="pf-kpi-sub">closed 09:42</span>
+                  <button class="pf-btn pf-btn-secondary" type="button">Open</button>
+                </a>
+
+                <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto auto; text-decoration:none; color:inherit;">
+                  <span class="pf-queue-position">Manufactured</span>
+                  <div>
+                    <span class="pf-queue-name">MESL1710935</span>
+                    <div class="pf-queue-detail">5G0-TRIM-4102 · Press 7 · Cavity A · 38 pcs</div>
+                  </div>
+                  <span class="pf-pill pf-pill-good">Good</span>
+                  <span class="pf-kpi-sub">created 06:20</span>
+                  <button class="pf-btn pf-btn-secondary" type="button">Open</button>
+                </a>
+              </div>
+            </section>
+          </div>
+
+          <!-- Tab: Genealogy (elevated-only) -->
+          <div class="pf-tab-panel" data-panel="genealogy">
+            <header class="pf-details-header">
+              <h2>Genealogy Lookup</h2>
+              <div class="pf-location-meta">
+                <span>Elevated · Honda audit query surface</span>
+                <span>·</span>
+                <span>Closure-table-backed if Phase 0 OI-35 elects materialization, recursive CTE otherwise</span>
+              </div>
+            </header>
+
+            <!-- Search bar -->
+            <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom: 16px;">
+              <div class="pf-field" style="flex:1;">
+                <label class="pf-field-label">LotName or Serial Number</label>
+                <input class="pf-field-input pf-field-mono" type="search" placeholder="MESL1710935 · 5G0F-240429-00147 · MESI0002493…" value="5G0F-240429-00147" />
+              </div>
+              <div class="pf-field" style="min-width: 200px;">
+                <label class="pf-field-label">Direction</label>
+                <select class="pf-field-select">
+                  <option>Both (ancestors + descendants)</option>
+                  <option>Ancestors only</option>
+                  <option>Descendants only</option>
+                </select>
+              </div>
+              <button class="pf-btn pf-btn-primary" type="button">Walk Tree</button>
+            </div>
+
+            <!-- Result: Genealogy tree visualization -->
+            <section class="pf-panel">
+              <div class="pf-panel-header">
+                <h3>Tree for SerialNumber 5G0F-240429-00147</h3>
+                <span class="pf-kpi-sub">Depth 4 · 5 nodes · walked closure table in 1 read</span>
+              </div>
+
+              <p class="pf-kpi-sub" style="margin:0;">
+                Genealogy walk from the shipped serial back to the cast machine. Each node carries
+                the LOT (or SerializedPart at the leaf), its origin, and the relationship
+                that linked it forward. Honda audits typically start here.
+              </p>
+
+              <!-- Vertical tree -->
+              <div style="display:flex; flex-direction:column; gap: 6px; padding: 8px 0;">
+
+                <!-- Root: shipped SerializedPart -->
+                <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto; border-color: var(--accent); background: var(--bg-row-sel);">
+                  <span style="display:inline-flex; width:36px; height:36px; border-radius:50%; background:var(--accent); color:var(--text-on-accent); align-items:center; justify-content:center; font-weight:700; font-size:13px;">⊙</span>
+                  <div>
+                    <span class="pf-queue-name">5G0F-240429-00147 · SerializedPart</span>
+                    <div class="pf-queue-detail">5G0F · Container CTR-5G0-0489 · Shipper SH-240429-0142 · etched 11:38 by JL</div>
+                  </div>
+                  <span class="pf-pill pf-pill-good">Shipped</span>
+                </div>
+
+                <div style="margin-left: 18px; padding-left: 18px; border-left: 1px dashed var(--border); display:flex; flex-direction:column; gap:6px;">
+                  <span class="pf-kpi-sub" style="font-size: 11px; padding: 2px 6px;">↑ Consumed from</span>
+
+                  <!-- Generation 1: machined LOT -->
+                  <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto; text-decoration:none; color:inherit;">
+                    <span class="pf-repeater-index">1</span>
+                    <div>
+                      <span class="pf-queue-name">MESL1710955 · machined LOT</span>
+                      <div class="pf-queue-detail">5G0-MACHINED-4102 · CNC 12 · ConsumptionEvent #84421 · 09:52</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Good</span>
+                  </a>
+
+                  <div style="margin-left: 18px; padding-left: 18px; border-left: 1px dashed var(--border); display:flex; flex-direction:column; gap:6px;">
+                    <span class="pf-kpi-sub" style="font-size: 11px; padding: 2px 6px;">↑ Consumed from (BOM rename Trim → Machining per FDS-05-033)</span>
+
+                    <!-- Generation 2: trim sub-LOT -->
+                    <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto; text-decoration:none; color:inherit;">
+                      <span class="pf-repeater-index">2</span>
+                      <div>
+                        <span class="pf-queue-name">MESL1710942-A · trim sub-LOT</span>
+                        <div class="pf-queue-detail">5G0-TRIM-4102 · 24 pcs · split at Trim OUT 09:42 · routed to CNC 12</div>
+                      </div>
+                      <span class="pf-pill" style="background: var(--bg-row-alt); color: var(--text-muted);">Closed</span>
+                    </a>
+
+                    <div style="margin-left: 18px; padding-left: 18px; border-left: 1px dashed var(--border); display:flex; flex-direction:column; gap:6px;">
+                      <span class="pf-kpi-sub" style="font-size: 11px; padding: 2px 6px;">↑ Split from (parent — Trim OUT)</span>
+
+                      <!-- Generation 3: parent trim LOT -->
+                      <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto; text-decoration:none; color:inherit;">
+                        <span class="pf-repeater-index">3</span>
+                        <div>
+                          <span class="pf-queue-name">MESL1710942 · cast/trim parent LOT</span>
+                          <div class="pf-queue-detail">5G0-TRIM-4102 · 50 pcs (split into 2 × 25) · Trim Cell 3 · created 06:42</div>
+                        </div>
+                        <span class="pf-pill" style="background: var(--bg-row-alt); color: var(--text-muted);">Closed</span>
+                      </a>
+
+                      <div style="margin-left: 18px; padding-left: 18px; border-left: 1px dashed var(--border); display:flex; flex-direction:column; gap:6px;">
+                        <span class="pf-kpi-sub" style="font-size: 11px; padding: 2px 6px;">⚙ Origin (Die Cast — leaf of the genealogy tree)</span>
+
+                        <!-- Generation 4: origin Die Cast LOT -->
+                        <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr auto; text-decoration:none; color:inherit; border-color: var(--pf-status-good-fg);">
+                          <span class="pf-repeater-index" style="background: var(--mpp-state-good-bg); color: var(--pf-status-good-fg); border-color: var(--pf-status-good-fg);">⌂</span>
+                          <div>
+                            <span class="pf-queue-name">MESL1710935 · die-cast origin</span>
+                            <div class="pf-queue-detail">5G0-TRIM-4102 · Press 7 · Tool DC-042 · Cavity A · operator CM · created 06:20</div>
+                          </div>
+                          <span class="pf-pill pf-pill-good">Origin</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p class="pf-kpi-sub" style="margin:0; padding-top: 12px; border-top: 1px dashed var(--border);">
+                Honda's "give me everything for serial X" query lands at the origin LOT in 1 read
+                via the closure table (or 4 recursive CTE iterations otherwise).
+                <strong>Tool DC-042, Cavity A, 06:20</strong> is the answer.
+              </p>
+            </section>
+          </div>
+
+          <!-- Tab: Hold Management (elevated-only) -->
+          <div class="pf-tab-panel" data-panel="holds">
+            <header class="pf-details-header">
+              <h2>Hold Management</h2>
+              <div class="pf-location-meta">
+                <span>FDS-08-007a</span>
+                <span>·</span>
+                <span>Multi-LOT / multi-Container batch place &amp; release · AD-elevated per FDS-04-007</span>
+              </div>
+            </header>
+
+            <!-- Filter / search row -->
+            <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom:16px;">
+              <div class="pf-field" style="flex:1;">
+                <label class="pf-field-label">Filter</label>
+                <input class="pf-field-input" type="search" placeholder="LotName, AIM Shipper ID, Item, Location…" />
+              </div>
+              <div class="pf-field">
+                <label class="pf-field-label">Hold Type</label>
+                <select class="pf-field-select">
+                  <option>—</option>
+                  <option>Customer Complaint</option>
+                  <option>Quality Issue</option>
+                  <option>Engineering Hold</option>
+                  <option>Production Hold</option>
+                  <option>Container Hold</option>
+                </select>
+              </div>
+              <div class="pf-field">
+                <label class="pf-field-label">Reason (required on Place)</label>
+                <input class="pf-field-input" type="text" placeholder="e.g. Honda dimensional concern" />
+              </div>
+            </div>
+
+            <!-- Two-column lists: open LOTs + open Containers -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+
+              <section class="pf-panel">
+                <div class="pf-panel-header">
+                  <h3>Open LOTs · 4</h3>
+                  <span class="pf-kpi-sub"><span id="hold-lot-selected">0</span> selected</span>
+                </div>
+
+                <div class="pf-queue">
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-lot-check" />
+                    <div>
+                      <span class="pf-queue-name">MESL1710935</span>
+                      <div class="pf-queue-detail">5G0-TRIM-4102 · Press 7 · 38 pcs · Good</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Good</span>
+                    <span class="pf-kpi-sub">Die Cast</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-lot-check" />
+                    <div>
+                      <span class="pf-queue-name">MESL1710942</span>
+                      <div class="pf-queue-detail">5G0-TRIM-4102 · Trim Cell 3 · 50 pcs · Good</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Good</span>
+                    <span class="pf-kpi-sub">Trim</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-lot-check" />
+                    <div>
+                      <span class="pf-queue-name">MESL1710948-B</span>
+                      <div class="pf-queue-detail">5G0-MACHINED-4102 · CNC 12 · 25 pcs · Good</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Good</span>
+                    <span class="pf-kpi-sub">Machining</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-lot-check" disabled />
+                    <div>
+                      <span class="pf-queue-name">MESL1710953-C</span>
+                      <div class="pf-queue-detail">5G0-MACHINED-4102 · CNC 14 · 16 pcs · already on hold</div>
+                    </div>
+                    <span class="pf-pill pf-pill-hold">Hold</span>
+                    <span class="pf-kpi-sub">Quality issue</span>
+                  </label>
+                </div>
+              </section>
+
+              <section class="pf-panel">
+                <div class="pf-panel-header">
+                  <h3>Open Containers · 3</h3>
+                  <span class="pf-kpi-sub"><span id="hold-ctr-selected">0</span> selected</span>
+                </div>
+
+                <div class="pf-queue">
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-ctr-check" />
+                    <div>
+                      <span class="pf-queue-name">CTR-5G0-0489</span>
+                      <div class="pf-queue-detail">SH-240429-0142 · Shipping Dock · 48 pcs · 5G0F</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Complete</span>
+                    <span class="pf-kpi-sub">Pre-shipped</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-ctr-check" />
+                    <div>
+                      <span class="pf-queue-name">CTR-5G0-0490</span>
+                      <div class="pf-queue-detail">SH-240429-0143 · Assembly · 32 of 48 pcs · 5G0F</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Open</span>
+                    <span class="pf-kpi-sub">In progress</span>
+                  </label>
+                  <label class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+                    <input type="checkbox" class="hold-ctr-check" />
+                    <div>
+                      <span class="pf-queue-name">CTR-6B2-0211</span>
+                      <div class="pf-queue-detail">SH-240429-0098 · Shipping Dock · 48 pcs · 6B2 Cam Holder</div>
+                    </div>
+                    <span class="pf-pill pf-pill-good">Complete</span>
+                    <span class="pf-kpi-sub">Pre-shipped</span>
+                  </label>
+                </div>
+              </section>
+
+            </div>
+
+            <!-- Action row -->
+            <div class="pf-actions" style="margin-top: 16px;">
+              <button class="pf-btn pf-btn-elevated pf-btn-large" data-elevated-action="HoldPlace" type="button">
+                Place Hold on Selected
+              </button>
+              <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldRelease" type="button">
+                Release Selected Holds
+              </button>
+              <span style="flex:1"></span>
+              <span class="pf-kpi-sub">Pre-shipped Containers also fire AIM `PlaceOnHold` async per FDS-07-008.</span>
+            </div>
+
+            <script>
+              // Selection counters
+              function updateHoldCounts() {
+                const lots = document.querySelectorAll('.hold-lot-check:checked').length;
+                const ctrs = document.querySelectorAll('.hold-ctr-check:checked').length;
+                const lotEl = document.getElementById('hold-lot-selected');
+                const ctrEl = document.getElementById('hold-ctr-selected');
+                if (lotEl) lotEl.textContent = lots;
+                if (ctrEl) ctrEl.textContent = ctrs;
+              }
+              document.querySelectorAll('.hold-lot-check, .hold-ctr-check').forEach(c => {
+                c.addEventListener('change', updateHoldCounts);
+              });
+            </script>
+          </div>
+
+          <!-- Tab: Supervisor Dashboard (elevated-only) -->
+          <div class="pf-tab-panel" data-panel="dashboard">
+            <header class="pf-details-header">
+              <h2>Supervisor Dashboard</h2>
+              <div class="pf-location-meta">
+                <span>Elevated · plant-wide aggregates</span>
+                <span>·</span>
+                <span>Live tiles · auto-refresh every 30s</span>
+              </div>
+            </header>
+
+            <!-- Tile grid -->
+            <div class="pf-kpis" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+
+              <!-- Downtime Open Summary -->
+              <div class="pf-kpi" style="border-color: var(--pf-status-warn-fg);">
+                <span class="pf-kpi-label">Open Downtime Events</span>
+                <span class="pf-kpi-value pf-kpi-warn">3</span>
+                <span class="pf-kpi-sub">2 with reason · 1 awaiting (PLC-driven)</span>
+                <div style="display:flex; flex-direction:column; gap:4px; padding-top:8px; border-top: 1px dashed var(--border); margin-top:4px;">
+                  <span style="font-size: 12px; color: var(--text-secondary);">EQ-DIE-STICK · Press 7 · 12 min</span>
+                  <span style="font-size: 12px; color: var(--text-secondary);">EQ-COOLANT · CNC 13 · 4 min</span>
+                  <span style="font-size: 12px; color: var(--pf-status-warn-fg);">⚠ Unclassified · Press 8 · 3 min</span>
+                </div>
+              </div>
+
+              <!-- Paused LOTs Summary -->
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Paused LOTs (open)</span>
+                <span class="pf-kpi-value">2</span>
+                <span class="pf-kpi-sub">Spanning 2 Cells across 1 Area</span>
+                <div style="display:flex; flex-direction:column; gap:4px; padding-top:8px; border-top: 1px dashed var(--border); margin-top:4px;">
+                  <span style="font-size: 12px; color: var(--text-secondary);">MESL1710942 @ Trim Cell 3 · 1h 12m</span>
+                  <span style="font-size: 12px; color: var(--text-secondary);">MESL1710930 @ CNC 14 · 22m</span>
+                </div>
+              </div>
+
+              <!-- Shift Availability -->
+              <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
+                <span class="pf-kpi-label">Shift 1 Availability</span>
+                <span class="pf-kpi-value pf-kpi-good">87%</span>
+                <span class="pf-kpi-sub">target 92% · 6:30am – now</span>
+                <div style="display:flex; gap:6px; padding-top:8px; border-top: 1px dashed var(--border); margin-top:4px;">
+                  <div style="flex:1;"><span style="font-size:11px; color: var(--text-muted);">UPTIME</span><div style="font-size: 16px; font-weight: 600;">412 min</div></div>
+                  <div style="flex:1;"><span style="font-size:11px; color: var(--text-muted);">DOWNTIME</span><div style="font-size: 16px; font-weight: 600; color: var(--pf-status-warn-fg);">62 min</div></div>
+                </div>
+              </div>
+
+              <!-- AIM Pool Wallboard Tile -->
+              <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
+                <span class="pf-kpi-label">AIM Shipper Pool</span>
+                <span class="pf-kpi-value pf-kpi-good">132</span>
+                <span class="pf-kpi-sub">total available · 4 part numbers · target depth 50 each</span>
+                <div style="display:flex; flex-direction:column; gap:3px; padding-top:8px; border-top: 1px dashed var(--border); margin-top:4px;">
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span style="font-size: 11px; font-family: monospace; flex:1;">5G0F</span>
+                    <div style="flex:2; height:6px; background: var(--bg-row-alt); border-radius:3px; overflow:hidden;">
+                      <div style="height:100%; width:100%; background: var(--pf-status-good-fg);"></div>
+                    </div>
+                    <span style="font-size: 11px; font-weight: 600; min-width:32px; text-align:right;">52</span>
+                  </div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span style="font-size: 11px; font-family: monospace; flex:1;">5G0R</span>
+                    <div style="flex:2; height:6px; background: var(--bg-row-alt); border-radius:3px; overflow:hidden;">
+                      <div style="height:100%; width:80%; background: var(--pf-status-good-fg);"></div>
+                    </div>
+                    <span style="font-size: 11px; font-weight: 600; min-width:32px; text-align:right;">40</span>
+                  </div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span style="font-size: 11px; font-family: monospace; flex:1;">6B2</span>
+                    <div style="flex:2; height:6px; background: var(--bg-row-alt); border-radius:3px; overflow:hidden;">
+                      <div style="height:100%; width:46%; background: var(--pf-status-warn-fg);"></div>
+                    </div>
+                    <span style="font-size: 11px; font-weight: 600; min-width:32px; text-align:right; color: var(--pf-status-warn-fg);">23 ⚠</span>
+                  </div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span style="font-size: 11px; font-family: monospace; flex:1;">RPY</span>
+                    <div style="flex:2; height:6px; background: var(--bg-row-alt); border-radius:3px; overflow:hidden;">
+                      <div style="height:100%; width:34%; background: var(--pf-status-good-fg);"></div>
+                    </div>
+                    <span style="font-size: 11px; font-weight: 600; min-width:32px; text-align:right;">17</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Print Failure Stranded -->
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Stranded Prints</span>
+                <span class="pf-kpi-value pf-kpi-good">0</span>
+                <span class="pf-kpi-sub">Safety sweep healthy · alarm at 5</span>
+                <div style="padding-top:8px; border-top: 1px dashed var(--border); margin-top:4px;">
+                  <span style="font-size: 12px; color: var(--text-secondary);">Last sweep: 2 min ago · 0 recovered</span>
+                </div>
+              </div>
+
+              <!-- Top Failing Defect -->
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Top Defect (shift-to-date)</span>
+                <span class="pf-kpi-value pf-kpi-mono" style="font-size: 18px;">DC-POR-01</span>
+                <span class="pf-kpi-sub">Porosity · 14 events · charged to Die Cast</span>
+                <div style="display:flex; flex-direction:column; gap:3px; padding-top:8px; border-top: 1px dashed var(--border); margin-top:4px;">
+                  <span style="font-size: 12px; color: var(--text-secondary);">2nd: MS-OOT-01 · 8 events</span>
+                  <span style="font-size: 12px; color: var(--text-secondary);">3rd: 5G0-PIN-MISS · 3 events</span>
+                </div>
+              </div>
+
+              <!-- Active Operators -->
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Active Operators</span>
+                <span class="pf-kpi-value">14</span>
+                <span class="pf-kpi-sub">across 23 active terminals · Shift 1</span>
+                <div style="padding-top:8px; border-top: 1px dashed var(--border); margin-top:4px;">
+                  <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                    <span style="font-size: 11px; font-family: monospace; padding: 2px; background: var(--bg-row-alt); border-radius: 3px; text-align:center;">CM</span>
+                    <span style="font-size: 11px; font-family: monospace; padding: 2px; background: var(--bg-row-alt); border-radius: 3px; text-align:center;">JL</span>
+                    <span style="font-size: 11px; font-family: monospace; padding: 2px; background: var(--bg-row-alt); border-radius: 3px; text-align:center;">DO</span>
+                    <span style="font-size: 11px; font-family: monospace; padding: 2px; background: var(--bg-row-alt); border-radius: 3px; text-align:center;">RS</span>
+                    <span style="font-size: 11px; font-family: monospace; padding: 2px; background: var(--bg-row-alt); border-radius: 3px; text-align:center;">MK</span>
+                    <span style="font-size: 11px; font-family: monospace; padding: 2px; background: var(--bg-row-alt); border-radius: 3px; text-align:center;">TP</span>
+                    <span style="font-size: 11px; color: var(--text-muted); padding: 2px;">+8</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Containers Shipped Today -->
+              <div class="pf-kpi">
+                <span class="pf-kpi-label">Containers Shipped Today</span>
+                <span class="pf-kpi-value">38</span>
+                <span class="pf-kpi-sub">target 42 · 90% · 4 to load</span>
+                <div style="display:flex; gap:6px; padding-top:8px; border-top: 1px dashed var(--border); margin-top:4px;">
+                  <div style="flex:1;"><span style="font-size:11px; color: var(--text-muted);">5G0F</span><div style="font-size: 14px; font-weight: 600;">22</div></div>
+                  <div style="flex:1;"><span style="font-size:11px; color: var(--text-muted);">5G0R</span><div style="font-size: 14px; font-weight: 600;">10</div></div>
+                  <div style="flex:1;"><span style="font-size:11px; color: var(--text-muted);">6B2</span><div style="font-size: 14px; font-weight: 600;">6</div></div>
+                </div>
+              </div>
+
+            </div>
+
+            <p class="pf-kpi-sub" style="margin: var(--pf-content-pad) 0 0 0; padding-top: var(--pf-content-pad); border-top: 1px dashed var(--border);">
+              All tiles auto-refresh every 30 seconds via Gateway-broadcast (one DB query per tile per cadence,
+              session-side render). Click any tile to drill into the underlying records.
+            </p>
+          </div>
+
+        </section>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: INITIALS ENTRY (Phase 1, Dedicated) ────── -->
+    <section data-route="terminal/initials" class="pf-terminal" style="align-items:center; justify-content:center;">
+      <div class="pf-panel" style="max-width: 480px; width: 100%; align-self:center;">
+        <div class="pf-panel-header">
+          <h3>Operator Presence</h3>
+          <span class="pf-pill pf-pill-good">Dedicated Terminal</span>
+        </div>
+        <p style="margin:0; color: var(--text-secondary);">
+          Scan or enter your initials to begin. Presence persists through the shift on this terminal,
+          subject to a 30-minute idle re-confirm.
+        </p>
+        <div class="pf-field">
+          <label class="pf-field-label">Initials</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="XX" autofocus
+                 style="font-size: 28px; height: 64px; text-align: center; letter-spacing: 0.2em; text-transform: uppercase;" />
+          <span class="pf-field-help">No password, no PIN. Initials map to <code>AppUser_GetByInitials</code>.</span>
+        </div>
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button" style="flex:1;">Set Presence</button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: CELL CONTEXT SELECTOR (Phase 1, Shared) ── -->
+    <section data-route="terminal/cell-context" class="pf-terminal" style="align-items:center; justify-content:center;">
+      <div class="pf-panel" style="max-width: 720px; width: 100%; align-self:center;">
+        <div class="pf-panel-header">
+          <h3>Select Active Cell</h3>
+          <span class="pf-pill pf-pill-good">Shared Terminal</span>
+        </div>
+        <p style="margin:0; color: var(--text-secondary);">
+          Scan a Cell barcode or pick from the dropdown. The selected Cell becomes
+          the active context for every action on this session until you change it.
+          Per FDS-02-009 — both selection methods are valid.
+        </p>
+
+        <!-- Primary: scan -->
+        <div class="pf-field">
+          <label class="pf-field-label">Scan Cell Barcode</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan or enter Cell code…" />
+        </div>
+
+        <!-- Alternative: dropdown of descendant Cells -->
+        <div class="pf-field">
+          <label class="pf-field-label">Or pick from list</label>
+          <select class="pf-field-select" style="font-size: 15px; height: 52px;">
+            <option value="">— Select a Cell —</option>
+            <optgroup label="Building 1 · Die Cast Area">
+              <option>Press 1 · DC-018 mounted · 2 cavities active</option>
+              <option>Press 2 · DC-024 mounted · 4 cavities active</option>
+              <option>Press 3 · DC-031 mounted · 2 cavities active</option>
+              <option>Press 4 · DC-031 mounted · 4 cavities active</option>
+              <option>Press 5 · DC-038 mounted · 2 cavities active</option>
+              <option>Press 6 · No tool mounted · idle</option>
+              <option selected>Press 7 · DC-042 mounted · 2 cavities active</option>
+              <option>Press 8 · DC-049 mounted · 4 cavities active</option>
+            </optgroup>
+          </select>
+          <span class="pf-field-help">
+            Dropdown lists the descendant Cells of this terminal's parent Location
+            (Building 1 Die Cast Area → 8 presses). A terminal parented to a smaller
+            WorkCenter would list fewer Cells; an Area-parented terminal lists more.
+          </span>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button" style="flex:1;">
+            Set Active Cell
+          </button>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin: 0; padding-top: 12px; border-top: 1px dashed var(--border);">
+          Mid-session Cell change uses the same selector — scan or dropdown — at any
+          time. The terminal does not remember the prior Cell on context change; the
+          active context is whatever was selected most recently.
+        </p>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: DIE CAST LOT ENTRY (Phase 3) ────────────── -->
+    <section data-route="terminal/diecast" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Die Cast LOT Entry</h1>
+          <span class="pf-terminal-title-meta">Press 7 (DC-042) · Shared Terminal · Die Cast Area</span>
+        </div>
+        <span class="pf-paused-indicator" title="Open paused LOTs at this Cell">
+          <span>⏸</span>
+          <span>Paused LOTs</span>
+          <span class="pf-paused-indicator-count">0</span>
+        </span>
+      </header>
+
+      <!-- Cell Context Selector (Shared terminal — first step of every interaction) -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Active Cell</span>
+        <span class="pf-cell-context-value">Press 7</span>
+        <button class="pf-btn pf-btn-secondary" type="button">Change (scan or pick)</button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">Tool DC-042 mounted · 2 cavities active</span>
+      </div>
+
+      <!-- Two-column layout: form on left, KPIs on right -->
+      <div style="display:grid; grid-template-columns: 1fr 320px; gap: var(--pf-content-pad);">
+
+        <!-- LOT Entry Form -->
+        <section class="pf-panel">
+          <div class="pf-panel-header">
+            <h3>New LOT</h3>
+            <span class="pf-kpi-sub">Scan an LTT barcode to begin</span>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-field-label">LTT Barcode (scan)</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan or enter LTT…" value="MESL1710935" />
+            <span class="pf-field-help">Pre-printed labels per FRS 2.2.1. Mints a new LOT in the MES on first scan.</span>
+          </div>
+
+          <div class="pf-field-row">
+            <div class="pf-field">
+              <label class="pf-field-label">Operator Initials</label>
+              <input class="pf-field-input pf-field-mono" type="text" placeholder="Initials" value="" />
+              <span class="pf-field-help">Shared terminal — enter inline (no auto-populate).</span>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Item</label>
+              <input class="pf-field-input pf-field-mono" type="text" value="5G0-TRIM-4102" disabled />
+              <span class="pf-field-help">Resolved from Tool's configured product.</span>
+            </div>
+          </div>
+
+          <div class="pf-field-row">
+            <div class="pf-field">
+              <label class="pf-field-label">Tool (auto-populated)</label>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input class="pf-field-input pf-field-mono" type="text" value="DC-042" disabled style="flex:1;" />
+                <button class="pf-btn pf-btn-elevated" data-elevated-action="EditTool" type="button">Edit</button>
+              </div>
+              <span class="pf-field-help">From <code>Tools.ToolAssignment_ListActiveByCell</code>. Edit (elevated) opens inline release+assign.</span>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Cavity</label>
+              <select class="pf-field-select">
+                <option>Cavity A — Active</option>
+                <option>Cavity B — Active</option>
+                <option disabled>Cavity C — Closed</option>
+              </select>
+              <span class="pf-field-help">Filtered to active cavities on Tool DC-042.</span>
+            </div>
+          </div>
+
+          <div class="pf-field-row">
+            <div class="pf-field">
+              <label class="pf-field-label">Piece Count</label>
+              <input class="pf-field-input" type="number" value="48" min="1" />
+              <span class="pf-field-help">≤ <code>Item.MaxLotSize</code> (PartsPerBasket) = 48</span>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Weight (lb)</label>
+              <input class="pf-field-input" type="number" step="0.01" placeholder="Optional" />
+              <span class="pf-field-help">Optional at Die Cast.</span>
+            </div>
+          </div>
+
+          <div class="pf-actions" style="border:none; margin:0; padding:0;">
+            <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit · Create LOT + Checkpoint</button>
+            <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
+            <span style="flex:1"></span>
+            <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold on this LOT</button>
+          </div>
+        </section>
+
+        <!-- Right rail: live KPIs + reject entry -->
+        <aside style="display:flex; flex-direction:column; gap: var(--pf-content-pad);">
+          <section class="pf-panel">
+            <div class="pf-panel-header"><h3>Cavity A (cumulative)</h3></div>
+            <div style="display:flex; flex-direction:column; gap: 10px;">
+              <div><span class="pf-kpi-label">Shot Count</span><div class="pf-kpi-value">1,247</div></div>
+              <div><span class="pf-kpi-label">Scrap Count</span><div class="pf-kpi-value pf-kpi-warn">3</div></div>
+              <div><span class="pf-kpi-label">Last Event</span><div class="pf-kpi-sub">06:18 · checkpoint</div></div>
+            </div>
+          </section>
+
+          <section class="pf-panel">
+            <div class="pf-panel-header"><h3>Reject Entry</h3></div>
+            <div class="pf-field">
+              <label class="pf-field-label">Defect Code</label>
+              <select class="pf-field-select">
+                <option>—</option>
+                <option>DC-POR-01 · Porosity</option>
+                <option>DC-DIM-01 · Dimensional</option>
+                <option>DC-COSM-01 · Cosmetic</option>
+              </select>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Quantity</label>
+              <input class="pf-field-input" type="number" value="0" min="0" />
+            </div>
+            <button class="pf-btn pf-btn-secondary" type="button">Add RejectEvent</button>
+          </section>
+        </aside>
+
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: TRIM OUT (Phase 4) — Flex Repeater pattern ─ -->
+    <section data-route="terminal/trim-out" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Trim Station OUT</h1>
+          <span class="pf-terminal-title-meta">Trim Cell 3 · LOT MESL1710935 · 5G0-TRIM-4102 · 48 pcs</span>
+        </div>
+        <span class="pf-paused-indicator" title="Open paused LOTs at this Cell">
+          <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">1</span>
+        </span>
+      </header>
+
+      <!-- Mockup demo toggle — switch RequiresSubLotSplit on/off -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">OperationTemplate</span>
+        <span class="pf-cell-context-value">TrimOut · 5G0-TRIM-4102 v3</span>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub" style="margin-right:8px;">RequiresSubLotSplit:</span>
+        <button class="pf-btn pf-btn-secondary" type="button" id="trim-split-toggle" data-state="on">
+          <span id="trim-split-state">ON · split + route</span>
+        </button>
+      </div>
+
+      <!-- Closing ProductionEvent capture -->
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>Closing ProductionEvent (TrimOut)</h3>
+          <span class="pf-kpi-sub">Cumulative — last event 08:31 · ShotCount 1,247 → 1,247 (Trim doesn't add shots)</span>
+        </div>
+        <div class="pf-field-row">
+          <div class="pf-field">
+            <label class="pf-field-label">Cumulative ShotCount</label>
+            <input class="pf-field-input" type="number" value="1247" />
+          </div>
+          <div class="pf-field">
+            <label class="pf-field-label">Cumulative ScrapCount</label>
+            <input class="pf-field-input" type="number" value="3" />
+            <span class="pf-field-help">Includes Trim sprue/deburr yield-loss rejects.</span>
+          </div>
+          <div class="pf-field">
+            <label class="pf-field-label">Operator Initials</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="XX" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Destination selection — Flex Repeater + Embedded View pattern -->
+      <section class="pf-panel" id="trim-split-panel">
+        <div class="pf-panel-header">
+          <h3 id="trim-split-heading">Sub-LOT Distribution · 2 destinations</h3>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="pf-kpi-sub" id="trim-total-check">Total: 48 / 48 ✓</span>
+            <button class="pf-btn pf-btn-secondary" type="button" id="trim-add-row">+ Add sub-LOT</button>
+          </div>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Same Flex Repeater renders 1 row when <code>RequiresSubLotSplit=0</code> (parent LOT moves whole)
+          and N rows when <code>RequiresSubLotSplit=1</code> (parent splits across N destinations). Each row
+          is the embedded Cell-Selector entity. Same submit handler · same proc · result-set count differs.
+        </p>
+
+        <!-- Repeater entities -->
+        <div class="pf-repeater pf-repeater-scroll" id="trim-repeater">
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">1</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Pieces</label>
+              <input class="pf-field-input" type="number" value="24" min="1" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination Machining Cell</label>
+              <select class="pf-field-select">
+                <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
+                <option>CNC 13 · 5G0 Machining WC · queue: 0</option>
+                <option>CNC 14 · 5G0 Machining WC · queue: 1</option>
+              </select>
+            </div>
+            <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">2</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Pieces</label>
+              <input class="pf-field-input" type="number" value="24" min="1" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination Machining Cell</label>
+              <select class="pf-field-select">
+                <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
+                <option selected>CNC 13 · 5G0 Machining WC · queue: 0</option>
+                <option>CNC 14 · 5G0 Machining WC · queue: 1</option>
+              </select>
+            </div>
+            <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+          </div>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit · TrimOut + Split + Route</button>
+          <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
+          <span style="flex:1"></span>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold instead</button>
+        </div>
+      </section>
+
+      <!-- Hidden script for the demo toggle -->
+      <script>
+        (function() {
+          const toggle  = document.getElementById('trim-split-toggle');
+          const state   = document.getElementById('trim-split-state');
+          const heading = document.getElementById('trim-split-heading');
+          const totalCheck = document.getElementById('trim-total-check');
+          const addBtn  = document.getElementById('trim-add-row');
+          const repeater = document.getElementById('trim-repeater');
+
+          if (!toggle) return;
+
+          toggle.addEventListener('click', () => {
+            const isOn = toggle.dataset.state === 'on';
+            toggle.dataset.state = isOn ? 'off' : 'on';
+            if (isOn) {
+              // Switch to OFF — move whole, single repeater entity
+              state.textContent = 'OFF · move whole';
+              heading.textContent = 'Destination · 1 destination (move whole, no split)';
+              totalCheck.textContent = 'Total: 48 / 48 ✓';
+              addBtn.style.display = 'none';
+              // Collapse to a single repeater entity
+              repeater.innerHTML = `
+                <div class="pf-repeater-entity">
+                  <span class="pf-repeater-index">1</span>
+                  <div class="pf-field">
+                    <label class="pf-field-label">Pieces</label>
+                    <input class="pf-field-input" type="number" value="48" min="48" max="48" disabled />
+                    <span class="pf-field-help">Locked at parent piece count — no split.</span>
+                  </div>
+                  <div class="pf-field">
+                    <label class="pf-field-label">Destination Cell</label>
+                    <select class="pf-field-select">
+                      <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
+                      <option>CNC 13 · 5G0 Machining WC · queue: 0</option>
+                    </select>
+                  </div>
+                  <span></span>
+                </div>
+              `;
+            } else {
+              state.textContent = 'ON · split + route';
+              heading.textContent = 'Sub-LOT Distribution · 2 destinations';
+              addBtn.style.display = '';
+              repeater.innerHTML = `
+                <div class="pf-repeater-entity">
+                  <span class="pf-repeater-index">1</span>
+                  <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="24" /></div>
+                  <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
+                    <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
+                  </div>
+                  <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+                </div>
+                <div class="pf-repeater-entity">
+                  <span class="pf-repeater-index">2</span>
+                  <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="24" /></div>
+                  <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
+                    <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option selected>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
+                  </div>
+                  <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+                </div>
+              `;
+            }
+          });
+
+          addBtn?.addEventListener('click', () => {
+            const idx = repeater.children.length + 1;
+            const entity = document.createElement('div');
+            entity.className = 'pf-repeater-entity';
+            entity.innerHTML = `
+              <span class="pf-repeater-index">${idx}</span>
+              <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="0" /></div>
+              <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
+                <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
+              </div>
+              <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+            `;
+            repeater.appendChild(entity);
+          });
+        })();
+      </script>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: MACHINING IN (Phase 5) ────────────────── -->
+    <section data-route="terminal/machining-in" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Machining IN</h1>
+          <span class="pf-terminal-title-meta">CNC 12 · 5G0 Machining WC · Dedicated terminal · auto-coupled to Assembly Cell 5G0F</span>
+        </div>
+        <span class="pf-paused-indicator">
+          <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">0</span>
+        </span>
+      </header>
+
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>FIFO Queue · 3 sub-LOTs awaiting</h3>
+          <span class="pf-kpi-sub">No scan-to-receive — pick from queue. BOM-driven rename fires on pick.</span>
+        </div>
+
+        <!-- FIFO queue rows -->
+        <div class="pf-queue">
+          <div class="pf-queue-row selected">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Position 1 · oldest</span>
+              <span class="pf-queue-name">MESL1710942-A</span>
+              <span class="pf-queue-detail">Parent: MESL1710942 · 5G0-TRIM-4102 · 24 pcs · arrived 09:45</span>
+            </div>
+            <span class="pf-pill pf-pill-good">Good</span>
+            <span class="pf-kpi-sub">From Trim Cell 3</span>
+            <button class="pf-btn pf-btn-primary" type="button" id="machining-pick">Pick</button>
+          </div>
+
+          <div class="pf-queue-row">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Position 2</span>
+              <span class="pf-queue-name">MESL1710948-B</span>
+              <span class="pf-queue-detail">Parent: MESL1710948 · 5G0-TRIM-4102 · 25 pcs · arrived 10:02</span>
+            </div>
+            <span class="pf-pill pf-pill-good">Good</span>
+            <span class="pf-kpi-sub">From Trim Cell 5</span>
+            <button class="pf-btn pf-btn-secondary" type="button">Pick (skip queue)</button>
+          </div>
+
+          <div class="pf-queue-row">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Position 3</span>
+              <span class="pf-queue-name">MESL1710953-C</span>
+              <span class="pf-queue-detail">Parent: MESL1710953 · 5G0-TRIM-4102 · 16 pcs · arrived 10:18</span>
+            </div>
+            <span class="pf-pill pf-pill-hold">Hold</span>
+            <span class="pf-kpi-sub" style="color:var(--pf-status-warn-fg);">Hold blocks pick</span>
+            <button class="pf-btn pf-btn-secondary" type="button" disabled>Pick</button>
+          </div>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Override-FIFO selection prompts for an optional reason (captured to the resulting ProductionEvent).
+          Held LOTs cannot be picked until the hold is released (B2 — `Lot_AssertNotBlocked`).
+        </p>
+      </section>
+
+      <section class="pf-panel">
+        <div class="pf-panel-header"><h3>Active machined LOT (after pick)</h3></div>
+        <div class="pf-empty-state">
+          <p>No LOT picked yet. Click "Pick" above to fire the BOM-Driven Rename Confirmation Modal.<br>
+             On confirm: new machined LOT minted, ConsumptionEvent + Genealogy + checkpoint ProductionEvent written, source sub-LOT closed.</p>
+          <p class="pf-kpi-sub">Press <kbd>R</kbd> to preview the BOM Rename Modal.</p>
+        </div>
+      </section>
+
+      <script>
+        document.getElementById('machining-pick')?.addEventListener('click', () => {
+          document.getElementById('bom-rename-modal').classList.add('shown');
+        });
+      </script>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: ASSEMBLY (Phase 6) ────────────────────── -->
+    <section data-route="terminal/assembly" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Assembly · 5G0F Serialized Line</h1>
+          <span class="pf-terminal-title-meta">Dedicated terminal · MIP integrated · operator monitoring</span>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span class="pf-confirm-method" data-method="Vision">🎥 Vision</span>
+          <span class="pf-paused-indicator">
+            <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">0</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- Top: live production telemetry -->
+      <section class="pf-kpis">
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Active Source LOT</span>
+          <span class="pf-kpi-value pf-kpi-mono">MESL1710955</span>
+          <span class="pf-kpi-sub">5G0-MACHINED-4102 · auto-arrived 09:52</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Lineside PNA pins</span>
+          <span class="pf-kpi-value pf-kpi-mono">MESL1710512</span>
+          <span class="pf-kpi-sub">PNA-PIN-2.5 · 442 pcs remaining</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Container · Tray</span>
+          <span class="pf-kpi-value">3 of 4 · 8 of 12</span>
+          <span class="pf-kpi-sub">CTR-5G0-0489 · accumulated 32 of 48</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">AIM Pool Depth</span>
+          <span class="pf-kpi-value pf-kpi-good">52</span>
+          <span class="pf-kpi-sub">Healthy · target 50 · topup at 30</span>
+        </div>
+      </section>
+
+      <!-- Container / Tray fill panel (read-mostly during normal operation) -->
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>Tray Fill — Tray 3</h3>
+          <span class="pf-kpi-sub">ByVision · camera scans the tray as a whole · 1 validation event per tray · TrayFullFlag at 12 pcs</span>
+        </div>
+
+        <!-- Mock tray grid -->
+        <div style="display:grid; grid-template-columns: repeat(6, 56px); gap: 8px; padding: 8px 0;">
+          <!-- Tray positions 1..12; first 8 filled (mock) -->
+          <div style="height:56px; background: var(--pf-status-good-bg); border:2px solid var(--pf-status-good-fg); border-radius: var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-weight:600; font-family: monospace; font-size:11px;">5G0F-00147</div>
+          <div style="height:56px; background: var(--pf-status-good-bg); border:2px solid var(--pf-status-good-fg); border-radius: var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-weight:600; font-family: monospace; font-size:11px;">5G0F-00148</div>
+          <div style="height:56px; background: var(--pf-status-good-bg); border:2px solid var(--pf-status-good-fg); border-radius: var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-weight:600; font-family: monospace; font-size:11px;">5G0F-00149</div>
+          <div style="height:56px; background: var(--pf-status-good-bg); border:2px solid var(--pf-status-good-fg); border-radius: var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-weight:600; font-family: monospace; font-size:11px;">5G0F-00150</div>
+          <div style="height:56px; background: var(--pf-status-warn-bg); border:2px dashed var(--pf-status-warn-fg); border-radius: var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-warn-fg); font-weight:600; font-size:10px; text-align:center;">Bypass<br>0151</div>
+          <div style="height:56px; background: var(--pf-status-good-bg); border:2px solid var(--pf-status-good-fg); border-radius: var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-weight:600; font-family: monospace; font-size:11px;">5G0F-00152</div>
+          <div style="height:56px; background: var(--pf-status-good-bg); border:2px solid var(--pf-status-good-fg); border-radius: var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-weight:600; font-family: monospace; font-size:11px;">5G0F-00153</div>
+          <div style="height:56px; background: var(--pf-status-good-bg); border:2px solid var(--pf-status-good-fg); border-radius: var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-weight:600; font-family: monospace; font-size:11px;">5G0F-00154</div>
+          <div style="height:56px; background: var(--bg-row-alt); border:2px dashed var(--border); border-radius: var(--radius);"></div>
+          <div style="height:56px; background: var(--bg-row-alt); border:2px dashed var(--border); border-radius: var(--radius);"></div>
+          <div style="height:56px; background: var(--bg-row-alt); border:2px dashed var(--border); border-radius: var(--radius);"></div>
+          <div style="height:56px; background: var(--bg-row-alt); border:2px dashed var(--border); border-radius: var(--radius);"></div>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          The camera scans the full 12-position tray as a single image once
+          <code>TrayFullFlag</code> asserts — one validation event per tray; positions
+          show the serial that was etched into each slot during the cycle. Position 5
+          was placed during a <code>HardwareInterlockEnable=false</code> window —
+          the corresponding <code>ContainerSerial.HardwareInterlockBypassed = 1</code>
+          per UJ-16; the audit row captures the bypass. A 4-tray container therefore
+          accumulates via 4 successful tray-scan events.
+        </p>
+      </section>
+
+      <!-- Bottom: completion gate panel -->
+      <section class="pf-panel" style="border-color: var(--accent);">
+        <div class="pf-panel-header">
+          <h3>WorkOrder Completion Gate</h3>
+          <span class="pf-kpi-sub">RequiresCompletionConfirm = 1 · large-button gesture required</span>
+        </div>
+        <div style="display:flex; gap:16px; align-items:center;">
+          <div style="flex:1;">
+            <p style="margin:0 0 8px 0;">When the container reaches 48 pcs and the PLC asserts <code>CompletionConfirmed=1</code>:</p>
+            <ul style="margin:0; padding-left:18px; color: var(--text-secondary); font-size:13px;">
+              <li>AIM Shipper ID claimed from local pool (sync FIFO, sub-millisecond)</li>
+              <li>ShippingLabel row inserted with PrintedAt = NULL</li>
+              <li>Async print message dispatched to Zebra at this terminal</li>
+              <li>Container status flips to Complete · WO auto-finishes</li>
+            </ul>
+          </div>
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button" style="min-height: 80px; min-width: 200px; font-size: 18px;">
+            ✓ Confirm Completion
+          </button>
+        </div>
+      </section>
+
+      <!-- Demo trigger for Material Substitute Override Modal (UJ-09) -->
+      <div style="display:flex; gap:12px; align-items:center; padding-top: 8px;">
+        <span class="pf-kpi-sub" style="flex:1;">
+          Demo · simulate an off-BOM material scan (UJ-09) to preview the supervisor override flow.
+        </span>
+        <button class="pf-btn pf-btn-elevated" type="button"
+                onclick="document.getElementById('material-substitute-modal').classList.add('shown');">
+          ⚠ Simulate BOM mismatch scan
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: ASSEMBLY NON-SERIALIZED (Phase 6) ──────── -->
+    <section data-route="terminal/assembly-ns" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Assembly · 6B2 Non-Serialized Line</h1>
+          <span class="pf-terminal-title-meta">Dedicated terminal · operator-driven count · no MIP per-piece handshake</span>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span class="pf-confirm-method" data-method="Barcode" id="ns-confirm-method">📦 ByCount</span>
+          <span class="pf-paused-indicator">
+            <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">0</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- Demo toggle: ClosureMethod ByCount vs ByWeight (ByVision shown on Serialized) -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">ContainerConfig.ClosureMethod (mockup demo)</span>
+        <button class="pf-btn pf-btn-secondary" type="button" id="ns-method-toggle" data-state="ByCount">
+          <span id="ns-method-state">ByCount · operator confirms tray quantity</span>
+        </button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">FDS-06-014 · ByVision shown on the serialized line.</span>
+      </div>
+
+      <!-- Live production telemetry -->
+      <section class="pf-kpis">
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Active Source LOT</span>
+          <span class="pf-kpi-value pf-kpi-mono">MESL1710962</span>
+          <span class="pf-kpi-sub">6B2-CAM-3814 · 240 pcs remaining</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Lineside Pin LOT</span>
+          <span class="pf-kpi-value pf-kpi-mono">MESL1710401</span>
+          <span class="pf-kpi-sub">6B2-PIN-1.5 · 1,860 pcs remaining</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Container · Tray</span>
+          <span class="pf-kpi-value">2 of 5 · in progress</span>
+          <span class="pf-kpi-sub">CTR-6B2-0212 · accumulated 36 of 96</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">AIM Pool Depth (6B2)</span>
+          <span class="pf-kpi-value pf-kpi-good">38</span>
+          <span class="pf-kpi-sub">Healthy · per-Part-Number pool</span>
+        </div>
+      </section>
+
+      <!-- Per-Tray Close panel — the active operator interaction surface -->
+      <section class="pf-panel" id="ns-tray-bycount">
+        <div class="pf-panel-header">
+          <h3>Per-Tray Close · Tray 3 in progress</h3>
+          <span class="pf-kpi-sub">Configured PartsPerTray = 24 · accumulated 36 / 96 toward Container</span>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Tap a tray-quantity button to close the current tray. Each tray close fires
+          one <code>ConsumptionEvent</code> against each BOM component LOT, increments
+          the parent Container's running count, and unlocks the next tray. Container
+          completes when accumulated trays × PartsPerTray reaches the configured
+          capacity.
+        </p>
+
+        <!-- Tray-quantity buttons. PartsPerTray = 24, but operator may report a partial close. -->
+        <div class="pf-toggle-group" style="grid-template-columns: repeat(4, 1fr); max-width: 720px;">
+          <button class="pf-toggle-btn" type="button">
+            <span class="pf-toggle-btn-label">24</span>
+            <span class="pf-toggle-btn-meta">Full tray · default</span>
+          </button>
+          <button class="pf-toggle-btn" type="button">
+            <span class="pf-toggle-btn-label">23</span>
+            <span class="pf-toggle-btn-meta">1 reject</span>
+          </button>
+          <button class="pf-toggle-btn" type="button">
+            <span class="pf-toggle-btn-label">22</span>
+            <span class="pf-toggle-btn-meta">2 reject</span>
+          </button>
+          <button class="pf-toggle-btn" type="button">
+            <span class="pf-toggle-btn-label">Other</span>
+            <span class="pf-toggle-btn-meta">Numeric entry</span>
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Close Tray · Submit Count</button>
+          <button class="pf-btn pf-btn-secondary" type="button">Add Reject Event</button>
+          <span style="flex:1"></span>
+          <span class="pf-kpi-sub">No per-piece serial · ConsumptionEvent fires per tray.</span>
+        </div>
+      </section>
+
+      <!-- Hidden ByWeight panel — toggled in via the demo button -->
+      <section class="pf-panel" id="ns-tray-byweight" style="display:none; border-color: var(--pf-status-warn-fg);">
+        <div class="pf-panel-header">
+          <h3>Per-Tray Close · ByWeight</h3>
+          <span class="pf-kpi-sub">Configured TargetWeight = 18.4 lb · OmniServer scale → PLC TrayFullFlag</span>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          On <code>ByWeight</code> lines, the operator does not enter a count. The
+          OmniServer scale publishes the per-tray weight; the PLC compares against
+          <code>TargetWeight</code> on <code>ContainerConfig</code> and asserts
+          <code>TrayFullFlag</code> at threshold. The MES reads the flag and writes
+          the close. The operator's only action is removing the tray from the scale
+          and starting the next tray.
+        </p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Live Scale Reading</span>
+            <span class="pf-kpi-value pf-kpi-mono pf-kpi-warn">17.83 lb</span>
+            <span class="pf-kpi-sub">Approaching target (97%)</span>
+          </div>
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">TrayFullFlag</span>
+            <span class="pf-kpi-value pf-kpi-warn">False</span>
+            <span class="pf-kpi-sub">PLC asserts at 18.4 lb</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="pf-btn pf-btn-secondary" type="button" disabled>Auto-close on TrayFullFlag</button>
+          <span style="flex:1"></span>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="Override" type="button">
+            Operator Override · Force Close
+          </button>
+        </div>
+      </section>
+
+      <!-- Container completion gate -->
+      <section class="pf-panel" style="border-color: var(--accent);">
+        <div class="pf-panel-header">
+          <h3>Container Completion Gate</h3>
+          <span class="pf-kpi-sub">Same atomic close as Serialized — claims AIM ID, dispatches print async</span>
+        </div>
+
+        <div style="display:flex; gap:16px; align-items:center;">
+          <div style="flex:1;">
+            <p style="margin:0 0 8px 0;">When accumulated tray closes reach the configured Container capacity:</p>
+            <ul style="margin:0; padding-left:18px; color: var(--text-secondary); font-size:13px;">
+              <li>AIM Shipper ID claimed from local pool (per-Part-Number FIFO, sub-millisecond)</li>
+              <li>ShippingLabel row inserted with PrintedAt = NULL</li>
+              <li>Async print dispatched to Zebra at this terminal</li>
+              <li>Container status flips to Complete</li>
+            </ul>
+          </div>
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button"
+                  style="min-height: 80px; min-width: 200px; font-size: 17px;">
+            ✓ Mark Container Complete
+          </button>
+        </div>
+      </section>
+
+      <script>
+        // Demo toggle: ByCount ↔ ByWeight
+        document.getElementById('ns-method-toggle')?.addEventListener('click', () => {
+          const btn = document.getElementById('ns-method-toggle');
+          const state = document.getElementById('ns-method-state');
+          const cm = document.getElementById('ns-confirm-method');
+          const byCount = document.getElementById('ns-tray-bycount');
+          const byWeight = document.getElementById('ns-tray-byweight');
+          const isCount = btn.dataset.state === 'ByCount';
+          if (isCount) {
+            btn.dataset.state = 'ByWeight';
+            state.textContent = 'ByWeight · OmniServer scale + PLC TrayFullFlag';
+            cm.textContent = '⚖ ByWeight';
+            cm.dataset.method = 'Both';
+            byCount.style.display = 'none';
+            byWeight.style.display = '';
+          } else {
+            btn.dataset.state = 'ByCount';
+            state.textContent = 'ByCount · operator confirms tray quantity';
+            cm.textContent = '📦 ByCount';
+            cm.dataset.method = 'Barcode';
+            byCount.style.display = '';
+            byWeight.style.display = 'none';
+          }
+        });
+      </script>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: SORT CAGE WORKFLOW (Phase 7) ──────────── -->
+    <section data-route="terminal/sort-cage" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Sort Cage Workflow</h1>
+          <span class="pf-terminal-title-meta" id="sort-subtitle">Container CTR-5G0-0489 on hold · re-containerization · UJ-05 update-in-place</span>
+        </div>
+        <span class="pf-pill pf-pill-hold">Container on Hold</span>
+      </header>
+
+      <!-- Demo toggle: Serialized (per-Serial migration) vs Non-Serialized (bulk piece-count split) -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Item type (mockup demo)</span>
+        <button class="pf-btn pf-btn-secondary" type="button" id="sort-mode-toggle" data-state="serialized">
+          <span id="sort-mode-state">Serialized · per-Serial migration</span>
+        </button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">Different Item types call different mechanics — UJ-05 default applies to serialized only.</span>
+      </div>
+
+      <!-- Source Container summary -->
+      <section class="pf-panel" id="sort-source-serialized">
+        <div class="pf-panel-header">
+          <h3>Source Container</h3>
+          <span class="pf-kpi-sub">Held since 13:15 · Customer Complaint · Diane Ortiz</span>
+        </div>
+        <div class="pf-field-row">
+          <div>
+            <span class="pf-kpi-label">Container</span>
+            <div class="pf-kpi-value pf-kpi-mono">CTR-5G0-0489</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">AIM Shipper ID</span>
+            <div class="pf-kpi-value pf-kpi-mono">SH-240429-0142</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Item</span>
+            <div class="pf-kpi-value pf-kpi-mono">5G0F</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Total Serials</span>
+            <div class="pf-kpi-value">48</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Per-Serial migration — Flex Repeater + Embedded View -->
+      <section class="pf-panel" id="sort-migration-serialized">
+        <div class="pf-panel-header">
+          <h3>Per-Serial Migration · 6 of 48 visible</h3>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="pf-btn pf-btn-secondary" type="button">Filter: Suspect Only</button>
+            <button class="pf-btn pf-btn-secondary" type="button">Select All</button>
+          </div>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Per UJ-05 default: update-in-place. Each row writes a <code>Lots.ContainerSerialHistory</code>
+          row capturing Old/New container + tray position; <code>ContainerSerial</code> updated in place.
+          Same Flex Repeater + Embedded View pattern as Trim OUT — N rows, one per serial to migrate.
+        </p>
+
+        <div class="pf-repeater pf-repeater-scroll">
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">1</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00147</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination Container · Tray · Position</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 1 (re-pack)</option>
+                <option>CTR-5G0-0502 · Tray 1 · Pos 1 (new)</option>
+                <option>SCRAP — disposition not migration</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Pass</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">2</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00148</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination Container · Tray · Position</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 2 (re-pack)</option>
+                <option>CTR-5G0-0502 · Tray 1 · Pos 1 (new)</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Pass</span>
+          </div>
+
+          <div class="pf-repeater-entity" style="border-left: 3px solid var(--pf-status-bad-fg);">
+            <span class="pf-repeater-index" style="background: var(--pf-status-bad-bg); color: var(--pf-status-bad-fg); border-color: var(--pf-status-bad-fg);">3</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00149</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 3 (re-pack)</option>
+                <option selected>SCRAP — fail at sort inspection</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-bad">Fail</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">4</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00150</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 3 (re-pack)</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Pass</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">5</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial (bypass)</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center; color: var(--pf-status-warn-fg);">5G0F-240406-00151</div>
+              <span class="pf-field-help">HardwareInterlockBypassed=1</span>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 4 (re-pack)</option>
+                <option>SCRAP — bypass not validated</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-hold">Bypass</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">6</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Serial</label>
+              <div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">5G0F-240406-00152</div>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-5G0-0501 · Tray 1 · Pos 5 (re-pack)</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Pass</span>
+          </div>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit Bulk Migration · 6 serials</button>
+          <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
+          <span style="flex:1"></span>
+          <span class="pf-kpi-sub">After re-pack: ShippingLabel_Void on CTR-5G0-0489 · new Container_Complete on CTR-5G0-0501 (claims fresh AIM ID).</span>
+        </div>
+      </section>
+
+      <!-- ─── NON-SERIALIZED variant: bulk piece-count split ──────────── -->
+      <section class="pf-panel" id="sort-source-nonserialized" style="display:none;">
+        <div class="pf-panel-header">
+          <h3>Source Container · Non-Serialized</h3>
+          <span class="pf-kpi-sub">Held since 13:15 · Customer Complaint · Diane Ortiz</span>
+        </div>
+        <div class="pf-field-row">
+          <div>
+            <span class="pf-kpi-label">Container</span>
+            <div class="pf-kpi-value pf-kpi-mono">CTR-6B2-0211</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">AIM Shipper ID</span>
+            <div class="pf-kpi-value pf-kpi-mono">SH-240429-0098</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Item</span>
+            <div class="pf-kpi-value pf-kpi-mono">6B2-CAM-3814</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Total Pieces</span>
+            <div class="pf-kpi-value">96</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="pf-panel" id="sort-migration-nonserialized" style="display:none;">
+        <div class="pf-panel-header">
+          <h3>Camera Re-Pack via ByVision · same camera as Assembly</h3>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="pf-confirm-method" data-method="Both">⚖ ByVision</span>
+          </div>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Non-serialized parts have no per-piece serial number, so the Sort Cage uses
+          the <strong>same camera scanner</strong> as the Assembly Non-Serialized line
+          to validate container trays. The camera scans <strong>the entire tray as a
+          single image</strong> — one validation event per tray, not per piece. A
+          container with 4 trays therefore yields 4 total passing scans. The PLC
+          asserts <code>TrayFullFlag</code> at <code>PartsPerTray</code>; the camera
+          fires its scan; on pass, the tray closes and a single
+          <code>ConsumptionEvent</code> records the BOM consumption for that tray.
+          Container fill is the MES-side accumulation of validated tray closes — same
+          <code>ByVision</code> closure path as Assembly. Operator-rejected pieces
+          (visual inspection before the part enters the tray) are routed to scrap
+          before they ever reach the camera. No <code>ContainerSerialHistory</code>
+          writes (those are serialized-only per UJ-05).
+        </p>
+
+        <!-- Camera view (left) + stacked counters (right) -->
+        <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap: 12px;">
+
+          <!-- LEFT: Camera image area with Pass/Fail overlay -->
+          <div style="background: linear-gradient(180deg, #0a1322 0%, #0f1d33 60%, #1a2a44 100%);
+                      border: 2px solid var(--border);
+                      border-radius: var(--radius-lg);
+                      position: relative;
+                      min-height: 280px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      overflow: hidden;">
+
+            <!-- Top-left: live camera label -->
+            <div style="position:absolute; top:12px; left:14px; display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-flex; width:8px; height:8px; border-radius:50%; background:var(--pf-status-bad-fg); box-shadow: 0 0 6px var(--pf-status-bad-fg); animation: blink 1.5s infinite;"></span>
+              <span style="font-size:11px; color: var(--mpp-neutral-90); text-transform:uppercase; letter-spacing:0.1em; font-weight: 500;">Sort Cage Camera · Live</span>
+            </div>
+
+            <!-- Top-right: timestamp -->
+            <div style="position:absolute; top:12px; right:14px; font-size: 11px; color: var(--mpp-neutral-80); font-family: monospace;">
+              12:42:15.342
+            </div>
+
+            <!-- Viewfinder corner accents -->
+            <div style="position:absolute; top:32px; left:14px; width:24px; height:24px; border-top: 2px solid var(--mpp-neutral-70); border-left: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; top:32px; right:14px; width:24px; height:24px; border-top: 2px solid var(--mpp-neutral-70); border-right: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; bottom:38px; left:14px; width:24px; height:24px; border-bottom: 2px solid var(--mpp-neutral-70); border-left: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; bottom:38px; right:14px; width:24px; height:24px; border-bottom: 2px solid var(--mpp-neutral-70); border-right: 2px solid var(--mpp-neutral-70);"></div>
+
+            <!-- Pass / Fail overlay (mockup demo: shows Pass) -->
+            <div id="sort-camera-overlay" style="background: rgba(80, 200, 120, 0.18);
+                        border: 3px solid var(--pf-status-good-fg);
+                        border-radius: var(--radius-lg);
+                        padding: 22px 44px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 6px;
+                        backdrop-filter: blur(2px);">
+              <span style="font-size: 52px; line-height: 1; color: var(--pf-status-good-fg);">✓</span>
+              <span style="font-size: 26px; font-weight: 700; color: var(--pf-status-good-fg); letter-spacing: 0.1em;">PASS</span>
+              <span style="font-size: 12px; color: var(--mpp-neutral-90); text-align:center;">Tray 2 of 4 · CTR-6B2-0220</span>
+              <span style="font-size: 11px; color: var(--mpp-neutral-80); text-align:center; font-family: monospace;">scanned 12:42:15 · 1.2 s · all positions valid</span>
+            </div>
+
+            <!-- Bottom: status strip -->
+            <div style="position:absolute; bottom:12px; left:14px; right:14px;
+                        display:flex; justify-content:space-between; align-items:center;
+                        font-size: 11px; color: var(--mpp-neutral-80); font-family: monospace;">
+              <span>TrayPresent: <span style="color: var(--mpp-neutral-100);">FALSE</span></span>
+              <span>Awaiting next tray placement…</span>
+              <span>TrayFullFlag: <span style="color: var(--mpp-neutral-100);">FALSE</span></span>
+            </div>
+
+            <style>
+              @keyframes blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.4; }
+              }
+            </style>
+          </div>
+
+          <!-- RIGHT: Stacked counters -->
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
+              <span class="pf-kpi-label">Trays Validated</span>
+              <span class="pf-kpi-value pf-kpi-good">2 / 4</span>
+              <span class="pf-kpi-sub">CTR-6B2-0220 · 48 of 96 pcs accumulated</span>
+            </div>
+            <div class="pf-kpi" style="border-color: var(--pf-status-bad-fg);">
+              <span class="pf-kpi-label">Operator Scrap</span>
+              <span class="pf-kpi-value pf-kpi-bad">8</span>
+              <span class="pf-kpi-sub">Visually rejected before tray placement</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">Source Remaining</span>
+              <span class="pf-kpi-value">26</span>
+              <span class="pf-kpi-sub">in source container · awaiting sort</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Destination management + actions -->
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <div class="pf-field" style="flex:1; min-width: 240px;">
+            <label class="pf-field-label">Active Destination Container</label>
+            <select class="pf-field-select">
+              <option selected>CTR-6B2-0220 · NEW · 2 trays closed · 14 / 24 in tray 3</option>
+              <option>CTR-6B2-0221 · NEW · empty</option>
+              <option>+ Open new destination Container…</option>
+            </select>
+          </div>
+          <button class="pf-btn pf-btn-secondary" type="button">Switch Destination</button>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="Override" type="button">
+            Force-Close Tray (override)
+          </button>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Pause Camera Re-Pack</button>
+          <button class="pf-btn pf-btn-secondary" type="button">End Session</button>
+          <span style="flex:1"></span>
+          <span class="pf-kpi-sub">On End: source ShippingLabel_Void · destination Containers complete via the same atomic close + AIM pool claim flow as Assembly · scrap quantities booked to Lots scrap path.</span>
+        </div>
+      </section>
+
+      <script>
+        // Sort Cage mode toggle: Serialized ↔ Non-Serialized
+        document.getElementById('sort-mode-toggle')?.addEventListener('click', () => {
+          const btn = document.getElementById('sort-mode-toggle');
+          const state = document.getElementById('sort-mode-state');
+          const subtitle = document.getElementById('sort-subtitle');
+          const srcS = document.getElementById('sort-source-serialized');
+          const migS = document.getElementById('sort-migration-serialized');
+          const srcN = document.getElementById('sort-source-nonserialized');
+          const migN = document.getElementById('sort-migration-nonserialized');
+          const isSerialized = btn.dataset.state === 'serialized';
+          if (isSerialized) {
+            btn.dataset.state = 'nonserialized';
+            state.textContent = 'Non-Serialized · bulk piece-count split';
+            subtitle.textContent = 'Container CTR-6B2-0211 on hold · re-containerization · no ContainerSerialHistory rows';
+            srcS.style.display = 'none';
+            migS.style.display = 'none';
+            srcN.style.display = '';
+            migN.style.display = '';
+          } else {
+            btn.dataset.state = 'serialized';
+            state.textContent = 'Serialized · per-Serial migration';
+            subtitle.textContent = 'Container CTR-5G0-0489 on hold · re-containerization · UJ-05 update-in-place';
+            srcS.style.display = '';
+            migS.style.display = '';
+            srcN.style.display = 'none';
+            migN.style.display = 'none';
+          }
+        });
+
+        // Add-destination row to non-serialized repeater
+        document.getElementById('ns-add-row')?.addEventListener('click', () => {
+          const repeater = document.getElementById('sort-ns-repeater');
+          const idx = repeater.children.length + 1;
+          const entity = document.createElement('div');
+          entity.className = 'pf-repeater-entity';
+          entity.innerHTML = `
+            <span class="pf-repeater-index">${idx}</span>
+            <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="0" min="0" /></div>
+            <div class="pf-field"><label class="pf-field-label">Destination</label>
+              <select class="pf-field-select"><option>CTR-6B2-0220 · NEW</option><option>CTR-6B2-0221 · NEW</option><option>SCRAP</option></select>
+            </div>
+            <span class="pf-pill pf-pill-good">Re-pack</span>
+          `;
+          repeater.appendChild(entity);
+        });
+      </script>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: END OF SHIFT (Phase 8) ────────────────── -->
+    <section data-route="terminal/end-of-shift" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>End-of-Shift Time Entry</h1>
+          <span class="pf-terminal-title-meta">FDS-09-013 · Shift 1 ending in 12 minutes · operator CM</span>
+        </div>
+      </header>
+
+      <!-- Mockup demo toggle: Dedicated single-button vs Shared form -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Terminal mode (mockup demo)</span>
+        <button class="pf-btn pf-btn-secondary" type="button" id="eos-mode-toggle" data-state="dedicated">
+          <span id="eos-mode-state">Dedicated · button-based</span>
+        </button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">Real app: derived from terminal's parent Location tier (FDS-02-010).</span>
+      </div>
+
+      <!-- Dedicated mode: button-based selection (FDS-09-013 amended) -->
+      <section class="pf-panel" id="eos-dedicated">
+        <div class="pf-panel-header">
+          <h3>Tap any breaks taken · then Submit</h3>
+          <span class="pf-kpi-sub">Shift 1 (06:00 – 14:30) · all durations from shift schedule</span>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Tap each break the operator took during this shift. Buttons are toggleable —
+          tap again to deselect. Submitting writes one <code>Oee.DowntimeEvent</code> row
+          per selected break with start time + duration from the shift schedule. No
+          operator-entered durations.
+        </p>
+
+        <div class="pf-toggle-group" id="eos-dedicated-buttons">
+          <button class="pf-toggle-btn" type="button" data-eos="lunch">
+            <span class="pf-toggle-btn-label">Lunch</span>
+            <span class="pf-toggle-btn-meta">30 min · 11:30 start</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos="break1">
+            <span class="pf-toggle-btn-label">Break 1</span>
+            <span class="pf-toggle-btn-meta">15 min · 09:00 start</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos="break2">
+            <span class="pf-toggle-btn-label">Break 2</span>
+            <span class="pf-toggle-btn-meta">15 min · 13:30 start</span>
+          </button>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button"
+                  style="flex:1; max-width:600px;">
+            ✓ Submit Shift End — <span id="eos-dedicated-count">0</span> selected
+          </button>
+        </div>
+      </section>
+
+      <!-- Shared mode: same buttons + initials inline (no time-category numeric entry) -->
+      <section class="pf-panel" id="eos-shared" style="display:none;">
+        <div class="pf-panel-header">
+          <h3>Tap any breaks taken · enter initials · then Submit</h3>
+          <span class="pf-kpi-sub">Shared terminal — operator stamps each event with their own initials</span>
+        </div>
+
+        <div class="pf-field" style="max-width: 320px;">
+          <label class="pf-field-label">Operator Initials</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="XX"
+                 style="font-size: 24px; height: 56px; text-align:center; letter-spacing: 0.2em; text-transform: uppercase;" />
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Same button pattern as Dedicated. Each tap toggles. Submission writes <code>Oee.DowntimeEvent</code>
+          rows stamped with the entered initials' <code>AppUserId</code>. Time Category — Regular / Overtime /
+          Double-Time — is selected via the small button row above the breaks.
+        </p>
+
+        <div class="pf-toggle-group" style="grid-template-columns: repeat(3, 1fr); max-width: 480px;">
+          <button class="pf-toggle-btn selected" type="button" data-eos-cat="regular" style="min-height: 60px;">
+            <span class="pf-toggle-btn-label" style="font-size:14px;">Regular</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos-cat="ot" style="min-height: 60px;">
+            <span class="pf-toggle-btn-label" style="font-size:14px;">Overtime</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos-cat="dt" style="min-height: 60px;">
+            <span class="pf-toggle-btn-label" style="font-size:14px;">Double-Time</span>
+          </button>
+        </div>
+
+        <div class="pf-toggle-group" id="eos-shared-buttons">
+          <button class="pf-toggle-btn" type="button" data-eos="lunch">
+            <span class="pf-toggle-btn-label">Lunch</span>
+            <span class="pf-toggle-btn-meta">30 min · 11:30 start</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos="break1">
+            <span class="pf-toggle-btn-label">Break 1</span>
+            <span class="pf-toggle-btn-meta">15 min · 09:00 start</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos="break2">
+            <span class="pf-toggle-btn-label">Break 2</span>
+            <span class="pf-toggle-btn-meta">15 min · 13:30 start</span>
+          </button>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button"
+                  style="flex:1; max-width:600px;">
+            ✓ Submit Shift End — <span id="eos-shared-count">0</span> selected
+          </button>
+          <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
+        </div>
+      </section>
+
+      <!-- Shift-end summary preview (FDS-09-015) -->
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>Shift Handover Summary (FDS-09-015)</h3>
+          <span class="pf-kpi-sub">Read-only · open events span the boundary per UJ-10 Option D</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+          <div>
+            <span class="pf-kpi-label">Open Downtime Events</span>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+              <div class="pf-queue-row" style="grid-template-columns: 1fr;">
+                <div>
+                  <span class="pf-queue-name">EQ-DIE-STICK</span>
+                  <div class="pf-queue-detail">Press 7 · open since 06:45</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <span class="pf-kpi-label">Open Paused LOTs</span>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+              <div class="pf-empty-state" style="padding: 24px 12px;">
+                <p class="pf-kpi-sub">None at this Cell</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <span class="pf-kpi-label">In-Process LOTs</span>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+              <div class="pf-queue-row" style="grid-template-columns: 1fr;">
+                <div>
+                  <span class="pf-queue-name">MESL1710935</span>
+                  <div class="pf-queue-detail">5G0-TRIM-4102 · Cavity A · 38 / 48 pcs</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="pf-btn pf-btn-secondary" type="button" style="align-self: flex-start;">Acknowledge Handover</button>
+      </section>
+
+      <script>
+        // Mode toggle (Dedicated vs Shared)
+        document.getElementById('eos-mode-toggle')?.addEventListener('click', () => {
+          const btn = document.getElementById('eos-mode-toggle');
+          const state = document.getElementById('eos-mode-state');
+          const ded = document.getElementById('eos-dedicated');
+          const shared = document.getElementById('eos-shared');
+          const isDed = btn.dataset.state === 'dedicated';
+          if (isDed) {
+            btn.dataset.state = 'shared';
+            state.textContent = 'Shared · same buttons + initials';
+            ded.style.display = 'none';
+            shared.style.display = '';
+          } else {
+            btn.dataset.state = 'dedicated';
+            state.textContent = 'Dedicated · button-based';
+            ded.style.display = '';
+            shared.style.display = 'none';
+          }
+        });
+
+        // Lunch/Break buttons toggle independently; counter updates
+        function wireToggles(groupId, counterId) {
+          const group   = document.getElementById(groupId);
+          const counter = document.getElementById(counterId);
+          if (!group || !counter) return;
+          group.querySelectorAll('[data-eos]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              btn.classList.toggle('selected');
+              const n = group.querySelectorAll('.selected').length;
+              counter.textContent = n;
+            });
+          });
+        }
+        wireToggles('eos-dedicated-buttons', 'eos-dedicated-count');
+        wireToggles('eos-shared-buttons',    'eos-shared-count');
+
+        // Time Category single-select
+        document.querySelectorAll('[data-eos-cat]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-eos-cat]').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+          });
+        });
+      </script>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: RECEIVING DOCK (Phase 4) ──────────────── -->
+    <section data-route="terminal/receiving" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Receiving Dock</h1>
+          <span class="pf-terminal-title-meta">Pass-through parts inbound · creates a new LOT (`LotOriginType=Received`)</span>
+        </div>
+        <span class="pf-paused-indicator">
+          <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">0</span>
+        </span>
+      </header>
+
+      <!-- Cell Context Selector (Shared terminal — Receiving Area) -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Active Location</span>
+        <span class="pf-cell-context-value">Receiving Dock A</span>
+        <button class="pf-btn pf-btn-secondary" type="button">Change (scan or pick)</button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">Items received here flow to Lineside Cells via subsequent Movement Scan.</span>
+      </div>
+
+      <!-- Two-column: receive form + recent log -->
+      <div style="display:grid; grid-template-columns: 1fr 360px; gap: var(--pf-content-pad);">
+
+        <section class="pf-panel">
+          <div class="pf-panel-header">
+            <h3>New Received LOT</h3>
+            <span class="pf-kpi-sub">Scan packing slip or enter manually</span>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-field-label">Packing Slip Barcode (scan)</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan packing slip…" />
+            <span class="pf-field-help">Auto-fills Part Number + Vendor LOT + piece count when present.</span>
+          </div>
+
+          <div class="pf-field-row">
+            <div class="pf-field">
+              <label class="pf-field-label">Part Number</label>
+              <input class="pf-field-input pf-field-mono" type="text" value="6MA-HSG" />
+              <span class="pf-field-help">Resolves to `Parts.Item.Id`.</span>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Item Description</label>
+              <input class="pf-field-input" type="text" value="6MA Cam Holder Housing" disabled />
+            </div>
+          </div>
+
+          <div class="pf-field-row">
+            <div class="pf-field">
+              <label class="pf-field-label">Vendor LOT Number</label>
+              <input class="pf-field-input pf-field-mono" type="text" value="VND-88721" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Vendor / Supplier</label>
+              <select class="pf-field-select">
+                <option>ACME Castings (offsite)</option>
+                <option>Honda Motor Mfg (consigned)</option>
+                <option>PNA Pin Co.</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pf-field-row">
+            <div class="pf-field">
+              <label class="pf-field-label">Piece Count</label>
+              <input class="pf-field-input" type="number" value="500" min="1" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Weight (lb · optional)</label>
+              <input class="pf-field-input" type="number" step="0.01" placeholder="—" />
+            </div>
+          </div>
+
+          <div class="pf-field-row">
+            <div class="pf-field">
+              <label class="pf-field-label">Min Serial Range (optional)</label>
+              <input class="pf-field-input pf-field-mono" type="text" placeholder="e.g. 88721-001" />
+              <span class="pf-field-help">Vendor-issued serial low bound — Phase 6 Assembly validates consumed serials within range.</span>
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Max Serial Range (optional)</label>
+              <input class="pf-field-input pf-field-mono" type="text" placeholder="e.g. 88721-500" />
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-field-label">Operator Initials</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="XX" style="max-width: 200px;" />
+          </div>
+
+          <div class="pf-actions" style="border:none; margin:0; padding:0;">
+            <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit · Create Received LOT</button>
+            <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
+            <span style="flex:1"></span>
+            <button class="pf-btn pf-btn-secondary" type="button">Print LTT Label</button>
+          </div>
+        </section>
+
+        <!-- Right rail: recent receiving log -->
+        <aside class="pf-panel">
+          <div class="pf-panel-header">
+            <h3>Today's Receiving Log</h3>
+            <span class="pf-kpi-sub">8 LOTs · 4,830 pcs</span>
+          </div>
+          <div class="pf-queue">
+            <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr; text-decoration:none; color:inherit;">
+              <span class="pf-queue-position">11:42</span>
+              <div>
+                <span class="pf-queue-name">MESL1710993</span>
+                <div class="pf-queue-detail">PNA-PIN-2.5 · VND-44120 · 2,000 pcs</div>
+              </div>
+            </a>
+            <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr; text-decoration:none; color:inherit;">
+              <span class="pf-queue-position">10:18</span>
+              <div>
+                <span class="pf-queue-name">MESL1710987</span>
+                <div class="pf-queue-detail">6MA-HSG · VND-88718 · 500 pcs</div>
+              </div>
+            </a>
+            <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr; text-decoration:none; color:inherit;">
+              <span class="pf-queue-position">09:30</span>
+              <div>
+                <span class="pf-queue-name">MESL1710982</span>
+                <div class="pf-queue-detail">PNA-PIN-1.5 · VND-44115 · 1,500 pcs</div>
+              </div>
+            </a>
+            <a href="#lot/detail" class="pf-queue-row" style="grid-template-columns: auto 1fr; text-decoration:none; color:inherit;">
+              <span class="pf-queue-position">07:50</span>
+              <div>
+                <span class="pf-queue-name">MESL1710974</span>
+                <div class="pf-queue-detail">6B2-CLIP · VND-22301 · 830 pcs</div>
+              </div>
+            </a>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: SHIPPING DOCK (Phase 7) ───────────────── -->
+    <section data-route="terminal/shipping" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Shipping Dock</h1>
+          <span class="pf-terminal-title-meta">Scan-to-ship · per-scan validates Complete + non-Hold + non-Void · Container_Ship proc</span>
+        </div>
+        <span class="pf-paused-indicator">
+          <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">0</span>
+        </span>
+      </header>
+
+      <!-- Cell Context Selector -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Active Location</span>
+        <span class="pf-cell-context-value">Shipping Dock A</span>
+        <button class="pf-btn pf-btn-secondary" type="button">Change (scan or pick)</button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">Loaded containers move <code>CurrentLocationId</code> → Shipping Dock; audit `ContainerShipped`.</span>
+      </div>
+
+      <!-- Two-column: Active Manifest (scan + per-scan results) + Today's Loaded log -->
+      <div style="display:grid; grid-template-columns: 1fr 360px; gap: var(--pf-content-pad);">
+
+        <section class="pf-panel">
+          <div class="pf-panel-header">
+            <h3>Active Manifest · Truck-MFG-240430-002 · Honda Marysville</h3>
+            <span class="pf-kpi-sub">Scheduled departure 14:30 · Carrier: Honda Logistics</span>
+          </div>
+
+          <!-- Manifest progress -->
+          <div class="pf-kpis" style="grid-template-columns: repeat(4, 1fr); margin: 0;">
+            <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
+              <span class="pf-kpi-label">Loaded</span>
+              <span class="pf-kpi-value pf-kpi-good">12 / 24</span>
+              <span class="pf-kpi-sub">50% · 12 remaining</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">5G0F</span>
+              <span class="pf-kpi-value">8 / 16</span>
+              <span class="pf-kpi-sub">Front Cover</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">5G0R</span>
+              <span class="pf-kpi-value">3 / 6</span>
+              <span class="pf-kpi-sub">Rear Cover</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">6B2</span>
+              <span class="pf-kpi-value">1 / 2</span>
+              <span class="pf-kpi-sub">Cam Holder</span>
+            </div>
+          </div>
+
+          <!-- Scan input + last result -->
+          <div class="pf-field">
+            <label class="pf-field-label">Scan Container Shipping Label</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan AIM Shipper ID or Container code…" autofocus
+                   style="font-size: 18px; height: 56px;" />
+            <span class="pf-field-help">Per-scan: validates `ContainerStatusCode = Complete`, no open `HoldEvent`, `ShippingLabel.IsVoid = 0`. On success, fires `Lots.Container_Ship` and updates the manifest below.</span>
+          </div>
+
+          <!-- Recent scan results -->
+          <div class="pf-queue">
+            <!-- Successful scans -->
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+              <span class="pf-queue-position">12:38</span>
+              <div>
+                <span class="pf-queue-name">SH-240429-0142</span>
+                <div class="pf-queue-detail">CTR-5G0-0489 · 5G0F · 48 pcs · loaded</div>
+              </div>
+              <span class="pf-pill pf-pill-good">✓ Loaded</span>
+              <span class="pf-kpi-sub">Position 12 / 24</span>
+            </div>
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+              <span class="pf-queue-position">12:36</span>
+              <div>
+                <span class="pf-queue-name">SH-240429-0141</span>
+                <div class="pf-queue-detail">CTR-5G0-0488 · 5G0F · 48 pcs · loaded</div>
+              </div>
+              <span class="pf-pill pf-pill-good">✓ Loaded</span>
+              <span class="pf-kpi-sub">Position 11 / 24</span>
+            </div>
+
+            <!-- Rejection examples -->
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto; border-color: var(--pf-status-bad-fg);">
+              <span class="pf-queue-position">12:34</span>
+              <div>
+                <span class="pf-queue-name" style="color: var(--pf-status-bad-fg);">SH-240429-0123</span>
+                <div class="pf-queue-detail">CTR-6B2-0211 · ContainerStatusCode = Hold · cannot ship</div>
+              </div>
+              <span class="pf-pill pf-pill-bad">✗ On Hold</span>
+              <span class="pf-kpi-sub">Customer Complaint · Diane Ortiz</span>
+            </div>
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+              <span class="pf-queue-position">12:32</span>
+              <div>
+                <span class="pf-queue-name">SH-240429-0140</span>
+                <div class="pf-queue-detail">CTR-5G0-0487 · 5G0F · 48 pcs · loaded</div>
+              </div>
+              <span class="pf-pill pf-pill-good">✓ Loaded</span>
+              <span class="pf-kpi-sub">Position 10 / 24</span>
+            </div>
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto; border-color: var(--pf-status-warn-fg);">
+              <span class="pf-queue-position">12:30</span>
+              <div>
+                <span class="pf-queue-name" style="color: var(--pf-status-warn-fg);">SH-240429-0098</span>
+                <div class="pf-queue-detail">CTR-6B2-0211 · `ShippingLabel.IsVoid = 1` · voided during Sort Cage re-pack</div>
+              </div>
+              <span class="pf-pill pf-pill-hold">⚠ Void Label</span>
+              <span class="pf-kpi-sub">Operator notified</span>
+            </div>
+          </div>
+
+          <!-- Action row -->
+          <div class="pf-actions" style="border:none; margin:0; padding:0;">
+            <button class="pf-btn pf-btn-secondary" type="button">Pause Manifest</button>
+            <button class="pf-btn pf-btn-elevated" data-elevated-action="ManifestForceClose" type="button">
+              Force-Close Manifest (operator override)
+            </button>
+            <span style="flex:1"></span>
+            <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Complete Manifest · Truck Out</button>
+          </div>
+        </section>
+
+        <!-- Right rail: Pending Containers + Today's Stats -->
+        <aside style="display:flex; flex-direction:column; gap: var(--pf-content-pad);">
+
+          <section class="pf-panel">
+            <div class="pf-panel-header">
+              <h3>Pending Containers</h3>
+              <span class="pf-kpi-sub">at Shipping Dock · ready to load</span>
+            </div>
+            <div class="pf-queue">
+              <div class="pf-queue-row" style="grid-template-columns: 1fr auto;">
+                <div>
+                  <span class="pf-queue-name">CTR-5G0-0490</span>
+                  <div class="pf-queue-detail">SH-240429-0143 · 5G0F · 48 pcs</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Ready</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: 1fr auto;">
+                <div>
+                  <span class="pf-queue-name">CTR-5G0-0491</span>
+                  <div class="pf-queue-detail">SH-240429-0144 · 5G0F · 48 pcs</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Ready</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: 1fr auto;">
+                <div>
+                  <span class="pf-queue-name">CTR-5G0R-0167</span>
+                  <div class="pf-queue-detail">SH-240429-0089 · 5G0R · 36 pcs</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Ready</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: 1fr auto;">
+                <div>
+                  <span class="pf-queue-name">CTR-6B2-0220</span>
+                  <div class="pf-queue-detail">SH-240429-0099 · 6B2 · 96 pcs (re-packed)</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Ready</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="pf-panel">
+            <div class="pf-panel-header">
+              <h3>Today's Stats</h3>
+            </div>
+            <div style="display:flex; flex-direction:column; gap: 8px;">
+              <div style="display:flex; justify-content:space-between;">
+                <span class="pf-kpi-sub">Containers Shipped</span>
+                <span style="font-weight: 600;">38</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span class="pf-kpi-sub">Manifests Completed</span>
+                <span style="font-weight: 600;">3</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span class="pf-kpi-sub">Rejected Scans</span>
+                <span style="font-weight: 600; color: var(--pf-status-bad-fg);">2</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span class="pf-kpi-sub">Target Today</span>
+                <span style="font-weight: 600;">42 · 90%</span>
+              </div>
+            </div>
+          </section>
+
+        </aside>
+
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: TRIM STATION IN (Phase 4) ─────────────── -->
+    <section data-route="terminal/trim-in" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Trim Station IN</h1>
+          <span class="pf-terminal-title-meta">Trim Cell 3 · Movement Scan + checkpoint ProductionEvent</span>
+        </div>
+        <span class="pf-paused-indicator">
+          <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">1</span>
+        </span>
+      </header>
+
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Active Cell</span>
+        <span class="pf-cell-context-value">Trim Cell 3</span>
+        <button class="pf-btn pf-btn-secondary" type="button">Change (scan or pick)</button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">Trim is yield loss only — LOT keeps its cast-part identity through Trim OUT.</span>
+      </div>
+
+      <!-- Movement Scan (cross-cutting reusable pattern) -->
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>Movement Scan</h3>
+          <span class="pf-kpi-sub">Validates eligibility (`v_EffectiveItemLocation`) + MaxParts cap on scan-in</span>
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-field-label">Scan LTT Barcode</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan LOT…" value="MESL1710935" />
+        </div>
+
+        <!-- Resolved LOT preview -->
+        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 12px 0;">
+          <div>
+            <span class="pf-kpi-label">LOT</span>
+            <div class="pf-kpi-value pf-kpi-mono" style="font-size:16px;">MESL1710935</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Item</span>
+            <div class="pf-kpi-value pf-kpi-mono" style="font-size:16px;">5G0-TRIM-4102</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">From Location</span>
+            <div class="pf-kpi-value" style="font-size:16px;">Press 7</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Pieces</span>
+            <div class="pf-kpi-value" style="font-size:16px;">48</div>
+          </div>
+        </div>
+
+        <!-- Eligibility validation result -->
+        <div style="display: flex; flex-direction: column; gap: 6px; background: var(--mpp-state-good-bg); border: 1px solid var(--pf-status-good-fg); border-radius: var(--radius-lg); padding: 12px 16px;">
+          <span style="color: var(--pf-status-good-fg); font-weight: 600;">✓ Eligible at Trim Cell 3</span>
+          <span style="color: var(--text-secondary); font-size: 12px;">Direct match: `Parts.ItemLocation` row exists for 5G0-TRIM-4102 at Trim Area (cascade to Cell).</span>
+          <span style="color: var(--text-secondary); font-size: 12px;">MaxParts cap: 48 incoming + 0 existing = 48 ≤ 500 (no overflow).</span>
+        </div>
+
+        <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Receive at Trim Cell 3</button>
+      </section>
+
+      <!-- Checkpoint ProductionEvent panel (auto-fired on receive) -->
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>Trim IN Checkpoint</h3>
+          <span class="pf-kpi-sub">ProductionEvent fires on Movement Scan accept · TrimIn OperationTemplate</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Cumulative ShotCount</span>
+            <span class="pf-kpi-value">1,247</span>
+            <span class="pf-kpi-sub">Carries forward — Trim doesn't add shots</span>
+          </div>
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Cumulative ScrapCount</span>
+            <span class="pf-kpi-value pf-kpi-warn">3</span>
+            <span class="pf-kpi-sub">From Die Cast porosity rejects</span>
+          </div>
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Operator</span>
+            <span class="pf-kpi-value">CM</span>
+            <span class="pf-kpi-sub">Auto-stamped from active presence</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Inline reject capture -->
+      <section class="pf-panel">
+        <div class="pf-panel-header">
+          <h3>Reject Entry · Trim yield loss</h3>
+          <span class="pf-kpi-sub">Records `RejectEvent` against this LOT — no rename, no new LOT</span>
+        </div>
+        <div class="pf-field-row">
+          <div class="pf-field">
+            <label class="pf-field-label">Defect Code (Trim Area)</label>
+            <select class="pf-field-select">
+              <option>TR-SPRUE-01 · Sprue Removal Fail</option>
+              <option>TR-DEBURR-01 · Deburr Damage</option>
+              <option>TR-WASH-01 · Wash Contamination</option>
+            </select>
+          </div>
+          <div class="pf-field">
+            <label class="pf-field-label">Quantity</label>
+            <input class="pf-field-input" type="number" value="0" min="0" />
+          </div>
+          <div class="pf-field" style="align-self:flex-end;">
+            <button class="pf-btn pf-btn-secondary" type="button" style="height:var(--pf-touch-min);">Add RejectEvent</button>
+          </div>
+        </div>
+      </section>
+    </section>
+
+
+    <!-- ─── LOT DETAIL (polymorphic — Phase 2) ───────────────────── -->
+    <section data-route="lot/detail" class="pf-terminal">
+        <header class="pf-terminal-header">
+          <div class="pf-terminal-title">
+            <h1>LOT Detail · MESL1710935</h1>
+            <span class="pf-terminal-title-meta">5G0-TRIM-4102 · Manufactured · single view across all phases</span>
+          </div>
+          <span class="pf-pill pf-pill-good">Good</span>
+        </header>
+
+        <!-- Mockup demo toggle: Die-Cast-origin (Tool/Cavity shown) vs Received -->
+        <div class="pf-terminal-cell-context">
+          <span class="pf-cell-context-label">LOT Origin (mockup demo)</span>
+          <button class="pf-btn pf-btn-secondary" type="button" id="lot-origin-toggle" data-state="manufactured">
+            <span id="lot-origin-state">Manufactured (Die Cast — Tool/Cavity populated)</span>
+          </button>
+          <span style="flex:1"></span>
+          <span class="pf-kpi-sub">Polymorphism: same view, conditional rendering based on `Lot.ToolId` / `.ToolCavityId` presence.</span>
+        </div>
+
+        <!-- Header KPIs -->
+        <section class="pf-kpis">
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">LOT Name</span>
+            <span class="pf-kpi-value pf-kpi-mono">MESL1710935</span>
+            <span class="pf-kpi-sub">Minted via IdentifierSequence_Next</span>
+          </div>
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Item</span>
+            <span class="pf-kpi-value pf-kpi-mono">5G0-TRIM-4102</span>
+            <span class="pf-kpi-sub">Cast / trim Item</span>
+          </div>
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Piece Count</span>
+            <span class="pf-kpi-value">38</span>
+            <span class="pf-kpi-sub">Inventory Available · 0 in process</span>
+          </div>
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Current Location</span>
+            <span class="pf-kpi-value" style="font-size:16px;">Press 7</span>
+            <span class="pf-kpi-sub">Die Cast Area · arrived 06:20</span>
+          </div>
+
+          <!-- Tool/Cavity rows — VISIBLE when ToolId is populated (Die Cast origin) -->
+          <div class="pf-kpi pf-tool-row">
+            <span class="pf-kpi-label">Tool</span>
+            <span class="pf-kpi-value pf-kpi-mono">DC-042</span>
+            <span class="pf-kpi-sub">Die mounted on Press 7</span>
+          </div>
+          <div class="pf-kpi pf-tool-row">
+            <span class="pf-kpi-label">Cavity</span>
+            <span class="pf-kpi-value">A</span>
+            <span class="pf-kpi-sub">Active</span>
+          </div>
+        </section>
+
+        <!-- Tabs: History · Genealogy · Paused-at · Linked Container -->
+        <section class="pf-panel">
+          <nav class="pf-tabs" style="margin: -20px -20px 16px -20px; height:44px;">
+            <button class="pf-tab active" data-lot-tab="history" type="button">History</button>
+            <button class="pf-tab" data-lot-tab="genealogy" type="button">Genealogy</button>
+            <button class="pf-tab" data-lot-tab="paused" type="button">Paused-at</button>
+            <button class="pf-tab" data-lot-tab="container" type="button">Linked Container</button>
+          </nav>
+
+          <div data-lot-panel="history">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
+                <span class="pf-queue-position">06:20</span>
+                <div>
+                  <span class="pf-queue-name">LotCreated</span>
+                  <div class="pf-queue-detail">CM at Press 7 · Tool DC-042 · Cavity A · 48 pcs</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Manufactured</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
+                <span class="pf-queue-position">06:20</span>
+                <div>
+                  <span class="pf-queue-name">DieCastCheckpoint</span>
+                  <div class="pf-queue-detail">ShotCount 1247 · ScrapCount 3 (cumulative)</div>
+                </div>
+                <span class="pf-kpi-sub">ProductionEvent #41203</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
+                <span class="pf-queue-position">06:31</span>
+                <div>
+                  <span class="pf-queue-name">RejectEvent · DC-POR-01</span>
+                  <div class="pf-queue-detail">Porosity · qty 3 · CM · charge to Die Cast</div>
+                </div>
+                <span class="pf-kpi-sub">RejectEvent #2104</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
+                <span class="pf-queue-position">08:25</span>
+                <div>
+                  <span class="pf-queue-name">LotMovement</span>
+                  <div class="pf-queue-detail">Press 7 → Trim Cell 3 · scanned by JL</div>
+                </div>
+                <span class="pf-kpi-sub">LotMovement #8821</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
+                <span class="pf-queue-position">08:25</span>
+                <div>
+                  <span class="pf-queue-name">TrimInCheckpoint</span>
+                  <div class="pf-queue-detail">ShotCount 1247 · ScrapCount 3 (carried — Trim adds no shots)</div>
+                </div>
+                <span class="pf-kpi-sub">ProductionEvent #41210</span>
+              </div>
+            </div>
+          </div>
+
+          <div data-lot-panel="genealogy" style="display:none;">
+            <div class="pf-empty-state">
+              <h3>Genealogy walk</h3>
+              <p>This LOT is at Generation 0 (Die Cast origin). No parents.<br>
+                 Walking descendants will hit any sub-LOTs split from this LOT at Trim OUT and the machined LOTs that consume them.</p>
+              <p class="pf-kpi-sub">Closure-table-backed if Phase 0 OI-35 elects materialization.</p>
+            </div>
+          </div>
+
+          <div data-lot-panel="paused" style="display:none;">
+            <div class="pf-empty-state">
+              <h3>No paused entries</h3>
+              <p>This LOT has no open <code>Lots.PauseEvent</code> rows.</p>
+            </div>
+          </div>
+
+          <div data-lot-panel="container" style="display:none;">
+            <div class="pf-empty-state">
+              <h3>Not yet containerized</h3>
+              <p>This LOT is at Trim · Container links land at Assembly when serialized parts produce into a Container.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="pf-actions">
+          <a href="#home" class="pf-btn pf-btn-secondary">Back to Home</a>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold</button>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="Scrap" type="button">Scrap</button>
+        </div>
+
+        <script>
+          // LOT Detail tab switching
+          document.querySelectorAll('[data-lot-tab]').forEach(tab => {
+            tab.addEventListener('click', () => {
+              const target = tab.dataset.lotTab;
+              document.querySelectorAll('[data-lot-tab]').forEach(t => t.classList.toggle('active', t === tab));
+              document.querySelectorAll('[data-lot-panel]').forEach(p => p.style.display = p.dataset.lotPanel === target ? '' : 'none');
+            });
+          });
+
+          // Polymorphic origin toggle — hides Tool/Cavity rows when "Received"
+          document.getElementById('lot-origin-toggle')?.addEventListener('click', () => {
+            const btn = document.getElementById('lot-origin-toggle');
+            const state = document.getElementById('lot-origin-state');
+            const isMfg = btn.dataset.state === 'manufactured';
+            const toolRows = document.querySelectorAll('.pf-tool-row');
+            if (isMfg) {
+              btn.dataset.state = 'received';
+              state.textContent = 'Received (Tool/Cavity NULL — rows hidden)';
+              toolRows.forEach(r => r.style.display = 'none');
+            } else {
+              btn.dataset.state = 'manufactured';
+              state.textContent = 'Manufactured (Die Cast — Tool/Cavity populated)';
+              toolRows.forEach(r => r.style.display = '');
+            }
+          });
+        </script>
+
+    </section>
+
+
+  </main>
+
+  <!-- ═══ CROSS-CUTTING EMBEDDED COMPONENTS ════════════════════════════ -->
+
+  <!-- Print Failure Banner (UJ-18 / FDS-07-006b) -->
+  <div class="pf-banner hidden" id="print-failure-banner">
+    <span class="pf-banner-icon">⚠</span>
+    <div class="pf-banner-content">
+      <span class="pf-banner-title">Print Failed · Container CTR-5G0-0489</span>
+      <span class="pf-banner-detail">Shipper ID SH-240429-0142 · 3 attempts · last error: zebra socket timeout</span>
+    </div>
+    <div class="pf-banner-actions">
+      <button class="pf-btn pf-btn-secondary" type="button">Retry</button>
+      <button class="pf-btn pf-btn-secondary" type="button">Reprint</button>
+      <button class="pf-btn pf-btn-secondary" type="button" id="banner-acknowledge">Acknowledge</button>
+    </div>
+  </div>
+
+  <!-- Elevation Modal (per-action AD — operator mode only) -->
+  <div class="pf-modal" id="elevation-modal">
+    <div class="pf-modal-card">
+      <header class="pf-modal-header">
+        <h3>Elevated Action — Sign In</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">
+          This action requires a supervisor or elevated user. Sign in with your AD credentials to proceed.
+        </p>
+        <div class="pf-field">
+          <label class="pf-field-label">AD Username</label>
+          <input class="pf-field-input" type="text" placeholder="firstname.lastname" />
+        </div>
+        <div class="pf-field">
+          <label class="pf-field-label">Password</label>
+          <input class="pf-field-input" type="password" />
+        </div>
+        <p class="pf-field-help">Your AD identity stamps the resulting event. The original operator presence stays for non-elevated events. No sticky session — next elevated action re-prompts.</p>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close>Authenticate</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- BOM-Driven Rename Modal (FDS-05-033 — Machining IN) -->
+  <div class="pf-modal" id="bom-rename-modal">
+    <div class="pf-modal-card">
+      <header class="pf-modal-header">
+        <h3>Receive sub-LOT — Rename to Machined Item?</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary);">
+          Source LOT carries the cast/trim Item. Active BOM at this Cell renames it to the machined Item on receive (FDS-05-033).
+        </p>
+        <div class="pf-field"><span class="pf-field-label">Source sub-LOT</span><div class="pf-field-input pf-field-mono" style="display:flex; align-items:center;">MESL1710942-A · 5G0-TRIM-4102 · 24 pcs</div></div>
+        <div class="pf-field"><span class="pf-field-label">Receive As</span><div class="pf-field-input pf-field-mono" style="display:flex; align-items:center; color:var(--accent);">5G0-MACHINED-4102 (new LotName: MESL1710955)</div></div>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close>Confirm Receive</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Change Cell Context Modal — wired from "Change (scan or pick)" buttons -->
+  <div class="pf-modal" id="cell-change-modal">
+    <div class="pf-modal-card" style="max-width: 640px;">
+      <header class="pf-modal-header">
+        <h3>Change Active Cell</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">
+          Scan a Cell barcode or pick from the dropdown. The new selection
+          becomes the active context for every action on this session — any
+          dependent fields on the underlying screen (Tool, Cavity, FIFO queue,
+          etc.) refresh to match.
+        </p>
+
+        <div class="pf-field">
+          <label class="pf-field-label">Scan Cell Barcode</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan or enter Cell code…" id="cell-change-scan" />
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-field-label">Or pick from list</label>
+          <select class="pf-field-select" id="cell-change-dropdown" style="font-size: 15px; height: 48px;">
+            <option value="">— Select a Cell —</option>
+            <optgroup label="Building 1 · Die Cast Area">
+              <option value="Press 1">Press 1 · DC-018 mounted · 2 cavities active</option>
+              <option value="Press 2">Press 2 · DC-024 mounted · 4 cavities active</option>
+              <option value="Press 3">Press 3 · DC-031 mounted · 2 cavities active</option>
+              <option value="Press 4">Press 4 · DC-031 mounted · 4 cavities active</option>
+              <option value="Press 5">Press 5 · DC-038 mounted · 2 cavities active</option>
+              <option value="Press 6">Press 6 · No tool mounted · idle</option>
+              <option value="Press 7" selected>Press 7 · DC-042 mounted · 2 cavities active</option>
+              <option value="Press 8">Press 8 · DC-049 mounted · 4 cavities active</option>
+            </optgroup>
+          </select>
+          <span class="pf-field-help">
+            Dropdown lists the descendant Cells of this terminal's parent Location.
+            In production, contents derive dynamically from the current view's
+            active Cell context — Die Cast terminals see presses, Trim terminals
+            see Trim Cells, etc.
+          </span>
+        </div>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="pf-btn pf-btn-primary" type="button" id="cell-change-confirm">Set Active Cell</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Material Substitute Override Modal (UJ-09 — Assembly BOM mismatch) -->
+  <div class="pf-modal" id="material-substitute-modal">
+    <div class="pf-modal-card" style="max-width: 600px;">
+      <header class="pf-modal-header">
+        <h3>Material Substitute · Supervisor Override Required</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--pf-status-warn-fg); font-weight: 600;">
+          ⚠ Scanned Item is not on the active BOM for this Cell.
+        </p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <span class="pf-kpi-label">Scanned Source LOT</span>
+            <div class="pf-kpi-value pf-kpi-mono" style="font-size: 14px;">MESL1710512-X</div>
+            <div class="pf-kpi-sub">PNA-PIN-3.0 · 880 pcs at lineside</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Producing Item BOM expects</span>
+            <div class="pf-kpi-value pf-kpi-mono" style="font-size: 14px;">PNA-PIN-2.5</div>
+            <div class="pf-kpi-sub">Active Bom v3 · 2 components</div>
+          </div>
+        </div>
+
+        <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">
+          Per FDS-06-011 + UJ-09: strict BOM check. Off-BOM consumption requires a
+          one-shot supervisor override per FDS-04-007. The override is logged with both
+          operator and supervisor `AppUserId` to `Audit.OperationLog` as
+          `MaterialSubstituteOverride`. Next scan re-runs the strict check.
+        </p>
+
+        <div class="pf-field">
+          <label class="pf-field-label">Supervisor AD Username</label>
+          <input class="pf-field-input" type="text" placeholder="firstname.lastname" />
+        </div>
+        <div class="pf-field">
+          <label class="pf-field-label">Password</label>
+          <input class="pf-field-input" type="password" />
+        </div>
+        <div class="pf-field">
+          <label class="pf-field-label">Reason for Substitute (required)</label>
+          <input class="pf-field-input" type="text" placeholder="e.g. PNA-PIN-2.5 stockout, engineering-approved equivalent" />
+        </div>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close>Authorize Substitute</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Idle Re-Confirm Modal (Dedicated terminal, 30-min idle) -->
+  <div class="pf-modal" id="idle-modal">
+    <div class="pf-modal-card">
+      <header class="pf-modal-header">
+        <h3>Still operating as CM?</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary);">
+          The terminal has been idle for 30 minutes. Confirm presence to continue, or change to a different operator.
+        </p>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>No — change</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close>Yes — continue as CM</button>
+      </footer>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ JAVASCRIPT ═══════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  const app = document.querySelector('.pf-app');
+
+  // ─── Auto-inject Close button on every terminal view (demo ease) ──
+  document.querySelectorAll('.pf-terminal').forEach(terminal => {
+    if (terminal.querySelector('.pf-terminal-close')) return;
+    const close = document.createElement('a');
+    close.href = '#home';
+    close.className = 'pf-terminal-close';
+    close.setAttribute('title', 'Close — back to Home');
+    close.setAttribute('aria-label', 'Close terminal view');
+    close.innerHTML = '<span class="pf-terminal-close-icon">✕</span><span>Close</span>';
+    terminal.insertBefore(close, terminal.firstChild);
+  });
+
+  // ─── Hash routing ─────────────────────────────────────────────────
+  function applyRoute() {
+    let hash = (location.hash || '#home').replace(/^#/, '');
+    // Normalize: longest-match wins; keep up to 2 segments
+    app.dataset.route = hash;
+
+    // If we routed away from home, hide tree-dock on mobile
+    if (!hash.startsWith('home')) {
+      document.querySelector('.pf-tree-dock')?.classList.remove('shown');
+    }
+
+    // Scroll terminal views to top on entry
+    const visible = document.querySelector(`[data-route="${hash}"]`);
+    if (visible && visible.scrollTo) visible.scrollTo({ top: 0 });
+  }
+  window.addEventListener('hashchange', applyRoute);
+  applyRoute();
+
+  // ─── Elevation toggle ─────────────────────────────────────────────
+  document.getElementById('elevation-toggle').addEventListener('click', () => {
+    app.dataset.mode = app.dataset.mode === 'elevated' ? 'operator' : 'elevated';
+  });
+
+  // ─── Tab switching ────────────────────────────────────────────────
+  document.querySelectorAll('.pf-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.pf-tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('.pf-tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === target));
+    });
+  });
+
+  // ─── Tree expand / collapse + driving Location Details ──────────
+  document.querySelectorAll('.pf-tree-row').forEach(row => {
+    row.addEventListener('click', e => {
+      const node = row.parentElement;
+      // Toggle expand on non-leaf rows
+      if (!node.classList.contains('leaf')) {
+        node.classList.toggle('expanded');
+      }
+      // Selection
+      document.querySelectorAll('.pf-tree-node.selected').forEach(n => n.classList.remove('selected'));
+      node.classList.add('selected');
+
+      // Update Location Details header to match selection
+      const label  = row.querySelector('.pf-tree-label')?.textContent?.trim() ?? '';
+      const meta   = row.querySelector('.pf-tree-meta')?.textContent?.trim() ?? '';
+      const titleEl = document.querySelector('[data-panel="details"] h2');
+      const metaEl  = document.querySelector('[data-panel="details"] .pf-location-meta');
+      if (titleEl && label) titleEl.textContent = label;
+      if (metaEl  && meta)  {
+        const tier = meta === 'Cell' ? 'Cell · DieCastMachine'
+                   : meta === 'WC'   ? 'WorkCenter'
+                   : meta === 'Term' ? 'Cell · Terminal'
+                   : meta === 'Area' ? 'Area' : meta;
+        metaEl.innerHTML = `<span>${tier}</span><span>·</span><span>Madison › ${label}</span>`;
+      }
+    });
+  });
+
+  // ─── Elevated action handler ──────────────────────────────────────
+  // In operator mode, clicking an elevated-required button shows the
+  // Elevation Modal. In elevated mode, the click would proceed normally
+  // (in real app); here we just no-op.
+  document.querySelectorAll('[data-elevated-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      if (app.dataset.mode !== 'elevated') {
+        e.preventDefault();
+        showModal('elevation-modal');
+      }
+    });
+  });
+
+  // ─── Modal show / hide ────────────────────────────────────────────
+  function showModal(id) {
+    document.getElementById(id)?.classList.add('shown');
+  }
+  function hideModal(id) {
+    document.getElementById(id)?.classList.remove('shown');
+  }
+  document.querySelectorAll('[data-modal-close]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.target.closest('.pf-modal')?.classList.remove('shown');
+    });
+  });
+  // Click outside modal-card closes
+  document.querySelectorAll('.pf-modal').forEach(modal => {
+    modal.addEventListener('click', e => {
+      if (e.target === modal) modal.classList.remove('shown');
+    });
+  });
+
+  // ─── Banner acknowledge ───────────────────────────────────────────
+  document.getElementById('banner-acknowledge')?.addEventListener('click', () => {
+    document.getElementById('print-failure-banner').classList.add('hidden');
+  });
+
+  // ─── Change Cell Context modal ────────────────────────────────────
+  // Any button that reads "Change (scan or pick)" inside a
+  // .pf-terminal-cell-context bar opens the Change Cell modal. On Set,
+  // the modal updates the parent bar's .pf-cell-context-value.
+  let cellChangeTargetEl = null; // remembers which view's bar to update
+  document.querySelectorAll('.pf-terminal-cell-context').forEach(bar => {
+    const btn = Array.from(bar.querySelectorAll('button'))
+      .find(b => /change\s*\(scan or pick\)/i.test(b.textContent || ''));
+    const valueEl = bar.querySelector('.pf-cell-context-value');
+    if (!btn || !valueEl) return;
+    btn.addEventListener('click', () => {
+      cellChangeTargetEl = valueEl;
+      // Pre-select the dropdown to the current value if it matches
+      const dd = document.getElementById('cell-change-dropdown');
+      if (dd) {
+        const cur = (valueEl.textContent || '').trim();
+        Array.from(dd.options).forEach(o => {
+          o.selected = o.value === cur;
+        });
+      }
+      const scan = document.getElementById('cell-change-scan');
+      if (scan) scan.value = '';
+      document.getElementById('cell-change-modal').classList.add('shown');
+    });
+  });
+  document.getElementById('cell-change-confirm')?.addEventListener('click', () => {
+    const dd = document.getElementById('cell-change-dropdown');
+    const scan = document.getElementById('cell-change-scan');
+    let next = (scan?.value || '').trim();
+    if (!next && dd?.value) next = dd.value;
+    if (next && cellChangeTargetEl) {
+      cellChangeTargetEl.textContent = next;
+    }
+    document.getElementById('cell-change-modal').classList.remove('shown');
+  });
+
+  // ─── Demo helpers (mockup-only) ───────────────────────────────────
+  // Press B to toggle the print-failure banner; Press I to fire the idle modal.
+  // Useful for design-review walkthroughs.
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'b' || e.key === 'B') {
+      document.getElementById('print-failure-banner').classList.toggle('hidden');
+    }
+    if (e.key === 'i' || e.key === 'I') {
+      showModal('idle-modal');
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      // Toggle BOM rename modal as a quick preview
+      document.getElementById('bom-rename-modal').classList.toggle('shown');
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      // Toggle Material Substitute Override modal as a quick preview
+      document.getElementById('material-substitute-modal').classList.toggle('shown');
+    }
+  });
+
+  // Expose a few helpers for console-driven demo
+  window.pfDemo = {
+    showBanner: () => document.getElementById('print-failure-banner').classList.remove('hidden'),
+    hideBanner: () => document.getElementById('print-failure-banner').classList.add('hidden'),
+    elevation: (on) => { app.dataset.mode = on ? 'elevated' : 'operator'; },
+    showIdle: () => showModal('idle-modal'),
+  };
+})();
+</script>
+
+</body>
+</html>

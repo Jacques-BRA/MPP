@@ -4,7 +4,7 @@
 **Project:** Madison Precision Products MES Replacement
 **Prepared By:** Blue Ridge Automation
 **Client:** Madison Precision Products, Inc. (Madison, IN)
-**Version:** 0.11m — Working Draft
+**Version:** 0.11o — Working Draft
 **Date:** 2026-04-28
 
 ---
@@ -1252,9 +1252,9 @@ Non-serialized assembly fills containers **one tray at a time**. The validation 
 |---|---|---|---|
 | **`ByCount`** | Operator confirms the tray's quantity matches `PartsPerTray`. | `PartsPerTray` | Operator submission via the workstation screen — no PLC signal required. |
 | **`ByWeight`** | Scale reports the tray weight has reached the per-tray target. | `TargetWeight` per tray (+ optional tolerance) | OPC tags `TargetWeightValue`, `TargetWeightMetFlag` via OmniServer assert when the per-tray target is met. |
-| **`ByVision`** | Camera validates each part in the tray (pass/fail per piece); the PLC accumulates validated parts and asserts the tray-full flag when `PartsPerTray` is reached. | `PartsPerTray` (vision counts validated parts; no weight target). | OPC tags fed by the PLC — `TrayCountValue` (running validated count for the open tray) and `TrayFullFlag` (asserts when the tray is full). Tag names TBD by integration team; reserved on the Machine Integration Panel. |
+| **`ByVision`** | Camera scans the **full tray as a single image** once it is presented for inspection — one validation event per tray, not per piece. On pass, the PLC asserts `TrayFullFlag`; on fail, the camera fault is surfaced to the operator who corrects the tray (re-place parts, remove invalid items) and re-presents it for re-scan. A four-tray container therefore yields exactly four passing tray-scan events when complete. | `PartsPerTray` (informs the camera's expected position count and the per-tray ConsumptionEvent). No weight target. | OPC tags fed by the PLC — `TrayPresent` (operator has positioned a full tray for scan), `TrayValidationResult` (Pass / Fail), `TrayFullFlag` (asserts on Pass). Tag names TBD by integration team; reserved on the Machine Integration Panel. |
 
-For `ByVision` and `ByWeight` the MES SHALL NOT fire tray close on the running count alone — the PLC's `TrayFullFlag` (or `TargetWeightMetFlag`) is authoritative.
+For `ByVision` and `ByWeight` the MES SHALL NOT fire tray close on the running count alone — the PLC's `TrayFullFlag` (or `TargetWeightMetFlag`) is authoritative. Specifically for `ByVision`: the camera produces **one validation event per tray**, and exactly one `Workorder.ConsumptionEvent` SHALL be written per BOM component per validated tray (not per piece).
 
 **Container accumulation:**
 
@@ -1811,12 +1811,14 @@ The MES SHALL accept a single time entry per operator per shift, capturing wheth
 
 **Visibility window.** The header SHALL surface a time-entry control from approximately 15 minutes before through 15 minutes after the scheduled shift end. Outside that window the control is hidden.
 
-**Workflow varies by terminal mode** (per FDS-02-010):
+**Selection mechanism — button-toggle on both terminal modes.** The shift schedule defines the lunch and breaks for that shift. The view renders one **toggleable button per scheduled break** (e.g., `Lunch`, `Break 1`, `Break 2`). The operator taps each button the operator took during this shift; tapping again deselects. There is **no numeric duration entry**, no dropdown, no checkbox list — just toggleable buttons. Durations and start times are resolved from the shift schedule at submit time.
 
-- **Dedicated terminals** (Cell-parented). Single button press. The submission is recorded against the operator's initials presence context (per FDS-04-002) and the current shift instance, with lunch and breaks taken per the schedule defaults.
-- **Shared terminals** (WorkCenter- or Area-parented). Operator presses the time-entry button → enters initials → selects time category (Regular by default) → confirms lunch (yes / no) and which breaks were taken → submits. Initials resolve to an `AppUser` per FDS-04-005; the submission writes against the current shift instance.
+**Workflow varies by terminal mode only in identity capture, not in selection** (per FDS-02-010):
 
-The system SHALL write `Oee.DowntimeEvent` rows for each lunch / break submitted, with durations and start times populated from the shift schedule's break configuration (durations are NOT operator-entered). This preserves the downtime classification Honda needs for OEE reporting without imposing live-entry friction during production. (FRS 3.15.2)
+- **Dedicated terminals** (Cell-parented). Operator taps any breaks taken, then taps Submit. The submission is recorded against the operator's initials presence context (per FDS-04-002) and the current shift instance.
+- **Shared terminals** (WorkCenter- or Area-parented). Same selection buttons, with two additions: (a) an inline initials field — operator types or scans their initials before submit; (b) a 3-button single-select Time Category row (Regular / Overtime / Double-Time, default Regular). Initials resolve to an `AppUser` per FDS-04-005; the submission writes against the current shift instance and stamps the resulting `DowntimeEvent` rows with that user.
+
+The system SHALL write `Oee.DowntimeEvent` rows for each selected lunch / break, with durations and start times populated from the shift schedule's break configuration (durations are NOT operator-entered). This preserves the downtime classification Honda needs for OEE reporting without imposing live-entry friction during production. Selecting zero buttons is valid (operator skipped all breaks); the system writes no `DowntimeEvent` rows in that case but still records the shift-end acknowledgement. (FRS 3.15.2)
 
 #### FDS-09-014 — Early-Start Behaviour
 When production events are captured with `RecordedAt` **earlier** than the shift's scheduled start, the MES SHALL accept those events without rejection. Availability reporting SHALL use the time-window bounded by the earliest event and the shift's scheduled end (effectively expanding the window backwards). MPP explicitly requested this behaviour at the 2026-04-20 review — early starts increase availability because events drive runtime, and operators should not be penalised for starting early. A shift that is NOT run (zero events across the entire scheduled window) SHALL still instantiate an `Oee.Shift` row and report as zero-run for auditability.

@@ -1,9 +1,34 @@
 # Data Model Indexing & Query-Performance Review
 
-**Date:** 2026-04-28
+**Date:** 2026-04-28 (Decision Gate callout added 2026-04-29)
 **Reviewer:** Blue Ridge Automation
 **Scope:** `MPP_MES_DATA_MODEL.md` v1.9j against `sql/migrations/versioned/*.sql` index commitments + Arc 2 deferred-table specs
 **Lens:** Customer-perspective concern about indexing and query performance at scale
+
+---
+
+## ⚠ Decision Gate — must resolve before Arc 2 Phase 1 SQL build
+
+**Tracked as OIR OI-35** (added 2026-04-29, ⬜ Open / HIGH).
+
+The 20-year retention requirement combined with MPP's observed throughput (~150K LOTs/year derived from Flexware's `IdentifierFormat=1,710,932` baseline after ~10–15 years of operation) projects to per-table volumes of 100M–1B rows on the high-volume audit + event tables. A 20-year blanket retention without architectural mitigations is not tractable on a single SQL Server 2022 instance.
+
+**Decisions deferred but gated** (per Jacques's 2026-04-29 last-responsible-moment posture — defer the call, but Arc 2 Phase 1 SQL build does not commence until resolved):
+
+1. Per-table retention class — push back on 20-year for `Audit.OperationLog` / `InterfaceLog` / `FailureLog` / `Oee.DowntimeEvent` / `Audit.ConfigLog`.
+2. Monthly range partitioning + sliding-window automation across ~14 deferred high-volume event tables.
+3. Clustered columnstore on partitions older than 90 days.
+4. Materialized closure table for `Lots.LotGenealogy` so Honda audits don't recursive-CTE-walk 100M+ rows at year 15.
+5. Materialize `TotalInProcess` / `InventoryAvailable` columns onto `Lots.Lot` (supersedes OI-23's view choice at scale; OI-23 stays Resolved — its choice was correct for MVP).
+6. `Lots.IdentifierSequence_Next` locking model — explicit `WITH (ROWLOCK, UPDLOCK)` vs replace with SQL Server `SEQUENCE` object.
+7. Split `Audit.OperationLog` into 7-year general audit + separate 20-year `Lots.LotEventLog` for traceability events.
+8. Filtered indexes on hot subsets (active-LOT, open-pause, available-AIM-pool, banner-active, etc.) — systematic per-table pass.
+
+**Why the gate is hard:** Items 2, 4, 5, 7 must be in the **CREATE migration** for the affected tables — adding partition schemes, closure tables, or materialization columns to populated 100M+ row tables later is operationally expensive (rebuild, log-volume blow-up, downtime window). Items 1, 3, 6, 8 are softer (post-CREATE configurable) but cleaner to lock in upfront.
+
+**Resolution path:** Phase 0 facilitation workshop adds OI-35 as a topic. Internal Blue Ridge architecture review covers items 2–7. MPP IT covers item 1 (retention policy negotiation). Output: data model spec § "Scaling Decisions" pinning the schema-level commitments, drives the Arc 2 Phase 1 migration content.
+
+The remainder of this document (the per-table indexing review) is the input to that conversation. The "What needs to be added" sections below set the **per-table index list** layer; OI-35 sets the **retention / partitioning / materialization** layer. Both feed the Arc 2 Phase 1 migration.
 
 ---
 
