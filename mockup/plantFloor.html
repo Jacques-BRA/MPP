@@ -265,7 +265,7 @@
             <div class="pf-actions">
               <a href="#terminal/diecast" class="pf-btn pf-btn-primary pf-btn-large">View Terminal</a>
               <a href="#lot/detail" class="pf-btn pf-btn-secondary">Open Current LOT</a>
-              <button class="pf-btn pf-btn-elevated" data-elevated-action="EditTool" type="button">Edit Tool Assignment</button>
+              <button class="pf-btn pf-btn-elevated" data-elevated-action="EditTool" data-elevated-target="tool-assignment-modal" type="button">Edit Tool Assignment</button>
               <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold</button>
             </div>
 
@@ -279,8 +279,7 @@
                 <a href="#terminal/cell-context"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 1 · Cell Context Selector</a>
                 <a href="#terminal/diecast"       class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 3 · Die Cast LOT Entry</a>
                 <a href="#terminal/receiving"     class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Receiving Dock</a>
-                <a href="#terminal/trim-in"       class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Trim Station IN</a>
-                <a href="#terminal/trim-out"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Trim OUT (Flex Repeater)</a>
+                <a href="#terminal/trim"          class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Trim Station (polymorphic IN/OUT)</a>
                 <a href="#terminal/machining-in"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 5 · Machining IN (FIFO)</a>
                 <a href="#terminal/assembly"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Serialized</a>
                 <a href="#terminal/assembly-ns"   class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Non-Serialized</a>
@@ -954,9 +953,9 @@
               <label class="pf-field-label">Tool (auto-populated)</label>
               <div style="display:flex; gap:8px; align-items:center;">
                 <input class="pf-field-input pf-field-mono" type="text" value="DC-042" disabled style="flex:1;" />
-                <button class="pf-btn pf-btn-elevated" data-elevated-action="EditTool" type="button">Edit</button>
+                <button class="pf-btn pf-btn-elevated" data-elevated-action="EditTool" data-elevated-target="tool-assignment-modal" type="button">Edit</button>
               </div>
-              <span class="pf-field-help">From <code>Tools.ToolAssignment_ListActiveByCell</code>. Edit (elevated) opens inline release+assign.</span>
+              <span class="pf-field-help">From <code>Tools.ToolAssignment_ListActiveByCell</code>. Edit (elevated) opens release + mount-new dialog.</span>
             </div>
             <div class="pf-field">
               <label class="pf-field-label">Cavity</label>
@@ -983,7 +982,7 @@
           </div>
 
           <div class="pf-actions" style="border:none; margin:0; padding:0;">
-            <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit · Create LOT + Checkpoint</button>
+            <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit · Create LOT</button>
             <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
             <span style="flex:1"></span>
             <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold on this LOT</button>
@@ -997,7 +996,7 @@
             <div style="display:flex; flex-direction:column; gap: 10px;">
               <div><span class="pf-kpi-label">Shot Count</span><div class="pf-kpi-value">1,247</div></div>
               <div><span class="pf-kpi-label">Scrap Count</span><div class="pf-kpi-value pf-kpi-warn">3</div></div>
-              <div><span class="pf-kpi-label">Last Event</span><div class="pf-kpi-sub">06:18 · checkpoint</div></div>
+              <div><span class="pf-kpi-label">Last Event</span><div class="pf-kpi-sub">06:18 · last shot</div></div>
             </div>
           </section>
 
@@ -1021,197 +1020,6 @@
         </aside>
 
       </div>
-    </section>
-
-
-    <!-- ─── TERMINAL VIEW: TRIM OUT (Phase 4) — Flex Repeater pattern ─ -->
-    <section data-route="terminal/trim-out" class="pf-terminal">
-      <header class="pf-terminal-header">
-        <div class="pf-terminal-title">
-          <h1>Trim Station OUT</h1>
-          <span class="pf-terminal-title-meta">Trim Cell 3 · LOT MESL1710935 · 5G0-TRIM-4102 · 48 pcs</span>
-        </div>
-        <span class="pf-paused-indicator" title="Open paused LOTs at this Cell">
-          <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">1</span>
-        </span>
-      </header>
-
-      <!-- Mockup demo toggle — switch RequiresSubLotSplit on/off -->
-      <div class="pf-terminal-cell-context">
-        <span class="pf-cell-context-label">OperationTemplate</span>
-        <span class="pf-cell-context-value">TrimOut · 5G0-TRIM-4102 v3</span>
-        <span style="flex:1"></span>
-        <span class="pf-kpi-sub" style="margin-right:8px;">RequiresSubLotSplit:</span>
-        <button class="pf-btn pf-btn-secondary" type="button" id="trim-split-toggle" data-state="on">
-          <span id="trim-split-state">ON · split + route</span>
-        </button>
-      </div>
-
-      <!-- Closing ProductionEvent capture -->
-      <section class="pf-panel">
-        <div class="pf-panel-header">
-          <h3>Closing ProductionEvent (TrimOut)</h3>
-          <span class="pf-kpi-sub">Cumulative — last event 08:31 · ShotCount 1,247 → 1,247 (Trim doesn't add shots)</span>
-        </div>
-        <div class="pf-field-row">
-          <div class="pf-field">
-            <label class="pf-field-label">Cumulative ShotCount</label>
-            <input class="pf-field-input" type="number" value="1247" />
-          </div>
-          <div class="pf-field">
-            <label class="pf-field-label">Cumulative ScrapCount</label>
-            <input class="pf-field-input" type="number" value="3" />
-            <span class="pf-field-help">Includes Trim sprue/deburr yield-loss rejects.</span>
-          </div>
-          <div class="pf-field">
-            <label class="pf-field-label">Operator Initials</label>
-            <input class="pf-field-input pf-field-mono" type="text" placeholder="XX" />
-          </div>
-        </div>
-      </section>
-
-      <!-- Destination selection — Flex Repeater + Embedded View pattern -->
-      <section class="pf-panel" id="trim-split-panel">
-        <div class="pf-panel-header">
-          <h3 id="trim-split-heading">Sub-LOT Distribution · 2 destinations</h3>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <span class="pf-kpi-sub" id="trim-total-check">Total: 48 / 48 ✓</span>
-            <button class="pf-btn pf-btn-secondary" type="button" id="trim-add-row">+ Add sub-LOT</button>
-          </div>
-        </div>
-
-        <p class="pf-kpi-sub" style="margin:0;">
-          Same Flex Repeater renders 1 row when <code>RequiresSubLotSplit=0</code> (parent LOT moves whole)
-          and N rows when <code>RequiresSubLotSplit=1</code> (parent splits across N destinations). Each row
-          is the embedded Cell-Selector entity. Same submit handler · same proc · result-set count differs.
-        </p>
-
-        <!-- Repeater entities -->
-        <div class="pf-repeater pf-repeater-scroll" id="trim-repeater">
-          <div class="pf-repeater-entity">
-            <span class="pf-repeater-index">1</span>
-            <div class="pf-field">
-              <label class="pf-field-label">Pieces</label>
-              <input class="pf-field-input" type="number" value="24" min="1" />
-            </div>
-            <div class="pf-field">
-              <label class="pf-field-label">Destination Machining Cell</label>
-              <select class="pf-field-select">
-                <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
-                <option>CNC 13 · 5G0 Machining WC · queue: 0</option>
-                <option>CNC 14 · 5G0 Machining WC · queue: 1</option>
-              </select>
-            </div>
-            <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
-          </div>
-
-          <div class="pf-repeater-entity">
-            <span class="pf-repeater-index">2</span>
-            <div class="pf-field">
-              <label class="pf-field-label">Pieces</label>
-              <input class="pf-field-input" type="number" value="24" min="1" />
-            </div>
-            <div class="pf-field">
-              <label class="pf-field-label">Destination Machining Cell</label>
-              <select class="pf-field-select">
-                <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
-                <option selected>CNC 13 · 5G0 Machining WC · queue: 0</option>
-                <option>CNC 14 · 5G0 Machining WC · queue: 1</option>
-              </select>
-            </div>
-            <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
-          </div>
-        </div>
-
-        <div class="pf-actions" style="border:none; margin:0; padding:0;">
-          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit · TrimOut + Split + Route</button>
-          <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
-          <span style="flex:1"></span>
-          <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold instead</button>
-        </div>
-      </section>
-
-      <!-- Hidden script for the demo toggle -->
-      <script>
-        (function() {
-          const toggle  = document.getElementById('trim-split-toggle');
-          const state   = document.getElementById('trim-split-state');
-          const heading = document.getElementById('trim-split-heading');
-          const totalCheck = document.getElementById('trim-total-check');
-          const addBtn  = document.getElementById('trim-add-row');
-          const repeater = document.getElementById('trim-repeater');
-
-          if (!toggle) return;
-
-          toggle.addEventListener('click', () => {
-            const isOn = toggle.dataset.state === 'on';
-            toggle.dataset.state = isOn ? 'off' : 'on';
-            if (isOn) {
-              // Switch to OFF — move whole, single repeater entity
-              state.textContent = 'OFF · move whole';
-              heading.textContent = 'Destination · 1 destination (move whole, no split)';
-              totalCheck.textContent = 'Total: 48 / 48 ✓';
-              addBtn.style.display = 'none';
-              // Collapse to a single repeater entity
-              repeater.innerHTML = `
-                <div class="pf-repeater-entity">
-                  <span class="pf-repeater-index">1</span>
-                  <div class="pf-field">
-                    <label class="pf-field-label">Pieces</label>
-                    <input class="pf-field-input" type="number" value="48" min="48" max="48" disabled />
-                    <span class="pf-field-help">Locked at parent piece count — no split.</span>
-                  </div>
-                  <div class="pf-field">
-                    <label class="pf-field-label">Destination Cell</label>
-                    <select class="pf-field-select">
-                      <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
-                      <option>CNC 13 · 5G0 Machining WC · queue: 0</option>
-                    </select>
-                  </div>
-                  <span></span>
-                </div>
-              `;
-            } else {
-              state.textContent = 'ON · split + route';
-              heading.textContent = 'Sub-LOT Distribution · 2 destinations';
-              addBtn.style.display = '';
-              repeater.innerHTML = `
-                <div class="pf-repeater-entity">
-                  <span class="pf-repeater-index">1</span>
-                  <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="24" /></div>
-                  <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
-                    <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
-                  </div>
-                  <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
-                </div>
-                <div class="pf-repeater-entity">
-                  <span class="pf-repeater-index">2</span>
-                  <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="24" /></div>
-                  <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
-                    <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option selected>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
-                  </div>
-                  <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
-                </div>
-              `;
-            }
-          });
-
-          addBtn?.addEventListener('click', () => {
-            const idx = repeater.children.length + 1;
-            const entity = document.createElement('div');
-            entity.className = 'pf-repeater-entity';
-            entity.innerHTML = `
-              <span class="pf-repeater-index">${idx}</span>
-              <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="0" /></div>
-              <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
-                <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
-              </div>
-              <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
-            `;
-            repeater.appendChild(entity);
-          });
-        })();
-      </script>
     </section>
 
 
@@ -1279,7 +1087,7 @@
         <div class="pf-panel-header"><h3>Active machined LOT (after pick)</h3></div>
         <div class="pf-empty-state">
           <p>No LOT picked yet. Click "Pick" above to fire the BOM-Driven Rename Confirmation Modal.<br>
-             On confirm: new machined LOT minted, ConsumptionEvent + Genealogy + checkpoint ProductionEvent written, source sub-LOT closed.</p>
+             On confirm: new machined LOT minted, ConsumptionEvent + Genealogy + ProductionEvent written, source sub-LOT closed.</p>
           <p class="pf-kpi-sub">Press <kbd>R</kbd> to preview the BOM Rename Modal.</p>
         </div>
       </section>
@@ -1409,21 +1217,21 @@
           <span class="pf-terminal-title-meta">Dedicated terminal · operator-driven count · no MIP per-piece handshake</span>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <span class="pf-confirm-method" data-method="Barcode" id="ns-confirm-method">📦 ByCount</span>
+          <span class="pf-confirm-method" data-method="Vision" id="ns-confirm-method">🎥 ByVision</span>
           <span class="pf-paused-indicator">
             <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">0</span>
           </span>
         </div>
       </header>
 
-      <!-- Demo toggle: ClosureMethod ByCount vs ByWeight (ByVision shown on Serialized) -->
+      <!-- Demo toggle: ClosureMethod ByVision (camera) vs ByWeight (scale) -->
       <div class="pf-terminal-cell-context">
         <span class="pf-cell-context-label">ContainerConfig.ClosureMethod (mockup demo)</span>
-        <button class="pf-btn pf-btn-secondary" type="button" id="ns-method-toggle" data-state="ByCount">
-          <span id="ns-method-state">ByCount · operator confirms tray quantity</span>
+        <button class="pf-btn pf-btn-secondary" type="button" id="ns-method-toggle" data-state="ByVision">
+          <span id="ns-method-state">ByVision · camera scans full tray as one image</span>
         </button>
         <span style="flex:1"></span>
-        <span class="pf-kpi-sub">FDS-06-014 · ByVision shown on the serialized line.</span>
+        <span class="pf-kpi-sub">FDS-06-014 · per-tray validation, never per-piece. Same Cognex camera as Sort Cage.</span>
       </div>
 
       <!-- Live production telemetry -->
@@ -1450,46 +1258,108 @@
         </div>
       </section>
 
-      <!-- Per-Tray Close panel — the active operator interaction surface -->
-      <section class="pf-panel" id="ns-tray-bycount">
+      <!-- Per-Tray Close · ByVision panel — camera validates the full tray as one image -->
+      <section class="pf-panel" id="ns-tray-byvision">
         <div class="pf-panel-header">
-          <h3>Per-Tray Close · Tray 3 in progress</h3>
-          <span class="pf-kpi-sub">Configured PartsPerTray = 24 · accumulated 36 / 96 toward Container</span>
+          <h3>Per-Tray Close · ByVision · Tray 3 of 4 in progress</h3>
+          <span class="pf-kpi-sub">Configured PartsPerTray = 24 · accumulated 48 / 96 toward Container</span>
         </div>
 
         <p class="pf-kpi-sub" style="margin:0;">
-          Tap a tray-quantity button to close the current tray. Each tray close fires
-          one <code>ConsumptionEvent</code> against each BOM component LOT, increments
-          the parent Container's running count, and unlocks the next tray. Container
-          completes when accumulated trays × PartsPerTray reaches the configured
-          capacity.
+          The Cognex camera scans the <strong>full tray as a single image</strong> once
+          the PLC asserts <code>TrayFullFlag</code> at <code>PartsPerTray</code> — one
+          validation event per tray, never per piece. On <code>PASS</code>, the tray
+          closes and a single <code>ConsumptionEvent</code> records the BOM consumption
+          for that tray. Container fill is the MES-side accumulation of validated tray
+          closes — same camera, same closure path as the Sort Cage non-serialized
+          re-pack flow.
         </p>
 
-        <!-- Tray-quantity buttons. PartsPerTray = 24, but operator may report a partial close. -->
-        <div class="pf-toggle-group" style="grid-template-columns: repeat(4, 1fr); max-width: 720px;">
-          <button class="pf-toggle-btn" type="button">
-            <span class="pf-toggle-btn-label">24</span>
-            <span class="pf-toggle-btn-meta">Full tray · default</span>
-          </button>
-          <button class="pf-toggle-btn" type="button">
-            <span class="pf-toggle-btn-label">23</span>
-            <span class="pf-toggle-btn-meta">1 reject</span>
-          </button>
-          <button class="pf-toggle-btn" type="button">
-            <span class="pf-toggle-btn-label">22</span>
-            <span class="pf-toggle-btn-meta">2 reject</span>
-          </button>
-          <button class="pf-toggle-btn" type="button">
-            <span class="pf-toggle-btn-label">Other</span>
-            <span class="pf-toggle-btn-meta">Numeric entry</span>
-          </button>
+        <!-- Camera view (left) + stacked counters (right) -->
+        <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap: 12px;">
+
+          <!-- LEFT: Camera image area with Pass/Fail overlay -->
+          <div style="background: linear-gradient(180deg, #0a1322 0%, #0f1d33 60%, #1a2a44 100%);
+                      border: 2px solid var(--border);
+                      border-radius: var(--radius-lg);
+                      position: relative;
+                      min-height: 280px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      overflow: hidden;">
+
+            <!-- Top-left: live camera label -->
+            <div style="position:absolute; top:12px; left:14px; display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-flex; width:8px; height:8px; border-radius:50%; background:var(--pf-status-bad-fg); box-shadow: 0 0 6px var(--pf-status-bad-fg); animation: blink 1.5s infinite;"></span>
+              <span style="font-size:11px; color: var(--mpp-neutral-90); text-transform:uppercase; letter-spacing:0.1em; font-weight: 500;">6B2 NS Line Camera · Live</span>
+            </div>
+
+            <!-- Top-right: timestamp -->
+            <div style="position:absolute; top:12px; right:14px; font-size: 11px; color: var(--mpp-neutral-80); font-family: monospace;">
+              10:18:42.106
+            </div>
+
+            <!-- Viewfinder corner accents -->
+            <div style="position:absolute; top:32px; left:14px; width:24px; height:24px; border-top: 2px solid var(--mpp-neutral-70); border-left: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; top:32px; right:14px; width:24px; height:24px; border-top: 2px solid var(--mpp-neutral-70); border-right: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; bottom:38px; left:14px; width:24px; height:24px; border-bottom: 2px solid var(--mpp-neutral-70); border-left: 2px solid var(--mpp-neutral-70);"></div>
+            <div style="position:absolute; bottom:38px; right:14px; width:24px; height:24px; border-bottom: 2px solid var(--mpp-neutral-70); border-right: 2px solid var(--mpp-neutral-70);"></div>
+
+            <!-- Pass overlay (mockup demo: shows last successful tray scan) -->
+            <div style="background: rgba(80, 200, 120, 0.18);
+                        border: 3px solid var(--pf-status-good-fg);
+                        border-radius: var(--radius-lg);
+                        padding: 22px 44px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 6px;
+                        backdrop-filter: blur(2px);">
+              <span style="font-size: 52px; line-height: 1; color: var(--pf-status-good-fg);">✓</span>
+              <span style="font-size: 26px; font-weight: 700; color: var(--pf-status-good-fg); letter-spacing: 0.1em;">PASS</span>
+              <span style="font-size: 12px; color: var(--mpp-neutral-90); text-align:center;">Tray 2 of 4 · CTR-6B2-0212</span>
+              <span style="font-size: 11px; color: var(--mpp-neutral-80); text-align:center; font-family: monospace;">scanned 10:18:42 · 1.1 s · 24 / 24 positions valid</span>
+            </div>
+
+            <!-- Bottom: PLC tag status strip -->
+            <div style="position:absolute; bottom:12px; left:14px; right:14px;
+                        display:flex; justify-content:space-between; align-items:center;
+                        font-size: 11px; color: var(--mpp-neutral-80); font-family: monospace;">
+              <span>TrayPresent: <span style="color: var(--mpp-neutral-100);">FALSE</span></span>
+              <span>Awaiting next tray placement…</span>
+              <span>TrayFullFlag: <span style="color: var(--mpp-neutral-100);">FALSE</span></span>
+            </div>
+          </div>
+
+          <!-- RIGHT: Stacked counters -->
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
+              <span class="pf-kpi-label">Trays Validated</span>
+              <span class="pf-kpi-value pf-kpi-good">2 / 4</span>
+              <span class="pf-kpi-sub">CTR-6B2-0212 · 48 / 96 pcs accumulated</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">Last Validation</span>
+              <span class="pf-kpi-value">PASS</span>
+              <span class="pf-kpi-sub">Tray 2 · 24 / 24 valid · 10:18:42</span>
+            </div>
+            <div class="pf-kpi" style="border-color: var(--pf-status-bad-fg);">
+              <span class="pf-kpi-label">Operator Reject</span>
+              <span class="pf-kpi-value pf-kpi-bad">3</span>
+              <span class="pf-kpi-sub">Booked to RejectEvent before tray placement</span>
+            </div>
+          </div>
+
         </div>
 
         <div style="display: flex; gap: 12px; align-items: center;">
-          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Close Tray · Submit Count</button>
+          <button class="pf-btn pf-btn-secondary" type="button" disabled>Auto-close on PASS</button>
           <button class="pf-btn pf-btn-secondary" type="button">Add Reject Event</button>
           <span style="flex:1"></span>
-          <span class="pf-kpi-sub">No per-piece serial · ConsumptionEvent fires per tray.</span>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="Override" type="button">
+            Operator Override · Force Close
+          </button>
         </div>
       </section>
 
@@ -1556,27 +1426,27 @@
       </section>
 
       <script>
-        // Demo toggle: ByCount ↔ ByWeight
+        // Demo toggle: ByVision ↔ ByWeight (FDS-06-014; piece-count not used at MPP)
         document.getElementById('ns-method-toggle')?.addEventListener('click', () => {
           const btn = document.getElementById('ns-method-toggle');
           const state = document.getElementById('ns-method-state');
           const cm = document.getElementById('ns-confirm-method');
-          const byCount = document.getElementById('ns-tray-bycount');
+          const byVision = document.getElementById('ns-tray-byvision');
           const byWeight = document.getElementById('ns-tray-byweight');
-          const isCount = btn.dataset.state === 'ByCount';
-          if (isCount) {
+          const isVision = btn.dataset.state === 'ByVision';
+          if (isVision) {
             btn.dataset.state = 'ByWeight';
             state.textContent = 'ByWeight · OmniServer scale + PLC TrayFullFlag';
             cm.textContent = '⚖ ByWeight';
             cm.dataset.method = 'Both';
-            byCount.style.display = 'none';
+            byVision.style.display = 'none';
             byWeight.style.display = '';
           } else {
-            btn.dataset.state = 'ByCount';
-            state.textContent = 'ByCount · operator confirms tray quantity';
-            cm.textContent = '📦 ByCount';
-            cm.dataset.method = 'Barcode';
-            byCount.style.display = '';
+            btn.dataset.state = 'ByVision';
+            state.textContent = 'ByVision · camera scans full tray as one image';
+            cm.textContent = '🎥 ByVision';
+            cm.dataset.method = 'Vision';
+            byVision.style.display = '';
             byWeight.style.display = 'none';
           }
         });
@@ -2032,21 +1902,8 @@
 
         <p class="pf-kpi-sub" style="margin:0;">
           Same button pattern as Dedicated. Each tap toggles. Submission writes <code>Oee.DowntimeEvent</code>
-          rows stamped with the entered initials' <code>AppUserId</code>. Time Category — Regular / Overtime /
-          Double-Time — is selected via the small button row above the breaks.
+          rows stamped with the entered initials' <code>AppUserId</code>.
         </p>
-
-        <div class="pf-toggle-group" style="grid-template-columns: repeat(3, 1fr); max-width: 480px;">
-          <button class="pf-toggle-btn selected" type="button" data-eos-cat="regular" style="min-height: 60px;">
-            <span class="pf-toggle-btn-label" style="font-size:14px;">Regular</span>
-          </button>
-          <button class="pf-toggle-btn" type="button" data-eos-cat="ot" style="min-height: 60px;">
-            <span class="pf-toggle-btn-label" style="font-size:14px;">Overtime</span>
-          </button>
-          <button class="pf-toggle-btn" type="button" data-eos-cat="dt" style="min-height: 60px;">
-            <span class="pf-toggle-btn-label" style="font-size:14px;">Double-Time</span>
-          </button>
-        </div>
 
         <div class="pf-toggle-group" id="eos-shared-buttons">
           <button class="pf-toggle-btn" type="button" data-eos="lunch">
@@ -2153,14 +2010,6 @@
         }
         wireToggles('eos-dedicated-buttons', 'eos-dedicated-count');
         wireToggles('eos-shared-buttons',    'eos-shared-count');
-
-        // Time Category single-select
-        document.querySelectorAll('[data-eos-cat]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('[data-eos-cat]').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-          });
-        });
       </script>
     </section>
 
@@ -2501,18 +2350,34 @@
     </section>
 
 
-    <!-- ─── TERMINAL VIEW: TRIM STATION IN (Phase 4) ─────────────── -->
-    <section data-route="terminal/trim-in" class="pf-terminal">
+    <!-- ─── TERMINAL VIEW: TRIM STATION (Phase 4) — polymorphic IN/OUT ─ -->
+    <!--
+      One terminal, three states driven by data-trim-state on the section:
+        idle   → scan field + Trim Shop Area-side storage queue picker
+        in     → Movement Scan eligibility + IN ProductionEvent
+        out    → Closing ProductionEvent + RequiresSubLotSplit Flex Repeater + reject
+        error  → friendly error (LOT not at this Cell and not in storage)
+
+      Path A (deliberate): pick from queue → IN form → submit → screen flips to OUT for
+      same LOT after work → submit. Path B (rapid): scan LTT → IN form auto-fires →
+      OUT form opens → quick close. No tab switching either way.
+
+      Storage check-in is auto-derived from Die Cast OUT (per design decision
+      2026-04-30) — Die Cast OUT writes Lot.LocationId = Trim Shop Area, Lot
+      appears in this terminal's storage queue without a separate human gesture.
+    -->
+    <section data-route="terminal/trim" class="pf-terminal" data-trim-state="idle">
       <header class="pf-terminal-header">
         <div class="pf-terminal-title">
-          <h1>Trim Station IN</h1>
-          <span class="pf-terminal-title-meta">Trim Cell 3 · Movement Scan + checkpoint ProductionEvent</span>
+          <h1>Trim Station</h1>
+          <span class="pf-terminal-title-meta">Trim Cell 3 · Shared Terminal · Trim Shop Area</span>
         </div>
-        <span class="pf-paused-indicator">
+        <span class="pf-paused-indicator" title="Open paused LOTs at this Cell">
           <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">1</span>
         </span>
       </header>
 
+      <!-- Cell context (Shared terminal) -->
       <div class="pf-terminal-cell-context">
         <span class="pf-cell-context-label">Active Cell</span>
         <span class="pf-cell-context-value">Trim Cell 3</span>
@@ -2521,23 +2386,133 @@
         <span class="pf-kpi-sub">Trim is yield loss only — LOT keeps its cast-part identity through Trim OUT.</span>
       </div>
 
-      <!-- Movement Scan (cross-cutting reusable pattern) -->
+      <!-- State stripe (mockup-demo cycler) -->
+      <div class="pf-terminal-cell-context" style="background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.35);">
+        <span class="pf-cell-context-label">Screen state</span>
+        <span class="pf-cell-context-value" id="trim-state-label">Idle — scan or pick from storage</span>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub" style="margin-right:8px;">Mockup demo:</span>
+        <div class="pf-toggle-group" id="trim-state-cycler" style="grid-template-columns: repeat(4, auto); gap:6px;">
+          <button class="pf-toggle-btn selected" type="button" data-trim-demo-state="idle">Idle</button>
+          <button class="pf-toggle-btn" type="button" data-trim-demo-state="in">Check IN</button>
+          <button class="pf-toggle-btn" type="button" data-trim-demo-state="out">Check OUT</button>
+          <button class="pf-toggle-btn" type="button" data-trim-demo-state="error">Error</button>
+        </div>
+      </div>
+
+      <!-- Active LOTs at this Cell — persistent indicator -->
       <section class="pf-panel">
         <div class="pf-panel-header">
-          <h3>Movement Scan</h3>
-          <span class="pf-kpi-sub">Validates eligibility (`v_EffectiveItemLocation`) + MaxParts cap on scan-in</span>
+          <h3>Active LOTs at Trim Cell 3</h3>
+          <span class="pf-kpi-sub">Currently checked-in here · awaiting close · resume jumps to OUT for that LOT</span>
+        </div>
+        <div class="pf-queue">
+          <div class="pf-queue-row">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Started 09:12 · 47 min ago by CM</span>
+              <span class="pf-queue-name">MESL1710931</span>
+              <span class="pf-queue-detail">5G0-TRIM-4102 · 48 pcs · in process</span>
+            </div>
+            <span class="pf-pill pf-pill-good">Good</span>
+            <span class="pf-kpi-sub">From Press 7</span>
+            <button class="pf-btn pf-btn-primary" type="button" data-trim-resume>Resume → OUT</button>
+          </div>
+        </div>
+        <span class="pf-field-help">Empty when no LOT is mid-process at this Cell. Source: <code>Lots.Lot_ListActiveAtCell</code>.</span>
+      </section>
+
+      <!-- ────────── STATE: IDLE — scan + pick from storage ────────── -->
+      <section class="pf-panel" data-trim-show="idle">
+        <div class="pf-panel-header">
+          <h3>Pick a LOT — scan or select from storage</h3>
+          <span class="pf-kpi-sub">Scan disambiguates → IN if in storage, OUT if active here, Error otherwise</span>
         </div>
 
         <div class="pf-field">
           <label class="pf-field-label">Scan LTT Barcode</label>
-          <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan LOT…" value="MESL1710935" />
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan LOT…" id="trim-scan-input" />
+          <span class="pf-field-help">
+            Path B (rapid in/out): scan → IN form auto-fires → submit → OUT form opens for same LOT → submit.
+            Same gesture, two events, no tab switching.
+          </span>
+        </div>
+
+        <div class="pf-panel-header" style="border-top: 1px solid var(--border); padding-top: 14px; margin-top: 6px;">
+          <h3>Trim Shop Area-side Storage · 5 LOTs awaiting</h3>
+          <span class="pf-kpi-sub">Auto-arrived from Die Cast OUT · <code>Lot.LocationId = Trim Shop Area</code> (no Cell yet)</span>
+        </div>
+
+        <div class="pf-queue pf-repeater-scroll" id="trim-storage-queue" style="max-height: 260px;">
+          <div class="pf-queue-row" data-trim-pick-lot="MESL1710935">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Position 1 · oldest · arrived 08:45</span>
+              <span class="pf-queue-name">MESL1710935</span>
+              <span class="pf-queue-detail">5G0-TRIM-4102 · 48 pcs · from Press 7 · DC-042 / Cavity A</span>
+            </div>
+            <span class="pf-pill pf-pill-good">Good</span>
+            <span class="pf-kpi-sub">2.1 hrs in storage</span>
+            <button class="pf-btn pf-btn-primary" type="button">Pick → IN</button>
+          </div>
+          <div class="pf-queue-row" data-trim-pick-lot="MESL1710936">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Position 2 · arrived 08:47</span>
+              <span class="pf-queue-name">MESL1710936</span>
+              <span class="pf-queue-detail">5G0-TRIM-4102 · 48 pcs · from Press 7 · DC-042 / Cavity B</span>
+            </div>
+            <span class="pf-pill pf-pill-good">Good</span>
+            <span class="pf-kpi-sub">2.1 hrs in storage</span>
+            <button class="pf-btn pf-btn-secondary" type="button">Pick → IN</button>
+          </div>
+          <div class="pf-queue-row" data-trim-pick-lot="MESL1710942">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Position 3 · arrived 09:02</span>
+              <span class="pf-queue-name">MESL1710942</span>
+              <span class="pf-queue-detail">5G0-TRIM-4102 · 48 pcs · from Press 7 · DC-042 / Cavity A</span>
+            </div>
+            <span class="pf-pill pf-pill-good">Good</span>
+            <span class="pf-kpi-sub">1.8 hrs in storage</span>
+            <button class="pf-btn pf-btn-secondary" type="button">Pick → IN</button>
+          </div>
+          <div class="pf-queue-row" data-trim-pick-lot="MESL1710948">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Position 4 · arrived 09:18</span>
+              <span class="pf-queue-name">MESL1710948</span>
+              <span class="pf-queue-detail">5G0-RC-4102 · 47 pcs · from Press 5 · DC-031 / Cavity A · 1 reject upstream</span>
+            </div>
+            <span class="pf-pill pf-pill-good">Good</span>
+            <span class="pf-kpi-sub">1.6 hrs in storage</span>
+            <button class="pf-btn pf-btn-secondary" type="button">Pick → IN</button>
+          </div>
+          <div class="pf-queue-row" data-trim-pick-lot="MESL1710951">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="pf-queue-position">Position 5 · arrived 09:42</span>
+              <span class="pf-queue-name">MESL1710951</span>
+              <span class="pf-queue-detail">5G0-RC-4102 · 48 pcs · from Press 5 · DC-031 / Cavity B</span>
+            </div>
+            <span class="pf-pill pf-pill-good">Good</span>
+            <span class="pf-kpi-sub">1.2 hrs in storage</span>
+            <button class="pf-btn pf-btn-secondary" type="button">Pick → IN</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ────────── STATE: IN — eligibility + ProductionEvent ────────── -->
+      <section class="pf-panel" data-trim-show="in">
+        <div class="pf-panel-header">
+          <h3>Movement Scan — Receive at Trim Cell 3</h3>
+          <span class="pf-kpi-sub">Validates eligibility (<code>v_EffectiveItemLocation</code>) + MaxParts cap on scan-in</span>
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-field-label">LTT Barcode</label>
+          <input class="pf-field-input pf-field-mono" type="text" id="trim-in-scan" value="MESL1710935" />
         </div>
 
         <!-- Resolved LOT preview -->
         <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 12px 0;">
           <div>
             <span class="pf-kpi-label">LOT</span>
-            <div class="pf-kpi-value pf-kpi-mono" style="font-size:16px;">MESL1710935</div>
+            <div class="pf-kpi-value pf-kpi-mono" style="font-size:16px;" id="trim-in-lot">MESL1710935</div>
           </div>
           <div>
             <span class="pf-kpi-label">Item</span>
@@ -2545,7 +2520,7 @@
           </div>
           <div>
             <span class="pf-kpi-label">From Location</span>
-            <div class="pf-kpi-value" style="font-size:16px;">Press 7</div>
+            <div class="pf-kpi-value" style="font-size:16px;">Trim Shop Area · storage</div>
           </div>
           <div>
             <span class="pf-kpi-label">Pieces</span>
@@ -2553,52 +2528,65 @@
           </div>
         </div>
 
-        <!-- Eligibility validation result -->
+        <!-- Eligibility validation -->
         <div style="display: flex; flex-direction: column; gap: 6px; background: var(--mpp-state-good-bg); border: 1px solid var(--pf-status-good-fg); border-radius: var(--radius-lg); padding: 12px 16px;">
           <span style="color: var(--pf-status-good-fg); font-weight: 600;">✓ Eligible at Trim Cell 3</span>
-          <span style="color: var(--text-secondary); font-size: 12px;">Direct match: `Parts.ItemLocation` row exists for 5G0-TRIM-4102 at Trim Area (cascade to Cell).</span>
+          <span style="color: var(--text-secondary); font-size: 12px;">Direct match: <code>Parts.ItemLocation</code> row exists for 5G0-TRIM-4102 at Trim Shop Area (cascade to Cell).</span>
           <span style="color: var(--text-secondary); font-size: 12px;">MaxParts cap: 48 incoming + 0 existing = 48 ≤ 500 (no overflow).</span>
         </div>
 
-        <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Receive at Trim Cell 3</button>
+        <div class="pf-field-row">
+          <div class="pf-field" style="max-width: 240px;">
+            <label class="pf-field-label">Operator Initials</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="XX" />
+            <span class="pf-field-help">Shared terminal — initials inline.</span>
+          </div>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button" data-trim-submit-in>Submit · Receive at Trim Cell 3</button>
+          <button class="pf-btn pf-btn-secondary" type="button" data-trim-cancel>Cancel</button>
+          <span style="flex:1"></span>
+          <span class="pf-kpi-sub">Fires <code>TrimIn</code> ProductionEvent · sets <code>Lot.LocationId = Trim Cell 3</code></span>
+        </div>
       </section>
 
-      <!-- Checkpoint ProductionEvent panel (auto-fired on receive) -->
-      <section class="pf-panel">
+      <!-- ────────── STATE: OUT — closing + split + reject ────────── -->
+      <!-- Operation context strip (what BOM/Operation are we closing against) -->
+      <div class="pf-terminal-cell-context" data-trim-show="out">
+        <span class="pf-cell-context-label">OperationTemplate</span>
+        <span class="pf-cell-context-value">TrimOut · 5G0-TRIM-4102 v3</span>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub" style="margin-right:8px;">RequiresSubLotSplit:</span>
+        <button class="pf-btn pf-btn-secondary" type="button" id="trim-split-toggle" data-state="on">
+          <span id="trim-split-state">ON · split + route</span>
+        </button>
+      </div>
+
+      <section class="pf-panel" data-trim-show="out">
         <div class="pf-panel-header">
-          <h3>Trim IN Checkpoint</h3>
-          <span class="pf-kpi-sub">ProductionEvent fires on Movement Scan accept · TrimIn OperationTemplate</span>
+          <h3>Closing ProductionEvent (TrimOut)</h3>
+          <span class="pf-kpi-sub">Trim is yield loss — no shot delta. Operator initials capture closing identity; rejects entered below.</span>
         </div>
-
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-          <div class="pf-kpi">
-            <span class="pf-kpi-label">Cumulative ShotCount</span>
-            <span class="pf-kpi-value">1,247</span>
-            <span class="pf-kpi-sub">Carries forward — Trim doesn't add shots</span>
-          </div>
-          <div class="pf-kpi">
-            <span class="pf-kpi-label">Cumulative ScrapCount</span>
-            <span class="pf-kpi-value pf-kpi-warn">3</span>
-            <span class="pf-kpi-sub">From Die Cast porosity rejects</span>
-          </div>
-          <div class="pf-kpi">
-            <span class="pf-kpi-label">Operator</span>
-            <span class="pf-kpi-value">CM</span>
-            <span class="pf-kpi-sub">Auto-stamped from active presence</span>
+        <div class="pf-field-row">
+          <div class="pf-field" style="max-width: 240px;">
+            <label class="pf-field-label">Operator Initials</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="XX" />
           </div>
         </div>
       </section>
 
-      <!-- Inline reject capture -->
-      <section class="pf-panel">
+      <!-- Inline reject capture (close-time review) -->
+      <section class="pf-panel" data-trim-show="out">
         <div class="pf-panel-header">
           <h3>Reject Entry · Trim yield loss</h3>
-          <span class="pf-kpi-sub">Records `RejectEvent` against this LOT — no rename, no new LOT</span>
+          <span class="pf-kpi-sub">Records <code>RejectEvent</code> against this LOT — no rename, no new LOT</span>
         </div>
         <div class="pf-field-row">
           <div class="pf-field">
             <label class="pf-field-label">Defect Code (Trim Area)</label>
             <select class="pf-field-select">
+              <option>—</option>
               <option>TR-SPRUE-01 · Sprue Removal Fail</option>
               <option>TR-DEBURR-01 · Deburr Damage</option>
               <option>TR-WASH-01 · Wash Contamination</option>
@@ -2613,6 +2601,233 @@
           </div>
         </div>
       </section>
+
+      <!-- Destination selection — Flex Repeater + Embedded View pattern -->
+      <section class="pf-panel" data-trim-show="out" id="trim-split-panel">
+        <div class="pf-panel-header">
+          <h3 id="trim-split-heading">Sub-LOT Distribution · 2 destinations</h3>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="pf-kpi-sub" id="trim-total-check">Total: 48 / 48 ✓</span>
+            <button class="pf-btn pf-btn-secondary" type="button" id="trim-add-row">+ Add sub-LOT</button>
+          </div>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Same Flex Repeater renders 1 row when <code>RequiresSubLotSplit=0</code> (parent LOT moves whole)
+          and N rows when <code>RequiresSubLotSplit=1</code> (parent splits across N destinations). Each row
+          is the embedded Cell-Selector entity. Same submit handler · same proc · result-set count differs.
+        </p>
+
+        <div class="pf-repeater pf-repeater-scroll" id="trim-repeater">
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">1</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Pieces</label>
+              <input class="pf-field-input" type="number" value="24" min="1" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination Machining Cell</label>
+              <select class="pf-field-select">
+                <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
+                <option>CNC 13 · 5G0 Machining WC · queue: 0</option>
+                <option>CNC 14 · 5G0 Machining WC · queue: 1</option>
+              </select>
+            </div>
+            <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">2</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Pieces</label>
+              <input class="pf-field-input" type="number" value="24" min="1" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination Machining Cell</label>
+              <select class="pf-field-select">
+                <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
+                <option selected>CNC 13 · 5G0 Machining WC · queue: 0</option>
+                <option>CNC 14 · 5G0 Machining WC · queue: 1</option>
+              </select>
+            </div>
+            <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+          </div>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button" data-trim-submit-out>Submit · TrimOut + Split + Route</button>
+          <button class="pf-btn pf-btn-secondary" type="button" data-trim-cancel>Cancel</button>
+          <span style="flex:1"></span>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold instead</button>
+        </div>
+      </section>
+
+      <!-- ────────── STATE: ERROR — friendly message ────────── -->
+      <section class="pf-panel" data-trim-show="error">
+        <div class="pf-panel-header">
+          <h3>Can't process this LOT here</h3>
+          <span class="pf-kpi-sub">Scanned LOT is not in this Cell's storage queue and isn't currently active here</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; background: var(--pf-status-warn-bg); border: 1px solid var(--pf-status-warn-fg); border-radius: var(--radius-lg); padding: 16px 20px;">
+          <span style="color: var(--pf-status-warn-fg); font-weight:600; font-size:15px;">⚠ MESL1710900 · 5G0-TRIM-4102</span>
+          <span class="pf-kpi-sub">Current location: Machining Cell CNC-13 (already past Trim) · checked in 11:18 by RJ</span>
+          <span class="pf-kpi-sub">Operator action: pick a different LOT, or visit the LOT Detail screen for status.</span>
+        </div>
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-secondary" type="button" data-trim-cancel>Back to storage queue</button>
+          <a href="#lot/detail" class="pf-btn pf-btn-secondary">Open LOT Detail</a>
+        </div>
+      </section>
+
+      <!-- View-local script: state cycler, scan→state mapping, queue pick, split toggle -->
+      <script>
+        (function() {
+          const section = document.querySelector('[data-route="terminal/trim"]');
+          if (!section) return;
+
+          const stateLabel = {
+            idle:  'Idle — scan or pick from storage',
+            in:    'Check IN — receive scan to Trim Cell 3',
+            out:   'Check OUT — close + route',
+            error: 'Error — LOT not at this Cell',
+          };
+
+          function setState(next) {
+            section.dataset.trimState = next;
+            const lbl = document.getElementById('trim-state-label');
+            if (lbl) lbl.textContent = stateLabel[next] || next;
+            document.querySelectorAll('#trim-state-cycler [data-trim-demo-state]').forEach(b => {
+              b.classList.toggle('selected', b.dataset.trimDemoState === next);
+            });
+          }
+
+          // Mockup demo cycler
+          document.getElementById('trim-state-cycler')?.addEventListener('click', e => {
+            const btn = e.target.closest('[data-trim-demo-state]');
+            if (btn) setState(btn.dataset.trimDemoState);
+          });
+
+          // Storage queue Pick → IN
+          document.querySelectorAll('#trim-storage-queue [data-trim-pick-lot]').forEach(row => {
+            row.addEventListener('click', () => {
+              const lot = row.dataset.trimPickLot;
+              const lotEl = document.getElementById('trim-in-lot');
+              const scanEl = document.getElementById('trim-in-scan');
+              if (lotEl) lotEl.textContent = lot;
+              if (scanEl) scanEl.value = lot;
+              setState('in');
+            });
+          });
+
+          // Active-at-this-Cell Resume → OUT
+          document.querySelectorAll('[data-trim-resume]').forEach(btn => {
+            btn.addEventListener('click', () => setState('out'));
+          });
+
+          // IDLE-state scan disambiguates → in / out / error
+          document.getElementById('trim-scan-input')?.addEventListener('change', e => {
+            const code = (e.target.value || '').trim().toUpperCase();
+            if (!code) return;
+            const inStorage = document.querySelector('#trim-storage-queue [data-trim-pick-lot="' + code + '"]');
+            if (inStorage) {
+              const lotEl = document.getElementById('trim-in-lot');
+              const scanIn = document.getElementById('trim-in-scan');
+              if (lotEl) lotEl.textContent = code;
+              if (scanIn) scanIn.value = code;
+              setState('in');
+            } else if (code === 'MESL1710931') {
+              setState('out');
+            } else {
+              setState('error');
+            }
+          });
+
+          // Submit IN → flips to OUT for same LOT (Path B rapid + Path A both end here)
+          document.querySelector('[data-trim-submit-in]')?.addEventListener('click', () => setState('out'));
+
+          // Submit OUT → back to idle (LOT routed downstream)
+          document.querySelector('[data-trim-submit-out]')?.addEventListener('click', () => setState('idle'));
+
+          // Cancel from any state → idle
+          document.querySelectorAll('[data-trim-cancel]').forEach(btn => {
+            btn.addEventListener('click', () => setState('idle'));
+          });
+
+          // RequiresSubLotSplit toggle (lifted from old terminal/trim-out)
+          const toggle    = document.getElementById('trim-split-toggle');
+          const stateEl   = document.getElementById('trim-split-state');
+          const heading   = document.getElementById('trim-split-heading');
+          const totalChk  = document.getElementById('trim-total-check');
+          const addBtn    = document.getElementById('trim-add-row');
+          const repeater  = document.getElementById('trim-repeater');
+
+          toggle?.addEventListener('click', () => {
+            const isOn = toggle.dataset.state === 'on';
+            toggle.dataset.state = isOn ? 'off' : 'on';
+            if (isOn) {
+              stateEl.textContent  = 'OFF · move whole';
+              heading.textContent  = 'Destination · 1 destination (move whole, no split)';
+              totalChk.textContent = 'Total: 48 / 48 ✓';
+              addBtn.style.display = 'none';
+              repeater.innerHTML = `
+                <div class="pf-repeater-entity">
+                  <span class="pf-repeater-index">1</span>
+                  <div class="pf-field">
+                    <label class="pf-field-label">Pieces</label>
+                    <input class="pf-field-input" type="number" value="48" min="48" max="48" disabled />
+                    <span class="pf-field-help">Locked at parent piece count — no split.</span>
+                  </div>
+                  <div class="pf-field">
+                    <label class="pf-field-label">Destination Cell</label>
+                    <select class="pf-field-select">
+                      <option>CNC 12 · 5G0 Machining WC · queue: 2</option>
+                      <option>CNC 13 · 5G0 Machining WC · queue: 0</option>
+                    </select>
+                  </div>
+                  <span></span>
+                </div>
+              `;
+            } else {
+              stateEl.textContent  = 'ON · split + route';
+              heading.textContent  = 'Sub-LOT Distribution · 2 destinations';
+              addBtn.style.display = '';
+              repeater.innerHTML = `
+                <div class="pf-repeater-entity">
+                  <span class="pf-repeater-index">1</span>
+                  <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="24" /></div>
+                  <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
+                    <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
+                  </div>
+                  <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+                </div>
+                <div class="pf-repeater-entity">
+                  <span class="pf-repeater-index">2</span>
+                  <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="24" /></div>
+                  <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
+                    <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option selected>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
+                  </div>
+                  <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+                </div>
+              `;
+            }
+          });
+
+          addBtn?.addEventListener('click', () => {
+            const idx = repeater.children.length + 1;
+            const entity = document.createElement('div');
+            entity.className = 'pf-repeater-entity';
+            entity.innerHTML = `
+              <span class="pf-repeater-index">${idx}</span>
+              <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="0" /></div>
+              <div class="pf-field"><label class="pf-field-label">Destination Machining Cell</label>
+                <select class="pf-field-select"><option>CNC 12 · 5G0 Machining WC · queue: 2</option><option>CNC 13 · 5G0 Machining WC · queue: 0</option></select>
+              </div>
+              <button class="pf-btn pf-btn-secondary" type="button" title="Remove">×</button>
+            `;
+            repeater.appendChild(entity);
+          });
+        })();
+      </script>
     </section>
 
 
@@ -2694,7 +2909,7 @@
               <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
                 <span class="pf-queue-position">06:20</span>
                 <div>
-                  <span class="pf-queue-name">DieCastCheckpoint</span>
+                  <span class="pf-queue-name">Die Cast Event</span>
                   <div class="pf-queue-detail">ShotCount 1247 · ScrapCount 3 (cumulative)</div>
                 </div>
                 <span class="pf-kpi-sub">ProductionEvent #41203</span>
@@ -2718,7 +2933,7 @@
               <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
                 <span class="pf-queue-position">08:25</span>
                 <div>
-                  <span class="pf-queue-name">TrimInCheckpoint</span>
+                  <span class="pf-queue-name">Trim IN Event</span>
                   <div class="pf-queue-detail">ShotCount 1247 · ScrapCount 3 (carried — Trim adds no shots)</div>
                 </div>
                 <span class="pf-kpi-sub">ProductionEvent #41210</span>
@@ -2827,7 +3042,7 @@
       </div>
       <footer class="pf-modal-footer">
         <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
-        <button class="pf-btn pf-btn-primary" type="button" data-modal-close>Authenticate</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close id="elevation-authenticate">Authenticate</button>
       </footer>
     </div>
   </div>
@@ -2952,6 +3167,150 @@
     </div>
   </div>
 
+  <!-- Tool Assignment Modal (FDS-04-007 elevated — release + mount-new on a Cell) -->
+  <div class="pf-modal" id="tool-assignment-modal">
+    <div class="pf-modal-card" style="max-width: 760px;">
+      <header class="pf-modal-header">
+        <h3>Tool Assignment — Press 7</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">
+          Writes to <code>Tools.ToolAssignment</code> — closes the active row (sets <code>ReleasedAt</code>) and inserts a new row for the mounted die.
+          One active mount per Cell is enforced by <code>UQ_ToolAssignment_ActiveCell</code>; release happens in the same transaction as mount.
+          Both actions stamp the supervisor's <code>AppUserId</code> from the elevation prompt above.
+        </p>
+
+        <!-- Two-column: currently mounted (read-only) + action choice -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <section class="pf-panel" style="margin: 0;">
+            <div class="pf-panel-header" style="padding: 10px 12px;">
+              <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">Currently Mounted</h3>
+            </div>
+            <div style="display:flex; flex-direction:column; gap: 6px; padding: 4px 0;">
+              <div><span class="pf-kpi-label">Tool</span><div class="pf-kpi-value pf-kpi-mono" style="font-size: 18px;">DC-042</div></div>
+              <div class="pf-kpi-sub">5G0 Front Cover Die · DieRank B</div>
+              <div class="pf-kpi-sub">Cavities: A · B Active · C · D Closed</div>
+              <div class="pf-kpi-sub">Mounted 2026-04-29 14:22 by Lopez, R.</div>
+              <div class="pf-kpi-sub">Shot count (cumulative since reset): 1,247</div>
+            </div>
+          </section>
+
+          <section class="pf-panel" style="margin: 0;">
+            <div class="pf-panel-header" style="padding: 10px 12px;">
+              <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">Action</h3>
+            </div>
+            <div class="pf-toggle-group" id="tool-action-toggle" style="grid-template-columns: 1fr;">
+              <button class="pf-toggle-btn selected" type="button" data-tool-action="swap">Swap to New Die</button>
+              <button class="pf-toggle-btn" type="button" data-tool-action="release">Release Only — Press goes idle</button>
+            </div>
+            <span class="pf-field-help" style="margin-top: 6px;">Release-only is rare — typically used for end-of-run when no follow-on die is staged.</span>
+          </section>
+        </div>
+
+        <!-- Mount-new section (hidden when Release Only is chosen) -->
+        <section class="pf-panel" id="tool-mount-section" style="margin: 0;">
+          <div class="pf-panel-header">
+            <h3>Mount New Die</h3>
+            <span class="pf-kpi-sub">Filtered to <code>Tool.StatusCode = Active</code> AND not currently mounted on any Cell</span>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-field-label">Scan Tool Barcode</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan or enter Tool code…" id="tool-scan" />
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-field-label">Or pick from available dies</label>
+            <div class="pf-queue pf-repeater-scroll" id="tool-pick-list" style="max-height: 220px;">
+              <div class="pf-queue-row" data-tool-code="DC-018" data-tool-name="5G0 Rear Cover Die" data-tool-rank="A" data-tool-cavities="C1:Active,C2:Active,C3:Active,C4:Active">
+                <div>
+                  <div class="pf-queue-name">DC-018</div>
+                  <div class="pf-queue-detail">5G0 Rear Cover Die · DieRank A · 4 cavities</div>
+                </div>
+                <span class="pf-kpi-sub">Eligible at Press 7</span>
+                <span class="pf-kpi-sub">Last used 2026-04-14</span>
+                <span class="pf-kpi-sub">Status: Active</span>
+              </div>
+              <div class="pf-queue-row" data-tool-code="DC-031" data-tool-name="5G0 Bracket Die" data-tool-rank="B" data-tool-cavities="C1:Active,C2:Active">
+                <div>
+                  <div class="pf-queue-name">DC-031</div>
+                  <div class="pf-queue-detail">5G0 Bracket Die · DieRank B · 2 cavities</div>
+                </div>
+                <span class="pf-kpi-sub">Eligible at Press 7</span>
+                <span class="pf-kpi-sub">Last used 2026-04-22</span>
+                <span class="pf-kpi-sub">Status: Active</span>
+              </div>
+              <div class="pf-queue-row" data-tool-code="DC-038" data-tool-name="5G0 Side Panel Die" data-tool-rank="C" data-tool-cavities="C1:Active,C2:Active,C3:Closed,C4:Active">
+                <div>
+                  <div class="pf-queue-name">DC-038</div>
+                  <div class="pf-queue-detail">5G0 Side Panel Die · DieRank C · 4 cavities</div>
+                </div>
+                <span class="pf-kpi-sub">Eligible at Press 7</span>
+                <span class="pf-kpi-sub">Last used 2026-04-01</span>
+                <span class="pf-kpi-sub">Status: Active</span>
+              </div>
+              <div class="pf-queue-row" data-tool-code="DC-049" data-tool-name="5G0 End Cap Die" data-tool-rank="A" data-tool-cavities="C1:Active,C2:Active,C3:Active,C4:Active">
+                <div>
+                  <div class="pf-queue-name">DC-049</div>
+                  <div class="pf-queue-detail">5G0 End Cap Die · DieRank A · 4 cavities</div>
+                </div>
+                <span class="pf-kpi-sub">Eligible at Press 7</span>
+                <span class="pf-kpi-sub">Last used 2026-04-27</span>
+                <span class="pf-kpi-sub">Status: Active</span>
+              </div>
+              <div class="pf-queue-row" data-tool-code="DC-055" data-tool-name="5G0 Cross Brace Die" data-tool-rank="B" data-tool-cavities="C1:Active,C2:Active">
+                <div>
+                  <div class="pf-queue-name">DC-055</div>
+                  <div class="pf-queue-detail">5G0 Cross Brace Die · DieRank B · 2 cavities</div>
+                </div>
+                <span class="pf-kpi-sub">Eligible at Press 7</span>
+                <span class="pf-kpi-sub">Last used 2026-03-30</span>
+                <span class="pf-kpi-sub">Status: Active</span>
+              </div>
+            </div>
+            <span class="pf-field-help">Eligibility derives from <code>Parts.ItemLocation</code> joined to the Tool's configured product. Source: <code>Tools.Tool_ListUnmountedEligibleForCell</code>.</span>
+          </div>
+
+          <!-- Selected die preview (cavities) -->
+          <div class="pf-field" id="tool-selected-preview" style="display: none;">
+            <span class="pf-field-label">Selected die — cavity preview</span>
+            <div style="display:flex; align-items:center; gap: 12px; padding: 12px 14px; background: var(--bg-row-alt); border: 1px solid var(--accent); border-radius: var(--radius-lg);">
+              <div style="flex:1;">
+                <div class="pf-kpi-mono" id="tool-selected-code" style="font-size: 16px; color: var(--accent);">—</div>
+                <div class="pf-kpi-sub" id="tool-selected-name">—</div>
+              </div>
+              <div id="tool-selected-cavities" style="display:flex; gap: 6px; flex-wrap: wrap;"></div>
+            </div>
+            <span class="pf-field-help">Cavity statuses come from <code>Tools.ToolCavity_ListByTool</code>. Closed/Scrapped cavities don't accept LOTs at Die Cast LOT Entry.</span>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-field-label">Reason for change (required)</label>
+            <input class="pf-field-input" type="text" placeholder="e.g. scheduled changeover for 5G0-RC production run" />
+            <span class="pf-field-help">Persisted to <code>ToolAssignment.Notes</code> on both the closing and opening rows.</span>
+          </div>
+        </section>
+
+        <!-- Release-only confirmation (shown when Release Only is chosen) -->
+        <section class="pf-panel" id="tool-release-section" style="margin: 0; display: none;">
+          <div class="pf-panel-header"><h3>Release Only — Press goes idle</h3></div>
+          <p style="margin: 0; color: var(--pf-status-warn-fg); font-weight: 500; font-size: 13px;">
+            ⚠ No follow-on die. Press 7 will be unavailable for new LOTs until a die is mounted.
+            Operators landing on the Die Cast Terminal at Press 7 will see "No tool mounted" and the LOT entry form will be locked.
+          </p>
+          <div class="pf-field">
+            <label class="pf-field-label">Reason for release (required)</label>
+            <input class="pf-field-input" type="text" placeholder="e.g. end of shift, maintenance window, awaiting next die" />
+          </div>
+        </section>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="pf-btn pf-btn-primary" type="button" data-modal-close id="tool-assignment-confirm">Confirm Tool Change</button>
+      </footer>
+    </div>
+  </div>
+
   <!-- Idle Re-Confirm Modal (Dedicated terminal, 30-min idle) -->
   <div class="pf-modal" id="idle-modal">
     <div class="pf-modal-card">
@@ -3050,16 +3409,31 @@
   });
 
   // ─── Elevated action handler ──────────────────────────────────────
-  // In operator mode, clicking an elevated-required button shows the
-  // Elevation Modal. In elevated mode, the click would proceed normally
-  // (in real app); here we just no-op.
+  // Buttons with `data-elevated-action` require a supervisor identity.
+  // Optional `data-elevated-target` names a follow-up modal to open after
+  // auth (or directly when already in elevated mode).
+  let elevationPendingTarget = null;
   document.querySelectorAll('[data-elevated-action]').forEach(btn => {
     btn.addEventListener('click', e => {
+      const target = btn.dataset.elevatedTarget || null;
       if (app.dataset.mode !== 'elevated') {
         e.preventDefault();
+        elevationPendingTarget = target;
         showModal('elevation-modal');
+      } else if (target) {
+        e.preventDefault();
+        showModal(target);
       }
     });
+  });
+  document.getElementById('elevation-authenticate')?.addEventListener('click', () => {
+    if (elevationPendingTarget) {
+      const t = elevationPendingTarget;
+      elevationPendingTarget = null;
+      // Defer one tick so the elevation modal's data-modal-close handler
+      // hides it before the target opens — avoids a stacked-modal flash.
+      setTimeout(() => showModal(t), 0);
+    }
   });
 
   // ─── Modal show / hide ────────────────────────────────────────────
@@ -3122,6 +3496,65 @@
     document.getElementById('cell-change-modal').classList.remove('shown');
   });
 
+  // ─── Tool Assignment modal — action toggle + pick-list ────────────
+  const toolActionToggle = document.getElementById('tool-action-toggle');
+  if (toolActionToggle) {
+    toolActionToggle.addEventListener('click', e => {
+      const btn = e.target.closest('[data-tool-action]');
+      if (!btn) return;
+      toolActionToggle.querySelectorAll('[data-tool-action]').forEach(b => b.classList.toggle('selected', b === btn));
+      const swap = btn.dataset.toolAction === 'swap';
+      document.getElementById('tool-mount-section').style.display = swap ? '' : 'none';
+      document.getElementById('tool-release-section').style.display = swap ? 'none' : '';
+    });
+  }
+
+  const cavityStatusColor = {
+    Active:   { bg: 'rgba(34,197,94,0.15)',  fg: '#22c55e' },
+    Closed:   { bg: 'rgba(245,158,11,0.15)', fg: '#f59e0b' },
+    Scrapped: { bg: 'rgba(239,68,68,0.15)',  fg: '#ef4444' },
+  };
+  function renderCavityPreview(row) {
+    const previewEl = document.getElementById('tool-selected-preview');
+    if (!row) { previewEl.style.display = 'none'; return; }
+    document.getElementById('tool-selected-code').textContent = row.dataset.toolCode;
+    document.getElementById('tool-selected-name').textContent =
+      row.dataset.toolName + ' · DieRank ' + row.dataset.toolRank;
+    const wrap = document.getElementById('tool-selected-cavities');
+    wrap.innerHTML = '';
+    (row.dataset.toolCavities || '').split(',').filter(Boolean).forEach(seg => {
+      const [num, status] = seg.split(':');
+      const colors = cavityStatusColor[status] || cavityStatusColor.Active;
+      const pill = document.createElement('span');
+      pill.style.cssText = `display:inline-flex; align-items:center; gap:6px; padding: 4px 10px;
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+        border-radius: var(--radius); background: ${colors.bg}; color: ${colors.fg};
+        border: 1px solid ${colors.fg};`;
+      pill.textContent = num + ' · ' + status;
+      wrap.appendChild(pill);
+    });
+    previewEl.style.display = '';
+  }
+  document.querySelectorAll('#tool-pick-list .pf-queue-row').forEach(row => {
+    row.addEventListener('click', () => {
+      document.querySelectorAll('#tool-pick-list .pf-queue-row.selected').forEach(r => r.classList.remove('selected'));
+      row.classList.add('selected');
+      const scan = document.getElementById('tool-scan');
+      if (scan) scan.value = row.dataset.toolCode;
+      renderCavityPreview(row);
+    });
+  });
+  document.getElementById('tool-scan')?.addEventListener('input', e => {
+    const code = (e.target.value || '').trim().toUpperCase();
+    let matched = null;
+    document.querySelectorAll('#tool-pick-list .pf-queue-row').forEach(r => {
+      const hit = code && r.dataset.toolCode === code;
+      r.classList.toggle('selected', hit);
+      if (hit) matched = r;
+    });
+    renderCavityPreview(matched);
+  });
+
   // ─── Demo helpers (mockup-only) ───────────────────────────────────
   // Press B to toggle the print-failure banner; Press I to fire the idle modal.
   // Useful for design-review walkthroughs.
@@ -3140,6 +3573,10 @@
     if (e.key === 'm' || e.key === 'M') {
       // Toggle Material Substitute Override modal as a quick preview
       document.getElementById('material-substitute-modal').classList.toggle('shown');
+    }
+    if (e.key === 't' || e.key === 'T') {
+      // Toggle Tool Assignment modal as a quick preview (skips elevation prompt)
+      document.getElementById('tool-assignment-modal').classList.toggle('shown');
     }
   });
 

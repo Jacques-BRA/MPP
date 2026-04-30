@@ -1816,7 +1816,7 @@ The MES SHALL accept a single time entry per operator per shift, capturing wheth
 **Workflow varies by terminal mode only in identity capture, not in selection** (per FDS-02-010):
 
 - **Dedicated terminals** (Cell-parented). Operator taps any breaks taken, then taps Submit. The submission is recorded against the operator's initials presence context (per FDS-04-002) and the current shift instance.
-- **Shared terminals** (WorkCenter- or Area-parented). Same selection buttons, with two additions: (a) an inline initials field — operator types or scans their initials before submit; (b) a 3-button single-select Time Category row (Regular / Overtime / Double-Time, default Regular). Initials resolve to an `AppUser` per FDS-04-005; the submission writes against the current shift instance and stamps the resulting `DowntimeEvent` rows with that user.
+- **Shared terminals** (WorkCenter- or Area-parented). Same selection buttons, with one addition: An inline initials field — operator types or scans their initials before submit; Initials resolve to an `AppUser` per FDS-04-005; the submission writes against the current shift instance and stamps the resulting `DowntimeEvent` rows with that user.
 
 The system SHALL write `Oee.DowntimeEvent` rows for each selected lunch / break, with durations and start times populated from the shift schedule's break configuration (durations are NOT operator-entered). This preserves the downtime classification Honda needs for OEE reporting without imposing live-entry friction during production. Selecting zero buttons is valid (operator skipped all breaks); the system writes no `DowntimeEvent` rows in that case but still records the shift-end acknowledgement. (FRS 3.15.2)
 
