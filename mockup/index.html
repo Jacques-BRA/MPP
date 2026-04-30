@@ -1801,6 +1801,331 @@
         </div><!-- /main split -->
       </div><!-- /screen-failure-log -->
 
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Tools
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-tools">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Parts</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Tools</span>
+            </div>
+            <h1>Tools</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn" onclick="openModal('modal-tool-attr-def')" style="margin-right:6px;">Attribute Schema</button>
+          <button class="btn btn-primary" onclick="openModal('modal-add-die')">+ Add Die</button>
+        </div>
+
+        <!-- Main split layout -->
+        <div style="display:flex;flex:1;overflow:hidden;border-top:1px solid var(--border);">
+
+          <!-- Left: list -->
+          <div class="filter-sidebar" style="width:220px;min-width:180px;">
+            <div>
+              <label>Search</label>
+              <input class="search-input" type="text" placeholder="&#128269; Search…" />
+            </div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:2px;">
+              <div class="filter-item selected" onclick="this.closest('.filter-sidebar').querySelectorAll('.filter-item').forEach(e=>e.classList.remove('selected'));this.classList.add('selected');">
+                <strong>DC-042</strong> <span class="badge badge-published" style="margin-left:4px;">Active</span><br/>
+                <small style="color:var(--text-muted);">Front Cover Die — A&nbsp;Premium</small>
+              </div>
+              <div class="filter-item" onclick="this.closest('.filter-sidebar').querySelectorAll('.filter-item').forEach(e=>e.classList.remove('selected'));this.classList.add('selected');">
+                <strong>DC-018</strong> <span class="badge badge-published" style="margin-left:4px;">Active</span><br/>
+                <small style="color:var(--text-muted);">Oil Pan Die — B&nbsp;Standard</small>
+              </div>
+              <div class="filter-item" onclick="this.closest('.filter-sidebar').querySelectorAll('.filter-item').forEach(e=>e.classList.remove('selected'));this.classList.add('selected');">
+                <strong>DC-031</strong> <span class="badge badge-warning" style="margin-left:4px;">UnderRepair</span><br/>
+                <small style="color:var(--text-muted);">Cam Holder Die — B&nbsp;Standard</small>
+              </div>
+              <div class="filter-item" onclick="this.closest('.filter-sidebar').querySelectorAll('.filter-item').forEach(e=>e.classList.remove('selected'));this.classList.add('selected');">
+                <strong>DC-007</strong> <span class="badge badge-deprecated" style="margin-left:4px;">Retired</span><br/>
+                <small style="color:var(--text-muted);">Fuel Pump Die — C&nbsp;Marginal</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: detail -->
+          <div style="flex:1;overflow-y:auto;background:var(--bg-content);padding:12px;">
+
+            <!-- Detail header -->
+            <div class="detail-panel" style="margin-bottom:8px;padding:12px 16px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:18px;font-weight:700;">DC-042</span>
+                <span class="badge badge-published">Active</span>
+                <span class="badge badge-type">A — Premium</span>
+                <div style="flex:1;"></div>
+                <button class="btn btn-primary" style="padding:4px 14px;">Save</button>
+                <button class="btn btn-danger" style="padding:4px 14px;">Deprecate</button>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+                <div>
+                  <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">CODE</label>
+                  <input class="search-input" type="text" value="DC-042" style="width:100%;" />
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">NAME</label>
+                  <input class="search-input" type="text" value="Front Cover Die" style="width:100%;" />
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">DIE RANK</label>
+                  <select class="select" style="width:100%;">
+                    <option selected>A — Premium</option>
+                    <option>B — Standard</option>
+                    <option>C — Marginal</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">STATUS</label>
+                  <select class="select" style="width:100%;">
+                    <option selected>Active</option>
+                    <option>UnderRepair</option>
+                    <option>Scrapped</option>
+                    <option>Retired</option>
+                  </select>
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">DESCRIPTION</label>
+                  <input class="search-input" type="text" value="2-cavity die for 5G0 Front Cover Assy" style="width:100%;" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="detail-panel" style="padding:0;">
+              <div class="tab-bar" id="tool-tabs">
+                <div class="tab-item active" data-tab="tool-tab-attrs" onclick="switchTab('tool-tabs','tool-tab-attrs')">Attributes</div>
+                <div class="tab-item" data-tab="tool-tab-cavities" onclick="switchTab('tool-tabs','tool-tab-cavities')">Cavities</div>
+                <div class="tab-item" data-tab="tool-tab-assignments" onclick="switchTab('tool-tabs','tool-tab-assignments')">Assignments</div>
+              </div>
+
+              <!-- Attributes tab -->
+              <div class="tab-content active" data-tab="tool-tab-attrs" style="padding:12px;">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Attribute</th><th>Value</th><th>UOM</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Tonnage</td>
+                      <td><input class="search-input" type="text" value="400" style="width:80px;" /></td>
+                      <td style="color:var(--text-muted);">tons</td>
+                    </tr>
+                    <tr>
+                      <td>RefCycleTimeSec</td>
+                      <td><input class="search-input" type="text" value="42.0" style="width:80px;" /></td>
+                      <td style="color:var(--text-muted);">sec</td>
+                    </tr>
+                    <tr>
+                      <td>ConfirmationMethod</td>
+                      <td>
+                        <select class="select" style="width:140px;">
+                          <option selected>None</option>
+                          <option>PLC</option>
+                          <option>Vision</option>
+                        </select>
+                      </td>
+                      <td style="color:var(--text-muted);">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Cavities tab -->
+              <div class="tab-content" data-tab="tool-tab-cavities" style="padding:12px;">
+                <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+                  <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-cavity')">+ Add Cavity</button>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr><th style="width:40px;"></th><th>Cavity #</th><th>Status</th><th>Notes</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="text-align:center;color:var(--text-muted);">1</td>
+                      <td><strong>A</strong></td>
+                      <td><span class="badge badge-published">Active</span></td>
+                      <td style="color:var(--text-muted);">—</td>
+                      <td><button class="btn btn-danger btn-sm">Deprecate</button></td>
+                    </tr>
+                    <tr>
+                      <td style="text-align:center;color:var(--text-muted);">2</td>
+                      <td><strong>B</strong></td>
+                      <td><span class="badge badge-published">Active</span></td>
+                      <td style="color:var(--text-muted);">—</td>
+                      <td><button class="btn btn-danger btn-sm">Deprecate</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Assignments tab -->
+              <div class="tab-content" data-tab="tool-tab-assignments" style="padding:12px;">
+                <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+                  <button class="btn btn-primary btn-sm" onclick="openModal('modal-mount-die')">Mount to Cell</button>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Cell</th><th>Mounted At</th><th>Released At</th><th>Mounted By</th><th>Notes</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    <tr style="background:var(--bg-row-alt);">
+                      <td><strong>DC Machine #7</strong></td>
+                      <td>2026-04-29 06:02</td>
+                      <td style="color:var(--text-muted);">— active —</td>
+                      <td>CM</td>
+                      <td style="color:var(--text-muted);">—</td>
+                      <td><button class="btn btn-sm btn-danger">Release</button></td>
+                    </tr>
+                    <tr>
+                      <td>DC Machine #7</td>
+                      <td>2026-04-21 05:58</td>
+                      <td>2026-04-29 05:55</td>
+                      <td>JR</td>
+                      <td style="color:var(--text-muted);">—</td>
+                      <td></td>
+                    </tr>
+                    <tr>
+                      <td>DC Machine #3</td>
+                      <td>2026-04-10 06:10</td>
+                      <td>2026-04-21 05:45</td>
+                      <td>CM</td>
+                      <td style="color:var(--text-muted);">Loan from line 7</td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div><!-- /tabs -->
+          </div><!-- /right detail -->
+        </div><!-- /main split -->
+      </div><!-- /screen-tools -->
+
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SCREEN: Die Ranks
+           ═══════════════════════════════════════════════════════════════ -->
+      <div class="screen" id="screen-die-ranks">
+
+        <!-- Title bar -->
+        <div class="title-row" style="padding-bottom:8px; border-bottom:1px solid var(--border); background:var(--bg-panel);">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="breadcrumb">
+              <span>Parts</span><span class="crumb-sep">›</span>
+              <span class="crumb-active">Die Ranks</span>
+            </div>
+            <h1>Die Ranks</h1>
+          </div>
+          <div class="title-row-spacer"></div>
+          <button class="btn btn-primary">+ Add Rank</button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;background:var(--bg-content);padding:12px;">
+
+          <!-- Rank list -->
+          <div class="detail-panel" style="margin-bottom:12px;">
+            <h3 style="font-size:13px;font-weight:600;margin-bottom:8px;">Ranks</h3>
+            <table class="data-table">
+              <thead>
+                <tr><th style="width:40px;"></th><th>Code</th><th>Name</th><th></th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div style="display:flex;flex-direction:column;gap:2px;">
+                      <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▲</button>
+                      <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▼</button>
+                    </div>
+                  </td>
+                  <td><input class="search-input" type="text" value="A" style="width:50px;" /></td>
+                  <td><input class="search-input" type="text" value="Premium" style="width:160px;" /></td>
+                  <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex;flex-direction:column;gap:2px;">
+                      <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▲</button>
+                      <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▼</button>
+                    </div>
+                  </td>
+                  <td><input class="search-input" type="text" value="B" style="width:50px;" /></td>
+                  <td><input class="search-input" type="text" value="Standard" style="width:160px;" /></td>
+                  <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="display:flex;flex-direction:column;gap:2px;">
+                      <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▲</button>
+                      <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▼</button>
+                    </div>
+                  </td>
+                  <td><input class="search-input" type="text" value="C" style="width:50px;" /></td>
+                  <td><input class="search-input" type="text" value="Marginal" style="width:160px;" /></td>
+                  <td><button class="btn btn-sm btn-danger">Remove</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+              <button class="btn btn-primary btn-sm">Save Ranks</button>
+            </div>
+          </div>
+
+          <!-- Compatibility matrix -->
+          <div class="detail-panel">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div>
+                <h3 style="font-size:13px;font-weight:600;margin-bottom:2px;">Merge Compatibility</h3>
+                <p style="font-size:11px;color:var(--text-muted);margin:0;">Click a cell to toggle. Green = can merge. Red = blocked. Lower triangle is read-only mirror.</p>
+              </div>
+              <button class="btn btn-primary btn-sm">Save Matrix</button>
+            </div>
+            <table style="border-collapse:separate;border-spacing:5px;">
+              <thead>
+                <tr>
+                  <td style="width:80px;"></td>
+                  <th style="width:80px;text-align:center;font-size:12px;color:var(--text-muted);font-weight:600;padding:4px;">A — Premium</th>
+                  <th style="width:80px;text-align:center;font-size:12px;color:var(--text-muted);font-weight:600;padding:4px;">B — Standard</th>
+                  <th style="width:80px;text-align:center;font-size:12px;color:var(--text-muted);font-weight:600;padding:4px;">C — Marginal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th style="text-align:right;padding-right:8px;font-size:12px;color:var(--text-muted);font-weight:600;">A — Premium</th>
+                  <td class="matrix-cell matrix-yes" onclick="toggleMatrixCell(this)" title="A × A — Can merge"></td>
+                  <td class="matrix-cell matrix-yes" onclick="toggleMatrixCell(this)" title="A × B — Can merge"></td>
+                  <td class="matrix-cell matrix-no"  onclick="toggleMatrixCell(this)" title="A × C — Blocked"></td>
+                </tr>
+                <tr>
+                  <th style="text-align:right;padding-right:8px;font-size:12px;color:var(--text-muted);font-weight:600;">B — Standard</th>
+                  <td class="matrix-cell matrix-mirror" title="Mirror of A × B"></td>
+                  <td class="matrix-cell matrix-yes" onclick="toggleMatrixCell(this)" title="B × B — Can merge"></td>
+                  <td class="matrix-cell matrix-no"  onclick="toggleMatrixCell(this)" title="B × C — Blocked"></td>
+                </tr>
+                <tr>
+                  <th style="text-align:right;padding-right:8px;font-size:12px;color:var(--text-muted);font-weight:600;">C — Marginal</th>
+                  <td class="matrix-cell matrix-mirror" title="Mirror of A × C"></td>
+                  <td class="matrix-cell matrix-mirror" title="Mirror of B × C"></td>
+                  <td class="matrix-cell matrix-yes" onclick="toggleMatrixCell(this)" title="C × C — Can merge"></td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="margin-top:10px;display:flex;gap:14px;font-size:11px;color:var(--text-muted);">
+              <span><span style="display:inline-block;width:14px;height:14px;background:#c8e6c9;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid #a5d6a7;"></span>Can merge</span>
+              <span><span style="display:inline-block;width:14px;height:14px;background:#ffcdd2;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid #ef9a9a;"></span>Blocked</span>
+              <span><span style="display:inline-block;width:14px;height:14px;background:var(--bg-row-alt);border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid var(--border);"></span>Mirror</span>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /screen-die-ranks -->
+
+
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════════════
@@ -2080,6 +2405,177 @@
       </div>
     </div>
 
+    <!-- modal: Add Die -->
+    <div class="modal-overlay" id="modal-add-die">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Add Die</span>
+          <button class="modal-close" onclick="closeModal('modal-add-die')">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Code</label>
+            <input class="search-input" type="text" placeholder="e.g. DC-043" style="width:100%;" />
+          </div>
+          <div class="form-row">
+            <label>Name</label>
+            <input class="search-input" type="text" placeholder="e.g. Cam Holder Die" style="width:100%;" />
+          </div>
+          <div class="form-row">
+            <label>Die Rank</label>
+            <select class="select" style="width:100%;">
+              <option>A — Premium</option>
+              <option>B — Standard</option>
+              <option>C — Marginal</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Description</label>
+            <input class="search-input" type="text" placeholder="Optional description" style="width:100%;" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-add-die')">Cancel</button>
+          <button class="btn btn-primary" onclick="closeModal('modal-add-die')">Create Die</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- modal: Add Cavity -->
+    <div class="modal-overlay" id="modal-add-cavity">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Add Cavity — DC-042</span>
+          <button class="modal-close" onclick="closeModal('modal-add-cavity')">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Cavity Number <span style="font-size:11px;color:var(--text-muted);">(immutable after creation)</span></label>
+            <input class="search-input" type="text" placeholder="e.g. C" style="width:100%;" />
+          </div>
+          <div class="form-row">
+            <label>Notes</label>
+            <input class="search-input" type="text" placeholder="Optional" style="width:100%;" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-add-cavity')">Cancel</button>
+          <button class="btn btn-primary" onclick="closeModal('modal-add-cavity')">Add Cavity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- modal: Mount Die to Cell -->
+    <div class="modal-overlay" id="modal-mount-die">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Mount DC-042 to Cell</span>
+          <button class="modal-close" onclick="closeModal('modal-mount-die')">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Cell</label>
+            <select class="select" style="width:100%;">
+              <option>DC Machine #3</option>
+              <option>DC Machine #5</option>
+              <option selected>DC Machine #7</option>
+              <option>DC Machine #12</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Notes</label>
+            <input class="search-input" type="text" placeholder="Optional" style="width:100%;" />
+          </div>
+          <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Only one die can be actively mounted per cell. If another die is currently mounted it must be released first.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-mount-die')">Cancel</button>
+          <button class="btn btn-primary" onclick="closeModal('modal-mount-die')">Mount</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- modal: Tool Attribute Schema -->
+    <div class="modal-overlay" id="modal-tool-attr-def">
+      <div class="modal" style="width:1020px;max-width:96vw;">
+        <div class="modal-header">
+          <span class="modal-title">Tool Attribute Schema — Die</span>
+          <button class="modal-close" onclick="closeModal('modal-tool-attr-def')">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Define the custom attributes that appear on every die's Attributes tab. Changes affect all dies immediately.</p>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:40px;"></th>
+                <th>Name</th>
+                <th style="width:130px;">Data Type</th>
+                <th style="width:80px;">Required</th>
+                <th style="width:100px;">Default</th>
+                <th style="width:80px;">UOM</th>
+                <th>Description</th>
+                <th style="width:80px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div style="display:flex;flex-direction:column;gap:2px;">
+                    <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▲</button>
+                    <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▼</button>
+                  </div>
+                </td>
+                <td><input class="search-input" type="text" value="Tonnage" style="width:100%;" /></td>
+                <td><select class="select" style="width:100%;"><option selected>DECIMAL</option><option>INTEGER</option><option>NVARCHAR</option><option>BIT</option></select></td>
+                <td style="text-align:center;"><input type="checkbox" checked style="width:15px;height:15px;accent-color:var(--accent);" /></td>
+                <td><input class="search-input" type="text" value="—" style="width:100%;" /></td>
+                <td><input class="search-input" type="text" value="tons" style="width:100%;" /></td>
+                <td><input class="search-input" type="text" value="Press tonnage rating" style="width:100%;" /></td>
+                <td><button class="btn btn-sm btn-danger">Remove</button></td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:flex;flex-direction:column;gap:2px;">
+                    <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▲</button>
+                    <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▼</button>
+                  </div>
+                </td>
+                <td><input class="search-input" type="text" value="RefCycleTimeSec" style="width:100%;" /></td>
+                <td><select class="select" style="width:100%;"><option selected>DECIMAL</option><option>INTEGER</option><option>NVARCHAR</option><option>BIT</option></select></td>
+                <td style="text-align:center;"><input type="checkbox" style="width:15px;height:15px;accent-color:var(--accent);" /></td>
+                <td><input class="search-input" type="text" value="60.0" style="width:100%;" /></td>
+                <td><input class="search-input" type="text" value="sec" style="width:100%;" /></td>
+                <td><input class="search-input" type="text" value="Reference cycle time" style="width:100%;" /></td>
+                <td><button class="btn btn-sm btn-danger">Remove</button></td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:flex;flex-direction:column;gap:2px;">
+                    <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▲</button>
+                    <button class="btn btn-sm" style="padding:1px 6px;line-height:1;">▼</button>
+                  </div>
+                </td>
+                <td><input class="search-input" type="text" value="ConfirmationMethod" style="width:100%;" /></td>
+                <td><select class="select" style="width:100%;"><option>DECIMAL</option><option>INTEGER</option><option selected>NVARCHAR</option><option>BIT</option></select></td>
+                <td style="text-align:center;"><input type="checkbox" style="width:15px;height:15px;accent-color:var(--accent);" /></td>
+                <td><input class="search-input" type="text" value="None" style="width:100%;" /></td>
+                <td><input class="search-input" type="text" value="—" style="width:100%;" /></td>
+                <td><input class="search-input" type="text" value="WO completion signal type" style="width:100%;" /></td>
+                <td><button class="btn btn-sm btn-danger">Remove</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="margin-top:10px;">
+            <button class="btn btn-primary btn-sm">+ Add Attribute</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-tool-attr-def')">Close</button>
+          <button class="btn btn-primary" onclick="closeModal('modal-tool-attr-def')">Save Schema</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2094,7 +2590,9 @@
     ],
     parts: [
       { id: 'item-master',           label: 'Item Master',           icon: '&#128230;' },
-      { id: 'operation-templates',   label: 'Operation Templates',   icon: '&#128203;' }
+      { id: 'operation-templates',   label: 'Operation Templates',   icon: '&#128203;' },
+      { id: 'tools',                 label: 'Tools',                 icon: '&#128295;' },
+      { id: 'die-ranks',             label: 'Die Ranks',             icon: '&#127941;' }
     ],
     quality: [
       { id: 'quality-specs',  label: 'Quality Specs',  icon: '&#128200;' },
@@ -2219,6 +2717,17 @@
   }
 
   /* ─── openModal ──────────────────────────────────────────────────── */
+  function toggleMatrixCell(el) {
+    if (el.classList.contains('matrix-mirror')) return;
+    if (el.classList.contains('matrix-yes')) {
+      el.classList.replace('matrix-yes', 'matrix-no');
+      el.title = el.title.replace('Can merge', 'Blocked');
+    } else {
+      el.classList.replace('matrix-no', 'matrix-yes');
+      el.title = el.title.replace('Blocked', 'Can merge');
+    }
+  }
+
   function openModal(modalId) {
     const overlay = document.getElementById(modalId);
     if (overlay) overlay.classList.add('open');
