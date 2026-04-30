@@ -285,6 +285,7 @@
                 <a href="#terminal/assembly"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Serialized</a>
                 <a href="#terminal/assembly-ns"   class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Non-Serialized</a>
                 <a href="#terminal/sort-cage"     class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 7 · Sort Cage (toggle Serialized / Non-Serialized)</a>
+                <a href="#terminal/shipping"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 7 · Shipping Dock</a>
                 <a href="#terminal/end-of-shift"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 8 · End-of-Shift Entry</a>
                 <a href="#lot/detail"             class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 2 · LOT Detail (polymorphic)</a>
               </div>
@@ -2299,6 +2300,201 @@
               </div>
             </a>
           </div>
+        </aside>
+
+      </div>
+    </section>
+
+
+    <!-- ─── TERMINAL VIEW: SHIPPING DOCK (Phase 7) ───────────────── -->
+    <section data-route="terminal/shipping" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Shipping Dock</h1>
+          <span class="pf-terminal-title-meta">Scan-to-ship · per-scan validates Complete + non-Hold + non-Void · Container_Ship proc</span>
+        </div>
+        <span class="pf-paused-indicator">
+          <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">0</span>
+        </span>
+      </header>
+
+      <!-- Cell Context Selector -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Active Location</span>
+        <span class="pf-cell-context-value">Shipping Dock A</span>
+        <button class="pf-btn pf-btn-secondary" type="button">Change (scan or pick)</button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">Loaded containers move <code>CurrentLocationId</code> → Shipping Dock; audit `ContainerShipped`.</span>
+      </div>
+
+      <!-- Two-column: Active Manifest (scan + per-scan results) + Today's Loaded log -->
+      <div style="display:grid; grid-template-columns: 1fr 360px; gap: var(--pf-content-pad);">
+
+        <section class="pf-panel">
+          <div class="pf-panel-header">
+            <h3>Active Manifest · Truck-MFG-240430-002 · Honda Marysville</h3>
+            <span class="pf-kpi-sub">Scheduled departure 14:30 · Carrier: Honda Logistics</span>
+          </div>
+
+          <!-- Manifest progress -->
+          <div class="pf-kpis" style="grid-template-columns: repeat(4, 1fr); margin: 0;">
+            <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
+              <span class="pf-kpi-label">Loaded</span>
+              <span class="pf-kpi-value pf-kpi-good">12 / 24</span>
+              <span class="pf-kpi-sub">50% · 12 remaining</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">5G0F</span>
+              <span class="pf-kpi-value">8 / 16</span>
+              <span class="pf-kpi-sub">Front Cover</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">5G0R</span>
+              <span class="pf-kpi-value">3 / 6</span>
+              <span class="pf-kpi-sub">Rear Cover</span>
+            </div>
+            <div class="pf-kpi">
+              <span class="pf-kpi-label">6B2</span>
+              <span class="pf-kpi-value">1 / 2</span>
+              <span class="pf-kpi-sub">Cam Holder</span>
+            </div>
+          </div>
+
+          <!-- Scan input + last result -->
+          <div class="pf-field">
+            <label class="pf-field-label">Scan Container Shipping Label</label>
+            <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan AIM Shipper ID or Container code…" autofocus
+                   style="font-size: 18px; height: 56px;" />
+            <span class="pf-field-help">Per-scan: validates `ContainerStatusCode = Complete`, no open `HoldEvent`, `ShippingLabel.IsVoid = 0`. On success, fires `Lots.Container_Ship` and updates the manifest below.</span>
+          </div>
+
+          <!-- Recent scan results -->
+          <div class="pf-queue">
+            <!-- Successful scans -->
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+              <span class="pf-queue-position">12:38</span>
+              <div>
+                <span class="pf-queue-name">SH-240429-0142</span>
+                <div class="pf-queue-detail">CTR-5G0-0489 · 5G0F · 48 pcs · loaded</div>
+              </div>
+              <span class="pf-pill pf-pill-good">✓ Loaded</span>
+              <span class="pf-kpi-sub">Position 12 / 24</span>
+            </div>
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+              <span class="pf-queue-position">12:36</span>
+              <div>
+                <span class="pf-queue-name">SH-240429-0141</span>
+                <div class="pf-queue-detail">CTR-5G0-0488 · 5G0F · 48 pcs · loaded</div>
+              </div>
+              <span class="pf-pill pf-pill-good">✓ Loaded</span>
+              <span class="pf-kpi-sub">Position 11 / 24</span>
+            </div>
+
+            <!-- Rejection examples -->
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto; border-color: var(--pf-status-bad-fg);">
+              <span class="pf-queue-position">12:34</span>
+              <div>
+                <span class="pf-queue-name" style="color: var(--pf-status-bad-fg);">SH-240429-0123</span>
+                <div class="pf-queue-detail">CTR-6B2-0211 · ContainerStatusCode = Hold · cannot ship</div>
+              </div>
+              <span class="pf-pill pf-pill-bad">✗ On Hold</span>
+              <span class="pf-kpi-sub">Customer Complaint · Diane Ortiz</span>
+            </div>
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto;">
+              <span class="pf-queue-position">12:32</span>
+              <div>
+                <span class="pf-queue-name">SH-240429-0140</span>
+                <div class="pf-queue-detail">CTR-5G0-0487 · 5G0F · 48 pcs · loaded</div>
+              </div>
+              <span class="pf-pill pf-pill-good">✓ Loaded</span>
+              <span class="pf-kpi-sub">Position 10 / 24</span>
+            </div>
+            <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto auto; border-color: var(--pf-status-warn-fg);">
+              <span class="pf-queue-position">12:30</span>
+              <div>
+                <span class="pf-queue-name" style="color: var(--pf-status-warn-fg);">SH-240429-0098</span>
+                <div class="pf-queue-detail">CTR-6B2-0211 · `ShippingLabel.IsVoid = 1` · voided during Sort Cage re-pack</div>
+              </div>
+              <span class="pf-pill pf-pill-hold">⚠ Void Label</span>
+              <span class="pf-kpi-sub">Operator notified</span>
+            </div>
+          </div>
+
+          <!-- Action row -->
+          <div class="pf-actions" style="border:none; margin:0; padding:0;">
+            <button class="pf-btn pf-btn-secondary" type="button">Pause Manifest</button>
+            <button class="pf-btn pf-btn-elevated" data-elevated-action="ManifestForceClose" type="button">
+              Force-Close Manifest (operator override)
+            </button>
+            <span style="flex:1"></span>
+            <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Complete Manifest · Truck Out</button>
+          </div>
+        </section>
+
+        <!-- Right rail: Pending Containers + Today's Stats -->
+        <aside style="display:flex; flex-direction:column; gap: var(--pf-content-pad);">
+
+          <section class="pf-panel">
+            <div class="pf-panel-header">
+              <h3>Pending Containers</h3>
+              <span class="pf-kpi-sub">at Shipping Dock · ready to load</span>
+            </div>
+            <div class="pf-queue">
+              <div class="pf-queue-row" style="grid-template-columns: 1fr auto;">
+                <div>
+                  <span class="pf-queue-name">CTR-5G0-0490</span>
+                  <div class="pf-queue-detail">SH-240429-0143 · 5G0F · 48 pcs</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Ready</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: 1fr auto;">
+                <div>
+                  <span class="pf-queue-name">CTR-5G0-0491</span>
+                  <div class="pf-queue-detail">SH-240429-0144 · 5G0F · 48 pcs</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Ready</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: 1fr auto;">
+                <div>
+                  <span class="pf-queue-name">CTR-5G0R-0167</span>
+                  <div class="pf-queue-detail">SH-240429-0089 · 5G0R · 36 pcs</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Ready</span>
+              </div>
+              <div class="pf-queue-row" style="grid-template-columns: 1fr auto;">
+                <div>
+                  <span class="pf-queue-name">CTR-6B2-0220</span>
+                  <div class="pf-queue-detail">SH-240429-0099 · 6B2 · 96 pcs (re-packed)</div>
+                </div>
+                <span class="pf-pill pf-pill-good">Ready</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="pf-panel">
+            <div class="pf-panel-header">
+              <h3>Today's Stats</h3>
+            </div>
+            <div style="display:flex; flex-direction:column; gap: 8px;">
+              <div style="display:flex; justify-content:space-between;">
+                <span class="pf-kpi-sub">Containers Shipped</span>
+                <span style="font-weight: 600;">38</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span class="pf-kpi-sub">Manifests Completed</span>
+                <span style="font-weight: 600;">3</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span class="pf-kpi-sub">Rejected Scans</span>
+                <span style="font-weight: 600; color: var(--pf-status-bad-fg);">2</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span class="pf-kpi-sub">Target Today</span>
+                <span style="font-weight: 600;">42 · 90%</span>
+              </div>
+            </div>
+          </section>
+
         </aside>
 
       </div>
