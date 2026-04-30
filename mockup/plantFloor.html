@@ -1774,78 +1774,104 @@
 
       <section class="pf-panel" id="sort-migration-nonserialized" style="display:none;">
         <div class="pf-panel-header">
-          <h3>Bulk Piece-Count Split · 96 pcs to redistribute</h3>
+          <h3>Camera Re-Pack via ByVision · same camera as Assembly</h3>
           <div style="display:flex; gap:8px; align-items:center;">
-            <span class="pf-kpi-sub" id="ns-total-check">Allocated: 0 / 96 ✓</span>
-            <button class="pf-btn pf-btn-secondary" type="button" id="ns-add-row">+ Add destination</button>
+            <span class="pf-confirm-method" data-method="Both">⚖ ByVision</span>
           </div>
         </div>
 
         <p class="pf-kpi-sub" style="margin:0;">
-          Non-serialized parts have no per-piece serial number, so re-containerization
-          is a <strong>bulk piece-count split</strong> — operator allocates the source
-          container's pieces across one or more destination Containers (and optionally
-          a scrap quantity). No <code>ContainerSerialHistory</code> rows are written;
-          the migration is a quantity transfer with closure on the source. Same
-          <strong>Flex Repeater + Embedded View</strong> pattern as Trim OUT —
-          one entity per destination row, dynamic count.
+          Non-serialized parts have no per-piece serial number, so the Sort Cage uses
+          the <strong>same camera scanner</strong> as the Assembly Non-Serialized line
+          to validate parts as they pass through. The camera classifies each part
+          Pass / Fail per the inspection criteria, the PLC accumulates the validated
+          count, and asserts <code>TrayFullFlag</code> at <code>PartsPerTray</code>
+          (per <code>Parts.ContainerConfig</code>). Container fill is the MES-side
+          accumulation of validated tray closes — same <code>ByVision</code> closure
+          path as Assembly. No <code>ContainerSerialHistory</code> writes (those are
+          serialized-only per UJ-05).
         </p>
 
-        <div class="pf-repeater pf-repeater-scroll" id="sort-ns-repeater">
-          <div class="pf-repeater-entity">
-            <span class="pf-repeater-index">1</span>
-            <div class="pf-field">
-              <label class="pf-field-label">Pieces</label>
-              <input class="pf-field-input" type="number" value="48" min="0" />
-            </div>
-            <div class="pf-field">
-              <label class="pf-field-label">Destination</label>
-              <select class="pf-field-select">
-                <option>CTR-6B2-0220 · NEW · Pack lineside</option>
-                <option>CTR-6B2-0221 · NEW · Pack lineside</option>
-              </select>
-            </div>
-            <span class="pf-pill pf-pill-good">Re-pack</span>
+        <!-- Live counters -->
+        <div class="pf-kpis" style="grid-template-columns: repeat(4, 1fr); margin: 0;">
+          <div class="pf-kpi" style="border-color: var(--pf-status-good-fg);">
+            <span class="pf-kpi-label">Camera Pass</span>
+            <span class="pf-kpi-value pf-kpi-good">62</span>
+            <span class="pf-kpi-sub">routed to active destination</span>
           </div>
-
-          <div class="pf-repeater-entity">
-            <span class="pf-repeater-index">2</span>
-            <div class="pf-field">
-              <label class="pf-field-label">Pieces</label>
-              <input class="pf-field-input" type="number" value="36" min="0" />
-            </div>
-            <div class="pf-field">
-              <label class="pf-field-label">Destination</label>
-              <select class="pf-field-select">
-                <option selected>CTR-6B2-0221 · NEW · Pack lineside</option>
-                <option>CTR-6B2-0220 · NEW · Pack lineside</option>
-              </select>
-            </div>
-            <span class="pf-pill pf-pill-good">Re-pack</span>
+          <div class="pf-kpi" style="border-color: var(--pf-status-bad-fg);">
+            <span class="pf-kpi-label">Camera Fail</span>
+            <span class="pf-kpi-value pf-kpi-bad">8</span>
+            <span class="pf-kpi-sub">routed to scrap</span>
           </div>
-
-          <div class="pf-repeater-entity" style="border-left: 3px solid var(--pf-status-bad-fg);">
-            <span class="pf-repeater-index" style="background: var(--pf-status-bad-bg); color: var(--pf-status-bad-fg); border-color: var(--pf-status-bad-fg);">3</span>
-            <div class="pf-field">
-              <label class="pf-field-label">Pieces</label>
-              <input class="pf-field-input" type="number" value="12" min="0" />
-            </div>
-            <div class="pf-field">
-              <label class="pf-field-label">Destination</label>
-              <select class="pf-field-select">
-                <option selected>SCRAP — fail at sort inspection</option>
-                <option>CTR-6B2-0220 · NEW · Pack lineside</option>
-              </select>
-            </div>
-            <span class="pf-pill pf-pill-bad">Scrap</span>
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Source Remaining</span>
+            <span class="pf-kpi-value">26</span>
+            <span class="pf-kpi-sub">of 96 starting · 70 sorted</span>
+          </div>
+          <div class="pf-kpi" style="border-color: var(--accent);">
+            <span class="pf-kpi-label">Active Tray</span>
+            <span class="pf-kpi-value">14 / 24</span>
+            <span class="pf-kpi-sub">CTR-6B2-0220 · Tray 3 of 4 · 58%</span>
           </div>
         </div>
 
+        <!-- Active destination tray fill grid -->
+        <div style="background: var(--bg-row-alt); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong style="font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary);">Active Tray Fill · CTR-6B2-0220 · Tray 3</strong>
+            <span class="pf-kpi-sub">PartsPerTray = 24 · TrayFullFlag asserts at 24</span>
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(12, 1fr); gap: 6px;">
+            <!-- 14 of 24 filled (mocked) -->
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--mpp-state-good-bg); border:2px solid var(--pf-status-good-fg); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color: var(--pf-status-good-fg); font-size:11px; font-weight:600;">✓</div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+            <div style="height:42px; background: var(--bg-input); border:2px dashed var(--border); border-radius:var(--radius);"></div>
+          </div>
+        </div>
+
+        <!-- Destination management + actions -->
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <div class="pf-field" style="flex:1; min-width: 240px;">
+            <label class="pf-field-label">Active Destination Container</label>
+            <select class="pf-field-select">
+              <option selected>CTR-6B2-0220 · NEW · 2 trays closed · 14 / 24 in tray 3</option>
+              <option>CTR-6B2-0221 · NEW · empty</option>
+              <option>+ Open new destination Container…</option>
+            </select>
+          </div>
+          <button class="pf-btn pf-btn-secondary" type="button">Switch Destination</button>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="Override" type="button">
+            Force-Close Tray (override)
+          </button>
+        </div>
+
         <div class="pf-actions" style="border:none; margin:0; padding:0;">
-          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit Bulk Split · 3 destinations</button>
-          <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Pause Camera Re-Pack</button>
+          <button class="pf-btn pf-btn-secondary" type="button">End Session</button>
           <span style="flex:1"></span>
-          <span class="pf-kpi-sub">After split: ShippingLabel_Void on CTR-6B2-0211 · two new Container_Complete claims · scrap booked to Lots schema.</span>
+          <span class="pf-kpi-sub">On End: source ShippingLabel_Void · destination Containers complete via the same atomic close + AIM pool claim flow as Assembly · scrap quantities booked to Lots scrap path.</span>
         </div>
       </section>
 
