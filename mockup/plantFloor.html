@@ -2595,6 +2595,55 @@
     </div>
   </div>
 
+  <!-- Change Cell Context Modal — wired from "Change (scan or pick)" buttons -->
+  <div class="pf-modal" id="cell-change-modal">
+    <div class="pf-modal-card" style="max-width: 640px;">
+      <header class="pf-modal-header">
+        <h3>Change Active Cell</h3>
+      </header>
+      <div class="pf-modal-body">
+        <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">
+          Scan a Cell barcode or pick from the dropdown. The new selection
+          becomes the active context for every action on this session — any
+          dependent fields on the underlying screen (Tool, Cavity, FIFO queue,
+          etc.) refresh to match.
+        </p>
+
+        <div class="pf-field">
+          <label class="pf-field-label">Scan Cell Barcode</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan or enter Cell code…" id="cell-change-scan" />
+        </div>
+
+        <div class="pf-field">
+          <label class="pf-field-label">Or pick from list</label>
+          <select class="pf-field-select" id="cell-change-dropdown" style="font-size: 15px; height: 48px;">
+            <option value="">— Select a Cell —</option>
+            <optgroup label="Building 1 · Die Cast Area">
+              <option value="Press 1">Press 1 · DC-018 mounted · 2 cavities active</option>
+              <option value="Press 2">Press 2 · DC-024 mounted · 4 cavities active</option>
+              <option value="Press 3">Press 3 · DC-031 mounted · 2 cavities active</option>
+              <option value="Press 4">Press 4 · DC-031 mounted · 4 cavities active</option>
+              <option value="Press 5">Press 5 · DC-038 mounted · 2 cavities active</option>
+              <option value="Press 6">Press 6 · No tool mounted · idle</option>
+              <option value="Press 7" selected>Press 7 · DC-042 mounted · 2 cavities active</option>
+              <option value="Press 8">Press 8 · DC-049 mounted · 4 cavities active</option>
+            </optgroup>
+          </select>
+          <span class="pf-field-help">
+            Dropdown lists the descendant Cells of this terminal's parent Location.
+            In production, contents derive dynamically from the current view's
+            active Cell context — Die Cast terminals see presses, Trim terminals
+            see Trim Cells, etc.
+          </span>
+        </div>
+      </div>
+      <footer class="pf-modal-footer">
+        <button class="pf-btn pf-btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="pf-btn pf-btn-primary" type="button" id="cell-change-confirm">Set Active Cell</button>
+      </footer>
+    </div>
+  </div>
+
   <!-- Material Substitute Override Modal (UJ-09 — Assembly BOM mismatch) -->
   <div class="pf-modal" id="material-substitute-modal">
     <div class="pf-modal-card" style="max-width: 600px;">
@@ -2778,6 +2827,42 @@
   // ─── Banner acknowledge ───────────────────────────────────────────
   document.getElementById('banner-acknowledge')?.addEventListener('click', () => {
     document.getElementById('print-failure-banner').classList.add('hidden');
+  });
+
+  // ─── Change Cell Context modal ────────────────────────────────────
+  // Any button that reads "Change (scan or pick)" inside a
+  // .pf-terminal-cell-context bar opens the Change Cell modal. On Set,
+  // the modal updates the parent bar's .pf-cell-context-value.
+  let cellChangeTargetEl = null; // remembers which view's bar to update
+  document.querySelectorAll('.pf-terminal-cell-context').forEach(bar => {
+    const btn = Array.from(bar.querySelectorAll('button'))
+      .find(b => /change\s*\(scan or pick\)/i.test(b.textContent || ''));
+    const valueEl = bar.querySelector('.pf-cell-context-value');
+    if (!btn || !valueEl) return;
+    btn.addEventListener('click', () => {
+      cellChangeTargetEl = valueEl;
+      // Pre-select the dropdown to the current value if it matches
+      const dd = document.getElementById('cell-change-dropdown');
+      if (dd) {
+        const cur = (valueEl.textContent || '').trim();
+        Array.from(dd.options).forEach(o => {
+          o.selected = o.value === cur;
+        });
+      }
+      const scan = document.getElementById('cell-change-scan');
+      if (scan) scan.value = '';
+      document.getElementById('cell-change-modal').classList.add('shown');
+    });
+  });
+  document.getElementById('cell-change-confirm')?.addEventListener('click', () => {
+    const dd = document.getElementById('cell-change-dropdown');
+    const scan = document.getElementById('cell-change-scan');
+    let next = (scan?.value || '').trim();
+    if (!next && dd?.value) next = dd.value;
+    if (next && cellChangeTargetEl) {
+      cellChangeTargetEl.textContent = next;
+    }
+    document.getElementById('cell-change-modal').classList.remove('shown');
   });
 
   // ─── Demo helpers (mockup-only) ───────────────────────────────────
