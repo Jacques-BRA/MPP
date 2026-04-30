@@ -190,7 +190,7 @@ html, body {
 .pf-app[data-route="terminal/initials"]   .pf-main > [data-route="terminal/initials"]   { display: flex; }
 .pf-app[data-route="terminal/cell-context"] .pf-main > [data-route="terminal/cell-context"] { display: flex; }
 .pf-app[data-route="terminal/diecast"]    .pf-main > [data-route="terminal/diecast"]    { display: flex; }
-.pf-app[data-route="terminal/trim-out"]   .pf-main > [data-route="terminal/trim-out"]   { display: flex; }
+.pf-app[data-route="terminal/trim"]       .pf-main > [data-route="terminal/trim"]       { display: flex; }
 .pf-app[data-route="terminal/machining-in"] .pf-main > [data-route="terminal/machining-in"] { display: flex; }
 .pf-app[data-route="terminal/assembly"]   .pf-main > [data-route="terminal/assembly"]   { display: flex; }
 .pf-app[data-route="terminal/assembly-ns"] .pf-main > [data-route="terminal/assembly-ns"] { display: flex; }
@@ -198,7 +198,6 @@ html, body {
 .pf-app[data-route="terminal/sort-cage"]  .pf-main > [data-route="terminal/sort-cage"]  { display: flex; }
 .pf-app[data-route="terminal/receiving"]  .pf-main > [data-route="terminal/receiving"]  { display: flex; }
 .pf-app[data-route="terminal/shipping"]   .pf-main > [data-route="terminal/shipping"]   { display: flex; }
-.pf-app[data-route="terminal/trim-in"]    .pf-main > [data-route="terminal/trim-in"]    { display: flex; }
 .pf-app[data-route="lot/detail"]          .pf-main > [data-route="lot/detail"]          { display: flex; }
 
 /* ─── Home Page layout ────────────────────────────────────────────────── */
@@ -943,4 +942,19 @@ html, body {
 @media (max-width: 600px) {
   .pf-kpis { grid-template-columns: 1fr; }
   .pf-header-right .pf-toggle-label-mockup { display: none; }
+}
+
+/* ─── State-driven polymorphic panels (Trim Station Phase 4) ──────────── */
+/* Panels with [data-trim-show] only render when the parent terminal's
+   [data-trim-state] matches. Lets a single screen morph between Idle / IN /
+   OUT / Error driven by the LOT state, instead of using tabs. */
+[data-trim-state] [data-trim-show] { display: none; }
+[data-trim-state="idle"]  [data-trim-show="idle"],
+[data-trim-state="in"]    [data-trim-show="in"],
+[data-trim-state="out"]   [data-trim-show="out"],
+[data-trim-state="error"] [data-trim-show="error"] { display: flex; flex-direction: column; }
+/* The OUT-state operation strip uses the cell-context bar layout, which is
+   row-direction; restore that. */
+[data-trim-state="out"] .pf-terminal-cell-context[data-trim-show="out"] {
+  flex-direction: row;
 }
