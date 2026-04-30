@@ -281,7 +281,8 @@
                 <a href="#terminal/trim-out"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 4 · Trim OUT (Flex Repeater)</a>
                 <a href="#terminal/machining-in"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 5 · Machining IN (FIFO)</a>
                 <a href="#terminal/assembly"      class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Serialized</a>
-                <a href="#terminal/sort-cage"     class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 7 · Sort Cage Workflow</a>
+                <a href="#terminal/assembly-ns"   class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 6 · Assembly Non-Serialized</a>
+                <a href="#terminal/sort-cage"     class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 7 · Sort Cage (toggle Serialized / Non-Serialized)</a>
                 <a href="#terminal/end-of-shift"  class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 8 · End-of-Shift Entry</a>
                 <a href="#lot/detail"             class="pf-btn pf-btn-secondary" style="justify-content: flex-start;">Phase 2 · LOT Detail (polymorphic)</a>
               </div>
@@ -1043,18 +1044,211 @@
     </section>
 
 
+    <!-- ─── TERMINAL VIEW: ASSEMBLY NON-SERIALIZED (Phase 6) ──────── -->
+    <section data-route="terminal/assembly-ns" class="pf-terminal">
+      <header class="pf-terminal-header">
+        <div class="pf-terminal-title">
+          <h1>Assembly · 6B2 Non-Serialized Line</h1>
+          <span class="pf-terminal-title-meta">Dedicated terminal · operator-driven count · no MIP per-piece handshake</span>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span class="pf-confirm-method" data-method="Barcode" id="ns-confirm-method">📦 ByCount</span>
+          <span class="pf-paused-indicator">
+            <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">0</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- Demo toggle: ClosureMethod ByCount vs ByWeight (ByVision shown on Serialized) -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">ContainerConfig.ClosureMethod (mockup demo)</span>
+        <button class="pf-btn pf-btn-secondary" type="button" id="ns-method-toggle" data-state="ByCount">
+          <span id="ns-method-state">ByCount · operator confirms tray quantity</span>
+        </button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">FDS-06-014 · ByVision shown on the serialized line.</span>
+      </div>
+
+      <!-- Live production telemetry -->
+      <section class="pf-kpis">
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Active Source LOT</span>
+          <span class="pf-kpi-value pf-kpi-mono">MESL1710962</span>
+          <span class="pf-kpi-sub">6B2-CAM-3814 · 240 pcs remaining</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Lineside Pin LOT</span>
+          <span class="pf-kpi-value pf-kpi-mono">MESL1710401</span>
+          <span class="pf-kpi-sub">6B2-PIN-1.5 · 1,860 pcs remaining</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">Container · Tray</span>
+          <span class="pf-kpi-value">2 of 5 · in progress</span>
+          <span class="pf-kpi-sub">CTR-6B2-0212 · accumulated 36 of 96</span>
+        </div>
+        <div class="pf-kpi">
+          <span class="pf-kpi-label">AIM Pool Depth (6B2)</span>
+          <span class="pf-kpi-value pf-kpi-good">38</span>
+          <span class="pf-kpi-sub">Healthy · per-Part-Number pool</span>
+        </div>
+      </section>
+
+      <!-- Per-Tray Close panel — the active operator interaction surface -->
+      <section class="pf-panel" id="ns-tray-bycount">
+        <div class="pf-panel-header">
+          <h3>Per-Tray Close · Tray 3 in progress</h3>
+          <span class="pf-kpi-sub">Configured PartsPerTray = 24 · accumulated 36 / 96 toward Container</span>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Tap a tray-quantity button to close the current tray. Each tray close fires
+          one <code>ConsumptionEvent</code> against each BOM component LOT, increments
+          the parent Container's running count, and unlocks the next tray. Container
+          completes when accumulated trays × PartsPerTray reaches the configured
+          capacity.
+        </p>
+
+        <!-- Tray-quantity buttons. PartsPerTray = 24, but operator may report a partial close. -->
+        <div class="pf-toggle-group" style="grid-template-columns: repeat(4, 1fr); max-width: 720px;">
+          <button class="pf-toggle-btn" type="button">
+            <span class="pf-toggle-btn-label">24</span>
+            <span class="pf-toggle-btn-meta">Full tray · default</span>
+          </button>
+          <button class="pf-toggle-btn" type="button">
+            <span class="pf-toggle-btn-label">23</span>
+            <span class="pf-toggle-btn-meta">1 reject</span>
+          </button>
+          <button class="pf-toggle-btn" type="button">
+            <span class="pf-toggle-btn-label">22</span>
+            <span class="pf-toggle-btn-meta">2 reject</span>
+          </button>
+          <button class="pf-toggle-btn" type="button">
+            <span class="pf-toggle-btn-label">Other</span>
+            <span class="pf-toggle-btn-meta">Numeric entry</span>
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Close Tray · Submit Count</button>
+          <button class="pf-btn pf-btn-secondary" type="button">Add Reject Event</button>
+          <span style="flex:1"></span>
+          <span class="pf-kpi-sub">No per-piece serial · ConsumptionEvent fires per tray.</span>
+        </div>
+      </section>
+
+      <!-- Hidden ByWeight panel — toggled in via the demo button -->
+      <section class="pf-panel" id="ns-tray-byweight" style="display:none; border-color: var(--pf-status-warn-fg);">
+        <div class="pf-panel-header">
+          <h3>Per-Tray Close · ByWeight</h3>
+          <span class="pf-kpi-sub">Configured TargetWeight = 18.4 lb · OmniServer scale → PLC TrayFullFlag</span>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          On <code>ByWeight</code> lines, the operator does not enter a count. The
+          OmniServer scale publishes the per-tray weight; the PLC compares against
+          <code>TargetWeight</code> on <code>ContainerConfig</code> and asserts
+          <code>TrayFullFlag</code> at threshold. The MES reads the flag and writes
+          the close. The operator's only action is removing the tray from the scale
+          and starting the next tray.
+        </p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">Live Scale Reading</span>
+            <span class="pf-kpi-value pf-kpi-mono pf-kpi-warn">17.83 lb</span>
+            <span class="pf-kpi-sub">Approaching target (97%)</span>
+          </div>
+          <div class="pf-kpi">
+            <span class="pf-kpi-label">TrayFullFlag</span>
+            <span class="pf-kpi-value pf-kpi-warn">False</span>
+            <span class="pf-kpi-sub">PLC asserts at 18.4 lb</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="pf-btn pf-btn-secondary" type="button" disabled>Auto-close on TrayFullFlag</button>
+          <span style="flex:1"></span>
+          <button class="pf-btn pf-btn-elevated" data-elevated-action="Override" type="button">
+            Operator Override · Force Close
+          </button>
+        </div>
+      </section>
+
+      <!-- Container completion gate -->
+      <section class="pf-panel" style="border-color: var(--accent);">
+        <div class="pf-panel-header">
+          <h3>Container Completion Gate</h3>
+          <span class="pf-kpi-sub">Same atomic close as Serialized — claims AIM ID, dispatches print async</span>
+        </div>
+
+        <div style="display:flex; gap:16px; align-items:center;">
+          <div style="flex:1;">
+            <p style="margin:0 0 8px 0;">When accumulated tray closes reach the configured Container capacity:</p>
+            <ul style="margin:0; padding-left:18px; color: var(--text-secondary); font-size:13px;">
+              <li>AIM Shipper ID claimed from local pool (per-Part-Number FIFO, sub-millisecond)</li>
+              <li>ShippingLabel row inserted with PrintedAt = NULL</li>
+              <li>Async print dispatched to Zebra at this terminal</li>
+              <li>Container status flips to Complete</li>
+            </ul>
+          </div>
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button"
+                  style="min-height: 80px; min-width: 200px; font-size: 17px;">
+            ✓ Mark Container Complete
+          </button>
+        </div>
+      </section>
+
+      <script>
+        // Demo toggle: ByCount ↔ ByWeight
+        document.getElementById('ns-method-toggle')?.addEventListener('click', () => {
+          const btn = document.getElementById('ns-method-toggle');
+          const state = document.getElementById('ns-method-state');
+          const cm = document.getElementById('ns-confirm-method');
+          const byCount = document.getElementById('ns-tray-bycount');
+          const byWeight = document.getElementById('ns-tray-byweight');
+          const isCount = btn.dataset.state === 'ByCount';
+          if (isCount) {
+            btn.dataset.state = 'ByWeight';
+            state.textContent = 'ByWeight · OmniServer scale + PLC TrayFullFlag';
+            cm.textContent = '⚖ ByWeight';
+            cm.dataset.method = 'Both';
+            byCount.style.display = 'none';
+            byWeight.style.display = '';
+          } else {
+            btn.dataset.state = 'ByCount';
+            state.textContent = 'ByCount · operator confirms tray quantity';
+            cm.textContent = '📦 ByCount';
+            cm.dataset.method = 'Barcode';
+            byCount.style.display = '';
+            byWeight.style.display = 'none';
+          }
+        });
+      </script>
+    </section>
+
+
     <!-- ─── TERMINAL VIEW: SORT CAGE WORKFLOW (Phase 7) ──────────── -->
     <section data-route="terminal/sort-cage" class="pf-terminal">
       <header class="pf-terminal-header">
         <div class="pf-terminal-title">
           <h1>Sort Cage Workflow</h1>
-          <span class="pf-terminal-title-meta">Container CTR-5G0-0489 on hold · re-containerization · UJ-05 update-in-place</span>
+          <span class="pf-terminal-title-meta" id="sort-subtitle">Container CTR-5G0-0489 on hold · re-containerization · UJ-05 update-in-place</span>
         </div>
         <span class="pf-pill pf-pill-hold">Container on Hold</span>
       </header>
 
+      <!-- Demo toggle: Serialized (per-Serial migration) vs Non-Serialized (bulk piece-count split) -->
+      <div class="pf-terminal-cell-context">
+        <span class="pf-cell-context-label">Item type (mockup demo)</span>
+        <button class="pf-btn pf-btn-secondary" type="button" id="sort-mode-toggle" data-state="serialized">
+          <span id="sort-mode-state">Serialized · per-Serial migration</span>
+        </button>
+        <span style="flex:1"></span>
+        <span class="pf-kpi-sub">Different Item types call different mechanics — UJ-05 default applies to serialized only.</span>
+      </div>
+
       <!-- Source Container summary -->
-      <section class="pf-panel">
+      <section class="pf-panel" id="sort-source-serialized">
         <div class="pf-panel-header">
           <h3>Source Container</h3>
           <span class="pf-kpi-sub">Held since 13:15 · Customer Complaint · Diane Ortiz</span>
@@ -1080,7 +1274,7 @@
       </section>
 
       <!-- Per-Serial migration — Flex Repeater + Embedded View -->
-      <section class="pf-panel">
+      <section class="pf-panel" id="sort-migration-serialized">
         <div class="pf-panel-header">
           <h3>Per-Serial Migration · 6 of 48 visible</h3>
           <div style="display:flex; gap:8px; align-items:center;">
@@ -1200,6 +1394,157 @@
           <span class="pf-kpi-sub">After re-pack: ShippingLabel_Void on CTR-5G0-0489 · new Container_Complete on CTR-5G0-0501 (claims fresh AIM ID).</span>
         </div>
       </section>
+
+      <!-- ─── NON-SERIALIZED variant: bulk piece-count split ──────────── -->
+      <section class="pf-panel" id="sort-source-nonserialized" style="display:none;">
+        <div class="pf-panel-header">
+          <h3>Source Container · Non-Serialized</h3>
+          <span class="pf-kpi-sub">Held since 13:15 · Customer Complaint · Diane Ortiz</span>
+        </div>
+        <div class="pf-field-row">
+          <div>
+            <span class="pf-kpi-label">Container</span>
+            <div class="pf-kpi-value pf-kpi-mono">CTR-6B2-0211</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">AIM Shipper ID</span>
+            <div class="pf-kpi-value pf-kpi-mono">SH-240429-0098</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Item</span>
+            <div class="pf-kpi-value pf-kpi-mono">6B2-CAM-3814</div>
+          </div>
+          <div>
+            <span class="pf-kpi-label">Total Pieces</span>
+            <div class="pf-kpi-value">96</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="pf-panel" id="sort-migration-nonserialized" style="display:none;">
+        <div class="pf-panel-header">
+          <h3>Bulk Piece-Count Split · 96 pcs to redistribute</h3>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="pf-kpi-sub" id="ns-total-check">Allocated: 0 / 96 ✓</span>
+            <button class="pf-btn pf-btn-secondary" type="button" id="ns-add-row">+ Add destination</button>
+          </div>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin:0;">
+          Non-serialized parts have no per-piece serial number, so re-containerization
+          is a <strong>bulk piece-count split</strong> — operator allocates the source
+          container's pieces across one or more destination Containers (and optionally
+          a scrap quantity). No <code>ContainerSerialHistory</code> rows are written;
+          the migration is a quantity transfer with closure on the source. Same
+          <strong>Flex Repeater + Embedded View</strong> pattern as Trim OUT —
+          one entity per destination row, dynamic count.
+        </p>
+
+        <div class="pf-repeater" id="sort-ns-repeater">
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">1</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Pieces</label>
+              <input class="pf-field-input" type="number" value="48" min="0" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option>CTR-6B2-0220 · NEW · Pack lineside</option>
+                <option>CTR-6B2-0221 · NEW · Pack lineside</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Re-pack</span>
+          </div>
+
+          <div class="pf-repeater-entity">
+            <span class="pf-repeater-index">2</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Pieces</label>
+              <input class="pf-field-input" type="number" value="36" min="0" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option selected>CTR-6B2-0221 · NEW · Pack lineside</option>
+                <option>CTR-6B2-0220 · NEW · Pack lineside</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-good">Re-pack</span>
+          </div>
+
+          <div class="pf-repeater-entity" style="border-left: 3px solid var(--pf-status-bad-fg);">
+            <span class="pf-repeater-index" style="background: var(--pf-status-bad-bg); color: var(--pf-status-bad-fg); border-color: var(--pf-status-bad-fg);">3</span>
+            <div class="pf-field">
+              <label class="pf-field-label">Pieces</label>
+              <input class="pf-field-input" type="number" value="12" min="0" />
+            </div>
+            <div class="pf-field">
+              <label class="pf-field-label">Destination</label>
+              <select class="pf-field-select">
+                <option selected>SCRAP — fail at sort inspection</option>
+                <option>CTR-6B2-0220 · NEW · Pack lineside</option>
+              </select>
+            </div>
+            <span class="pf-pill pf-pill-bad">Scrap</span>
+          </div>
+        </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit Bulk Split · 3 destinations</button>
+          <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
+          <span style="flex:1"></span>
+          <span class="pf-kpi-sub">After split: ShippingLabel_Void on CTR-6B2-0211 · two new Container_Complete claims · scrap booked to Lots schema.</span>
+        </div>
+      </section>
+
+      <script>
+        // Sort Cage mode toggle: Serialized ↔ Non-Serialized
+        document.getElementById('sort-mode-toggle')?.addEventListener('click', () => {
+          const btn = document.getElementById('sort-mode-toggle');
+          const state = document.getElementById('sort-mode-state');
+          const subtitle = document.getElementById('sort-subtitle');
+          const srcS = document.getElementById('sort-source-serialized');
+          const migS = document.getElementById('sort-migration-serialized');
+          const srcN = document.getElementById('sort-source-nonserialized');
+          const migN = document.getElementById('sort-migration-nonserialized');
+          const isSerialized = btn.dataset.state === 'serialized';
+          if (isSerialized) {
+            btn.dataset.state = 'nonserialized';
+            state.textContent = 'Non-Serialized · bulk piece-count split';
+            subtitle.textContent = 'Container CTR-6B2-0211 on hold · re-containerization · no ContainerSerialHistory rows';
+            srcS.style.display = 'none';
+            migS.style.display = 'none';
+            srcN.style.display = '';
+            migN.style.display = '';
+          } else {
+            btn.dataset.state = 'serialized';
+            state.textContent = 'Serialized · per-Serial migration';
+            subtitle.textContent = 'Container CTR-5G0-0489 on hold · re-containerization · UJ-05 update-in-place';
+            srcS.style.display = '';
+            migS.style.display = '';
+            srcN.style.display = 'none';
+            migN.style.display = 'none';
+          }
+        });
+
+        // Add-destination row to non-serialized repeater
+        document.getElementById('ns-add-row')?.addEventListener('click', () => {
+          const repeater = document.getElementById('sort-ns-repeater');
+          const idx = repeater.children.length + 1;
+          const entity = document.createElement('div');
+          entity.className = 'pf-repeater-entity';
+          entity.innerHTML = `
+            <span class="pf-repeater-index">${idx}</span>
+            <div class="pf-field"><label class="pf-field-label">Pieces</label><input class="pf-field-input" type="number" value="0" min="0" /></div>
+            <div class="pf-field"><label class="pf-field-label">Destination</label>
+              <select class="pf-field-select"><option>CTR-6B2-0220 · NEW</option><option>CTR-6B2-0221 · NEW</option><option>SCRAP</option></select>
+            </div>
+            <span class="pf-pill pf-pill-good">Re-pack</span>
+          `;
+          repeater.appendChild(entity);
+        });
+      </script>
     </section>
 
 
@@ -1216,94 +1561,100 @@
       <div class="pf-terminal-cell-context">
         <span class="pf-cell-context-label">Terminal mode (mockup demo)</span>
         <button class="pf-btn pf-btn-secondary" type="button" id="eos-mode-toggle" data-state="dedicated">
-          <span id="eos-mode-state">Dedicated · single button</span>
+          <span id="eos-mode-state">Dedicated · button-based</span>
         </button>
         <span style="flex:1"></span>
         <span class="pf-kpi-sub">Real app: derived from terminal's parent Location tier (FDS-02-010).</span>
       </div>
 
-      <!-- Dedicated mode: single button submit -->
+      <!-- Dedicated mode: button-based selection (FDS-09-013 amended) -->
       <section class="pf-panel" id="eos-dedicated">
         <div class="pf-panel-header">
-          <h3>Submit shift time entry</h3>
-          <span class="pf-kpi-sub">Single tap — defaults from shift schedule</span>
+          <h3>Tap any breaks taken · then Submit</h3>
+          <span class="pf-kpi-sub">Shift 1 (06:00 – 14:30) · all durations from shift schedule</span>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap: 12px; padding: 16px 0;">
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width:600px;">
-            <div>
-              <span class="pf-kpi-label">Shift Schedule</span>
-              <div class="pf-kpi-value" style="font-size: 16px;">Shift 1 (06:00–14:30)</div>
-            </div>
-            <div>
-              <span class="pf-kpi-label">Time Category</span>
-              <div class="pf-kpi-value" style="font-size: 16px;">Regular</div>
-            </div>
-            <div>
-              <span class="pf-kpi-label">Lunch</span>
-              <div class="pf-kpi-value" style="font-size: 16px;">Taken (30 min · 11:30–12:00)</div>
-            </div>
-            <div>
-              <span class="pf-kpi-label">Breaks</span>
-              <div class="pf-kpi-value" style="font-size: 16px;">Both (10 min each · 09:00, 13:30)</div>
-            </div>
-          </div>
+        <p class="pf-kpi-sub" style="margin:0;">
+          Tap each break the operator took during this shift. Buttons are toggleable —
+          tap again to deselect. Submitting writes one <code>Oee.DowntimeEvent</code> row
+          per selected break with start time + duration from the shift schedule. No
+          operator-entered durations.
+        </p>
 
-          <p class="pf-kpi-sub" style="margin: 0; max-width:600px;">
-            Submitting writes <code>Oee.DowntimeEvent</code> rows for the lunch and each break with durations from
-            the shift schedule. <strong>No operator-entered durations</strong>; no <code>+30</code>/<code>+10</code>/<code>+110</code>
-            adjustments anywhere — that pattern is explicitly excluded by FDS-09-009.
-          </p>
+        <div class="pf-toggle-group" id="eos-dedicated-buttons">
+          <button class="pf-toggle-btn" type="button" data-eos="lunch">
+            <span class="pf-toggle-btn-label">Lunch</span>
+            <span class="pf-toggle-btn-meta">30 min · 11:30 start</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos="break1">
+            <span class="pf-toggle-btn-label">Break 1</span>
+            <span class="pf-toggle-btn-meta">15 min · 09:00 start</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos="break2">
+            <span class="pf-toggle-btn-label">Break 2</span>
+            <span class="pf-toggle-btn-meta">15 min · 13:30 start</span>
+          </button>
+        </div>
 
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
           <button class="pf-btn pf-btn-primary pf-btn-large" type="button"
-                  style="min-height: 100px; max-width: 600px; font-size: 22px;">
-            ✓ Submit Shift End
+                  style="flex:1; max-width:600px;">
+            ✓ Submit Shift End — <span id="eos-dedicated-count">0</span> selected
           </button>
         </div>
       </section>
 
-      <!-- Shared mode: full form -->
+      <!-- Shared mode: same buttons + initials inline (no time-category numeric entry) -->
       <section class="pf-panel" id="eos-shared" style="display:none;">
         <div class="pf-panel-header">
-          <h3>Submit shift time entry · Shared terminal</h3>
-          <span class="pf-kpi-sub">Operator confirms identity + selections inline</span>
+          <h3>Tap any breaks taken · enter initials · then Submit</h3>
+          <span class="pf-kpi-sub">Shared terminal — operator stamps each event with their own initials</span>
         </div>
 
-        <div class="pf-field-row">
-          <div class="pf-field">
-            <label class="pf-field-label">Operator Initials</label>
-            <input class="pf-field-input pf-field-mono" type="text" placeholder="XX" />
-          </div>
-          <div class="pf-field">
-            <label class="pf-field-label">Time Category</label>
-            <select class="pf-field-select">
-              <option>Regular</option>
-              <option>Overtime</option>
-              <option>Double-Time</option>
-            </select>
-          </div>
+        <div class="pf-field" style="max-width: 320px;">
+          <label class="pf-field-label">Operator Initials</label>
+          <input class="pf-field-input pf-field-mono" type="text" placeholder="XX"
+                 style="font-size: 24px; height: 56px; text-align:center; letter-spacing: 0.2em; text-transform: uppercase;" />
         </div>
 
-        <div class="pf-field-row">
-          <div class="pf-field">
-            <label class="pf-field-label">Lunch Taken?</label>
-            <select class="pf-field-select">
-              <option>Yes (default)</option>
-              <option>No</option>
-            </select>
-            <span class="pf-field-help">Duration pulled from shift schedule.</span>
-          </div>
-          <div class="pf-field">
-            <label class="pf-field-label">Breaks Taken</label>
-            <select class="pf-field-select" multiple style="height: auto; min-height: var(--pf-touch-min);">
-              <option selected>Break 1 · 09:00 (10 min)</option>
-              <option selected>Break 2 · 13:30 (10 min)</option>
-            </select>
-          </div>
+        <p class="pf-kpi-sub" style="margin:0;">
+          Same button pattern as Dedicated. Each tap toggles. Submission writes <code>Oee.DowntimeEvent</code>
+          rows stamped with the entered initials' <code>AppUserId</code>. Time Category — Regular / Overtime /
+          Double-Time — is selected via the small button row above the breaks.
+        </p>
+
+        <div class="pf-toggle-group" style="grid-template-columns: repeat(3, 1fr); max-width: 480px;">
+          <button class="pf-toggle-btn selected" type="button" data-eos-cat="regular" style="min-height: 60px;">
+            <span class="pf-toggle-btn-label" style="font-size:14px;">Regular</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos-cat="ot" style="min-height: 60px;">
+            <span class="pf-toggle-btn-label" style="font-size:14px;">Overtime</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos-cat="dt" style="min-height: 60px;">
+            <span class="pf-toggle-btn-label" style="font-size:14px;">Double-Time</span>
+          </button>
+        </div>
+
+        <div class="pf-toggle-group" id="eos-shared-buttons">
+          <button class="pf-toggle-btn" type="button" data-eos="lunch">
+            <span class="pf-toggle-btn-label">Lunch</span>
+            <span class="pf-toggle-btn-meta">30 min · 11:30 start</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos="break1">
+            <span class="pf-toggle-btn-label">Break 1</span>
+            <span class="pf-toggle-btn-meta">15 min · 09:00 start</span>
+          </button>
+          <button class="pf-toggle-btn" type="button" data-eos="break2">
+            <span class="pf-toggle-btn-label">Break 2</span>
+            <span class="pf-toggle-btn-meta">15 min · 13:30 start</span>
+          </button>
         </div>
 
         <div class="pf-actions" style="border:none; margin:0; padding:0;">
-          <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit Shift End</button>
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button"
+                  style="flex:1; max-width:600px;">
+            ✓ Submit Shift End — <span id="eos-shared-count">0</span> selected
+          </button>
           <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
         </div>
       </section>
@@ -1354,6 +1705,7 @@
       </section>
 
       <script>
+        // Mode toggle (Dedicated vs Shared)
         document.getElementById('eos-mode-toggle')?.addEventListener('click', () => {
           const btn = document.getElementById('eos-mode-toggle');
           const state = document.getElementById('eos-mode-state');
@@ -1362,23 +1714,46 @@
           const isDed = btn.dataset.state === 'dedicated';
           if (isDed) {
             btn.dataset.state = 'shared';
-            state.textContent = 'Shared · full form';
+            state.textContent = 'Shared · same buttons + initials';
             ded.style.display = 'none';
             shared.style.display = '';
           } else {
             btn.dataset.state = 'dedicated';
-            state.textContent = 'Dedicated · single button';
+            state.textContent = 'Dedicated · button-based';
             ded.style.display = '';
             shared.style.display = 'none';
           }
+        });
+
+        // Lunch/Break buttons toggle independently; counter updates
+        function wireToggles(groupId, counterId) {
+          const group   = document.getElementById(groupId);
+          const counter = document.getElementById(counterId);
+          if (!group || !counter) return;
+          group.querySelectorAll('[data-eos]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              btn.classList.toggle('selected');
+              const n = group.querySelectorAll('.selected').length;
+              counter.textContent = n;
+            });
+          });
+        }
+        wireToggles('eos-dedicated-buttons', 'eos-dedicated-count');
+        wireToggles('eos-shared-buttons',    'eos-shared-count');
+
+        // Time Category single-select
+        document.querySelectorAll('[data-eos-cat]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-eos-cat]').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+          });
         });
       </script>
     </section>
 
 
     <!-- ─── LOT DETAIL (polymorphic — Phase 2) ───────────────────── -->
-    <section data-route="lot/detail">
-      <div class="pf-terminal">
+    <section data-route="lot/detail" class="pf-terminal">
         <header class="pf-terminal-header">
           <div class="pf-terminal-title">
             <h1>LOT Detail · MESL1710935</h1>
@@ -1545,7 +1920,6 @@
           });
         </script>
 
-      </div>
     </section>
 
 

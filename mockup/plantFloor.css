@@ -193,9 +193,10 @@ html, body {
 .pf-app[data-route="terminal/trim-out"]   .pf-main > [data-route="terminal/trim-out"]   { display: flex; }
 .pf-app[data-route="terminal/machining-in"] .pf-main > [data-route="terminal/machining-in"] { display: flex; }
 .pf-app[data-route="terminal/assembly"]   .pf-main > [data-route="terminal/assembly"]   { display: flex; }
+.pf-app[data-route="terminal/assembly-ns"] .pf-main > [data-route="terminal/assembly-ns"] { display: flex; }
 .pf-app[data-route="terminal/end-of-shift"] .pf-main > [data-route="terminal/end-of-shift"] { display: flex; }
 .pf-app[data-route="terminal/sort-cage"]  .pf-main > [data-route="terminal/sort-cage"]  { display: flex; }
-.pf-app[data-route="lot/detail"]          .pf-main > [data-route="lot/detail"]          { display: block; }
+.pf-app[data-route="lot/detail"]          .pf-main > [data-route="lot/detail"]          { display: flex; }
 
 /* ─── Home Page layout ────────────────────────────────────────────────── */
 .pf-home {
@@ -842,6 +843,55 @@ html, body {
 .pf-confirm-method[data-method="Vision"] { color: #8b5cf6; border-color: #8b5cf6; }
 .pf-confirm-method[data-method="Barcode"] { color: #22d3ee; border-color: #22d3ee; }
 .pf-confirm-method[data-method="Both"] { color: #f4b343; border-color: #f4b343; }
+
+/* Toggleable selection buttons (FDS-09-013 lunch/break selection, etc.) */
+.pf-toggle-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.pf-toggle-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 2px solid var(--border-input);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  gap: 4px;
+}
+.pf-toggle-btn:hover {
+  background: var(--bg-row-hover);
+  border-color: var(--accent);
+}
+.pf-toggle-btn.selected {
+  background: var(--mpp-state-good-bg);
+  border-color: var(--mpp-state-good-fg);
+  color: var(--mpp-state-good-fg);
+}
+.pf-toggle-btn.selected::before {
+  content: "✓ ";
+  font-weight: 700;
+}
+.pf-toggle-btn-label {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pf-toggle-btn-meta {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.85;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 
 /* Status pills (LOT status, Cell status, etc.) */
 .pf-pill {
