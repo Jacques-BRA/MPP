@@ -983,7 +983,7 @@
           </div>
 
           <div class="pf-actions" style="border:none; margin:0; padding:0;">
-            <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit · Create LOT + Checkpoint</button>
+            <button class="pf-btn pf-btn-primary pf-btn-large" type="button">Submit · Create LOT</button>
             <button class="pf-btn pf-btn-secondary" type="button">Cancel</button>
             <span style="flex:1"></span>
             <button class="pf-btn pf-btn-elevated" data-elevated-action="HoldPlace" type="button">Place Hold on this LOT</button>
@@ -997,7 +997,7 @@
             <div style="display:flex; flex-direction:column; gap: 10px;">
               <div><span class="pf-kpi-label">Shot Count</span><div class="pf-kpi-value">1,247</div></div>
               <div><span class="pf-kpi-label">Scrap Count</span><div class="pf-kpi-value pf-kpi-warn">3</div></div>
-              <div><span class="pf-kpi-label">Last Event</span><div class="pf-kpi-sub">06:18 · checkpoint</div></div>
+              <div><span class="pf-kpi-label">Last Event</span><div class="pf-kpi-sub">06:18 · last shot</div></div>
             </div>
           </section>
 
@@ -1279,7 +1279,7 @@
         <div class="pf-panel-header"><h3>Active machined LOT (after pick)</h3></div>
         <div class="pf-empty-state">
           <p>No LOT picked yet. Click "Pick" above to fire the BOM-Driven Rename Confirmation Modal.<br>
-             On confirm: new machined LOT minted, ConsumptionEvent + Genealogy + checkpoint ProductionEvent written, source sub-LOT closed.</p>
+             On confirm: new machined LOT minted, ConsumptionEvent + Genealogy + ProductionEvent written, source sub-LOT closed.</p>
           <p class="pf-kpi-sub">Press <kbd>R</kbd> to preview the BOM Rename Modal.</p>
         </div>
       </section>
@@ -2506,7 +2506,7 @@
       <header class="pf-terminal-header">
         <div class="pf-terminal-title">
           <h1>Trim Station IN</h1>
-          <span class="pf-terminal-title-meta">Trim Cell 3 · Movement Scan + checkpoint ProductionEvent</span>
+          <span class="pf-terminal-title-meta">Trim Cell 3 · Movement Scan + ProductionEvent</span>
         </div>
         <span class="pf-paused-indicator">
           <span>⏸</span><span>Paused</span><span class="pf-paused-indicator-count">1</span>
@@ -2566,7 +2566,7 @@
       <!-- Checkpoint ProductionEvent panel (auto-fired on receive) -->
       <section class="pf-panel">
         <div class="pf-panel-header">
-          <h3>Trim IN Checkpoint</h3>
+          <h3>Trim IN Event</h3>
           <span class="pf-kpi-sub">ProductionEvent fires on Movement Scan accept · TrimIn OperationTemplate</span>
         </div>
 
@@ -2694,7 +2694,7 @@
               <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
                 <span class="pf-queue-position">06:20</span>
                 <div>
-                  <span class="pf-queue-name">DieCastCheckpoint</span>
+                  <span class="pf-queue-name">Die Cast Event</span>
                   <div class="pf-queue-detail">ShotCount 1247 · ScrapCount 3 (cumulative)</div>
                 </div>
                 <span class="pf-kpi-sub">ProductionEvent #41203</span>
@@ -2718,7 +2718,7 @@
               <div class="pf-queue-row" style="grid-template-columns: auto 1fr auto;">
                 <span class="pf-queue-position">08:25</span>
                 <div>
-                  <span class="pf-queue-name">TrimInCheckpoint</span>
+                  <span class="pf-queue-name">Trim IN Event</span>
                   <div class="pf-queue-detail">ShotCount 1247 · ScrapCount 3 (carried — Trim adds no shots)</div>
                 </div>
                 <span class="pf-kpi-sub">ProductionEvent #41210</span>
