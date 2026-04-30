@@ -841,51 +841,57 @@
 
     <!-- ─── TERMINAL VIEW: CELL CONTEXT SELECTOR (Phase 1, Shared) ── -->
     <section data-route="terminal/cell-context" class="pf-terminal" style="align-items:center; justify-content:center;">
-      <div class="pf-panel" style="max-width: 640px; width: 100%; align-self:center;">
+      <div class="pf-panel" style="max-width: 720px; width: 100%; align-self:center;">
         <div class="pf-panel-header">
           <h3>Select Active Cell</h3>
           <span class="pf-pill pf-pill-good">Shared Terminal</span>
         </div>
         <p style="margin:0; color: var(--text-secondary);">
-          Scan a Cell barcode or pick from the list below (FDS-02-009).
-          The selected Cell becomes the active context for every action on this session
-          until you change it.
+          Scan a Cell barcode or pick from the dropdown. The selected Cell becomes
+          the active context for every action on this session until you change it.
+          Per FDS-02-009 — both selection methods are valid.
         </p>
 
+        <!-- Primary: scan -->
         <div class="pf-field">
           <label class="pf-field-label">Scan Cell Barcode</label>
           <input class="pf-field-input pf-field-mono" type="text" placeholder="Scan or enter Cell code…" />
         </div>
 
+        <!-- Alternative: dropdown of descendant Cells -->
         <div class="pf-field">
-          <label class="pf-field-label">Or pick from Die Cast Area</label>
-          <div class="pf-queue">
-            <label class="pf-queue-row" style="grid-template-columns: 1fr auto auto;">
-              <div>
-                <span class="pf-queue-name">Press 7</span>
-                <div class="pf-queue-detail">DC-042 mounted · 2 cavities active</div>
-              </div>
-              <span class="pf-pill pf-pill-good">Running</span>
-              <button class="pf-btn pf-btn-primary" type="button">Select</button>
-            </label>
-            <label class="pf-queue-row" style="grid-template-columns: 1fr auto auto;">
-              <div>
-                <span class="pf-queue-name">Press 8</span>
-                <div class="pf-queue-detail">DC-049 mounted · 4 cavities active</div>
-              </div>
-              <span class="pf-pill pf-pill-good">Running</span>
-              <button class="pf-btn pf-btn-secondary" type="button">Select</button>
-            </label>
-            <label class="pf-queue-row" style="grid-template-columns: 1fr auto auto;">
-              <div>
-                <span class="pf-queue-name">Press 9</span>
-                <div class="pf-queue-detail">No tool mounted</div>
-              </div>
-              <span class="pf-pill pf-pill-hold">Idle</span>
-              <button class="pf-btn pf-btn-secondary" type="button" disabled>Select</button>
-            </label>
-          </div>
+          <label class="pf-field-label">Or pick from list</label>
+          <select class="pf-field-select" style="font-size: 15px; height: 52px;">
+            <option value="">— Select a Cell —</option>
+            <optgroup label="Building 1 · Die Cast Area">
+              <option>Press 1 · DC-018 mounted · 2 cavities active</option>
+              <option>Press 2 · DC-024 mounted · 4 cavities active</option>
+              <option>Press 3 · DC-031 mounted · 2 cavities active</option>
+              <option>Press 4 · DC-031 mounted · 4 cavities active</option>
+              <option>Press 5 · DC-038 mounted · 2 cavities active</option>
+              <option>Press 6 · No tool mounted · idle</option>
+              <option selected>Press 7 · DC-042 mounted · 2 cavities active</option>
+              <option>Press 8 · DC-049 mounted · 4 cavities active</option>
+            </optgroup>
+          </select>
+          <span class="pf-field-help">
+            Dropdown lists the descendant Cells of this terminal's parent Location
+            (Building 1 Die Cast Area → 8 presses). A terminal parented to a smaller
+            WorkCenter would list fewer Cells; an Area-parented terminal lists more.
+          </span>
         </div>
+
+        <div class="pf-actions" style="border:none; margin:0; padding:0;">
+          <button class="pf-btn pf-btn-primary pf-btn-large" type="button" style="flex:1;">
+            Set Active Cell
+          </button>
+        </div>
+
+        <p class="pf-kpi-sub" style="margin: 0; padding-top: 12px; border-top: 1px dashed var(--border);">
+          Mid-session Cell change uses the same selector — scan or dropdown — at any
+          time. The terminal does not remember the prior Cell on context change; the
+          active context is whatever was selected most recently.
+        </p>
       </div>
     </section>
 
