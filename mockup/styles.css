@@ -622,7 +622,8 @@ a {
   border-radius: var(--mpp-radius-sm);
   background: var(--mpp-surface-raised);
   color: var(--mpp-text-primary);
-  min-width: 180px;
+  min-width: 0;
+  box-sizing: border-box;
   outline: none;
   transition: border-color var(--mpp-transition-fast),
               box-shadow var(--mpp-transition-fast);
@@ -686,6 +687,7 @@ a {
 .detail-body {
   padding: var(--mpp-space-3) var(--mpp-space-4);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ─── Fields ───────────────────────────────────────────────────────── */
